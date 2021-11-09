@@ -5,12 +5,9 @@
  * @author BharatERP
  * @created 2025-02-09
  */
-export default function PreviewPage({ params }: { params: { pageId: string } }) {
-  return (
-    <div>
-      <h1>Preview - Page {params.pageId}</h1>
-      <p>Content rendering here...</p>
-    </div>
-  );
-}
+import PreviewClient from './PreviewClient';
 
+export default async function PreviewPage({ params }: { params: Promise<{ pageId: string }> }) {
+  const { pageId } = await params;
+  return <PreviewClient pageId={pageId} />;
+}
