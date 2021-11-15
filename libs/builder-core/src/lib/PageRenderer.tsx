@@ -1,32 +1,25 @@
 /**
- * @file PageRenderer.tsx
- * @module builder-core
- * @description Recursive renderer for page content
- * @author BharatERP
- * @created 2025-02-09
+ * File: libs/builder-core/src/lib/PageRenderer.tsx
+ * Module: builder-core
+ * Purpose: Recursive renderer for page content
+ * Author: Cursor / Aman
+ * Last-updated: 2025-12-16
+ * Notes:
+ * - Renders `PageContentV1` (shared contract) by resolving `type` via ComponentRegistry
+ * - Used in both editor (selectable) and preview/storefront (non-edit)
  */
 import React from 'react';
 import { getComponent } from './registry';
-
-export interface ComponentData {
-  type: string;
-  props?: Record<string, any>;
-  children?: ComponentData[];
-  id?: string; // unique id for editor selection
-}
-
-export interface PageContent {
-  root: ComponentData;
-}
+import type { PageContentV1, PageNode } from '@web-builder/contracts';
 
 interface PageRendererProps {
-  content: PageContent;
+  content: PageContentV1;
   onComponentClick?: (id: string, e: React.MouseEvent) => void;
   selectedId?: string;
 }
 
 const RenderNode: React.FC<{ 
-  node: ComponentData; 
+  node: PageNode; 
   onComponentClick?: (id: string, e: React.MouseEvent) => void;
   selectedId?: string;
 }> = ({ node, onComponentClick, selectedId }) => {
