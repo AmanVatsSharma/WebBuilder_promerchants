@@ -13,11 +13,13 @@ import { AppService } from './app.service';
 import { LoggerModule } from '../shared/logger/logger.module';
 import { GlobalExceptionFilter } from '../common/filters/global-exception.filter';
 import { SitesModule } from '../modules/sites/sites.module';
+import { DomainsModule } from '../modules/domains/domains.module';
 
 @Module({
   imports: [
     LoggerModule,
     SitesModule,
+    DomainsModule,
     TypeOrmModule.forRootAsync({
       useFactory: () => ({
         type: 'postgres',
