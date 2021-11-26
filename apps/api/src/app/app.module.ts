@@ -14,12 +14,14 @@ import { LoggerModule } from '../shared/logger/logger.module';
 import { GlobalExceptionFilter } from '../common/filters/global-exception.filter';
 import { SitesModule } from '../modules/sites/sites.module';
 import { DomainsModule } from '../modules/domains/domains.module';
+import { ThemesModule } from '../modules/themes/themes.module';
 
 @Module({
   imports: [
     LoggerModule,
     SitesModule,
     DomainsModule,
+    ThemesModule,
     TypeOrmModule.forRootAsync({
       useFactory: () => ({
         type: 'postgres',
