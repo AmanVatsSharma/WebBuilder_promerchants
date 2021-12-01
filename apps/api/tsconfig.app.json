@@ -4,7 +4,9 @@
     "outDir": "../../dist/out-tsc",
     "module": "commonjs",
     "types": [
-      "node"
+      "node",
+      "express",
+      "multer"
     ],
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
