@@ -17,9 +17,10 @@ import { ThemeVersion } from './entities/theme-version.entity';
 import { ThemeFile } from './entities/theme-file.entity';
 import { ThemeInstall } from './entities/theme-install.entity';
 import { UploadThemeDto } from './dto/upload-theme.dto';
-import { ThemeStorageService } from './storage/theme-storage.service';
+import { STORAGE_PROVIDER } from '../../shared/storage/storage.constants';
+import type { StorageProvider } from '../../shared/storage/storage.types';
 import * as unzipper from 'unzipper';
-import { Readable } from 'stream';
+import { Inject } from '@nestjs/common';
 
 function defaultVersion() {
   // POC versioning; real pipeline will compute or read from manifest
@@ -40,7 +41,7 @@ export class ThemesService {
     @InjectRepository(ThemeVersion) private readonly versionRepo: Repository<ThemeVersion>,
     @InjectRepository(ThemeFile) private readonly fileRepo: Repository<ThemeFile>,
     @InjectRepository(ThemeInstall) private readonly installRepo: Repository<ThemeInstall>,
-    private readonly storage: ThemeStorageService,
+    @Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider,
   ) {}
 
   async listThemes() {
@@ -81,7 +82,7 @@ export class ThemesService {
       }),
     );
 
-    await this.storage.ensureThemeDir(version.id);
+    await this.storage.ensurePrefix(`themes/${version.id}/src`);
 
     // Extract zip (buffer) into storage and register files
     const dir = await unzipper.Open.buffer(file.buffer);
@@ -95,7 +96,7 @@ export class ThemesService {
         continue;
       }
       const content = await entry.buffer();
-      const { size, sha256 } = await this.storage.writeFile(version.id, entryPath, content);
+      const { size, sha256 } = await this.storage.writeBytes(`themes/${version.id}/src/${entryPath}`, content);
 
       if (entryPath.toLowerCase() === 'manifest.json') {
         try {
@@ -133,7 +134,7 @@ export class ThemesService {
     if (!filePath) throw new BadRequestException('path is required');
     if (!isAllowedThemePath(filePath)) throw new BadRequestException('path extension not allowed');
 
-    const content = await this.storage.readFile(themeVersionId, filePath);
+    const content = await this.storage.readText(`themes/${themeVersionId}/src/${filePath}`);
     return { path: filePath, content };
   }
 
@@ -142,7 +143,7 @@ export class ThemesService {
     if (!filePath) throw new BadRequestException('path is required');
     if (!isAllowedThemePath(filePath)) throw new BadRequestException('path extension not allowed');
 
-    const { size, sha256 } = await this.storage.writeFile(themeVersionId, filePath, content);
+    const { size, sha256 } = await this.storage.writeText(`themes/${themeVersionId}/src/${filePath}`, content);
     await this.fileRepo.save(
       this.fileRepo.create({
         themeVersionId,

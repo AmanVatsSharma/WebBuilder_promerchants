@@ -16,13 +16,13 @@ import { ThemeFile } from './entities/theme-file.entity';
 import { ThemeInstall } from './entities/theme-install.entity';
 import { ThemesService } from './themes.service';
 import { ThemesController } from './themes.controller';
-import { ThemeStorageService } from './storage/theme-storage.service';
 import { SitesThemeController } from './sites-theme.controller';
+import { StorageModule } from '../../shared/storage/storage.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Theme, ThemeVersion, ThemeFile, ThemeInstall])],
+  imports: [TypeOrmModule.forFeature([Theme, ThemeVersion, ThemeFile, ThemeInstall]), StorageModule],
   controllers: [ThemesController, SitesThemeController],
-  providers: [ThemesService, ThemeStorageService],
+  providers: [ThemesService],
   exports: [ThemesService],
 })
 export class ThemesModule {}
