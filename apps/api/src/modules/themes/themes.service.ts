@@ -21,6 +21,8 @@ import { STORAGE_PROVIDER } from '../../shared/storage/storage.constants';
 import type { StorageProvider } from '../../shared/storage/storage.types';
 import * as unzipper from 'unzipper';
 import { Inject } from '@nestjs/common';
+import * as path from 'path';
+import * as fs from 'fs/promises';
 
 function defaultVersion() {
   // POC versioning; real pipeline will compute or read from manifest
@@ -179,6 +181,80 @@ export class ThemesService {
     const install = await this.installRepo.findOne({ where: { siteId } });
     if (!install) throw new NotFoundException(`No theme installed for siteId=${siteId}`);
     return install;
+  }
+
+  /**
+   * Seed the built-in default ecommerce theme from repo files.
+   * This is used to give every new platform install a usable starter theme.
+   */
+  async seedDefaultTheme() {
+    const themeName = 'Default Ecommerce';
+    const existing = await this.themeRepo.findOne({ where: { name: themeName } });
+    if (existing) {
+      this.logger.log(`seedDefaultTheme: already exists themeId=${existing.id}`);
+      const latest = await this.versionRepo.findOne({ where: { themeId: existing.id }, order: { createdAt: 'DESC' } });
+      return { theme: existing, themeVersion: latest };
+    }
+
+    const theme = await this.themeRepo.save(
+      this.themeRepo.create({
+        name: themeName,
+        description: 'Starter ecommerce theme shipped with the platform.',
+        author: 'WebBuilder',
+      }),
+    );
+
+    const version = await this.versionRepo.save(
+      this.versionRepo.create({
+        themeId: theme.id,
+        version: '1.0.0',
+        status: 'DRAFT',
+      }),
+    );
+
+    const srcRoot = path.resolve(process.cwd(), 'libs', 'default-theme', 'theme');
+    this.logger.log(`seedDefaultTheme: reading from ${srcRoot}`);
+    await this.storage.ensurePrefix(`themes/${version.id}/src`);
+
+    const files: Array<{ rel: string; abs: string }> = [];
+    const walk = async (dir: string) => {
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      for (const e of entries) {
+        const abs = path.join(dir, e.name);
+        if (e.isDirectory()) await walk(abs);
+        else files.push({ abs, rel: path.relative(srcRoot, abs).replace(/\\/g, '/') });
+      }
+    };
+    await walk(srcRoot);
+
+    let manifestJson: any = null;
+    for (const f of files) {
+      if (!isAllowedThemePath(f.rel)) continue;
+      const buf = await fs.readFile(f.abs);
+      const { size, sha256 } = await this.storage.writeBytes(`themes/${version.id}/src/${f.rel}`, buf);
+      await this.fileRepo.save(
+        this.fileRepo.create({
+          themeVersionId: version.id,
+          path: f.rel,
+          size,
+          sha256,
+        }),
+      );
+      if (f.rel.toLowerCase() === 'manifest.json') {
+        try {
+          manifestJson = JSON.parse(buf.toString('utf-8'));
+        } catch (e) {
+          this.logger.warn(`seedDefaultTheme: invalid manifest.json ${(e as Error).message}`);
+        }
+      }
+    }
+
+    if (manifestJson) {
+      version.manifest = manifestJson;
+      await this.versionRepo.save(version);
+    }
+
+    return { theme, themeVersion: version };
   }
 }
 

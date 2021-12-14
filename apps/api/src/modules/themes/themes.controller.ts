@@ -34,6 +34,15 @@ export class ThemesController {
     return this.themesService.uploadThemeBundle(dto, file);
   }
 
+  /**
+   * Seed the platform with a default ecommerce theme.
+   * This reads files from `libs/default-theme/theme`.
+   */
+  @Post('seed/default')
+  seedDefault() {
+    return this.themesService.seedDefaultTheme();
+  }
+
   @Get('versions/:themeVersionId/files')
   listFiles(@Param('themeVersionId') themeVersionId: string) {
     return this.themesService.listThemeFiles(themeVersionId);
