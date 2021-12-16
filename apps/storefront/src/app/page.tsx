@@ -11,7 +11,8 @@
 
 import { headers } from 'next/headers';
 import { PageRenderer, registerCoreComponents } from '@web-builder/builder-core';
-import { resolvePageContentBySlug, resolveSiteByHost } from '../lib/tenant';
+import { resolveInstalledThemeVersion, resolvePageContentBySlug, resolveSiteByHost } from '../lib/tenant';
+import { loadThemeComponent } from '../lib/theme-runtime';
 
 registerCoreComponents();
 
@@ -27,6 +28,20 @@ export default async function Home() {
         <p>Tenant not found for host: {host}</p>
       </main>
     );
+  }
+
+  // Prefer published theme, fallback to draft (dev), then fallback to page-json renderer
+  const installed = await resolveInstalledThemeVersion(site.id);
+  const themeVersionId = installed?.published || installed?.draft || null;
+  if (themeVersionId) {
+    const ThemeRoot = await loadThemeComponent(themeVersionId);
+    if (ThemeRoot) {
+      return (
+        <main>
+          <ThemeRoot />
+        </main>
+      );
+    }
   }
 
   const content = await resolvePageContentBySlug(site.id, 'home');

@@ -26,6 +26,13 @@ export interface PageDto {
   siteId: string;
 }
 
+export interface ThemeInstallDto {
+  siteId: string;
+  themeId: string;
+  draftThemeVersionId?: string | null;
+  publishedThemeVersionId?: string | null;
+}
+
 function apiBase() {
   return process.env.API_BASE_URL || 'http://localhost:3000/api';
 }
@@ -72,6 +79,18 @@ export async function resolvePageContentBySlug(siteId: string, slug: string): Pr
     return { schemaVersion: 1, root: page.content };
   } catch (e) {
     console.error('[storefront] resolvePageContentBySlug error', e);
+    return null;
+  }
+}
+
+export async function resolveInstalledThemeVersion(siteId: string): Promise<{ published?: string | null; draft?: string | null } | null> {
+  try {
+    const res = await fetch(`${apiBase()}/sites/${siteId}/theme`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const install: ThemeInstallDto = await res.json();
+    return { published: install.publishedThemeVersionId ?? null, draft: install.draftThemeVersionId ?? null };
+  } catch (e) {
+    console.error('[storefront] resolveInstalledThemeVersion error', e);
     return null;
   }
 }
