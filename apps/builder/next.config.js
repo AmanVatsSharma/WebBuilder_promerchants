@@ -1,16 +1,18 @@
 //@ts-check
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { composePlugins, withNx } = require('@nx/next');
-
-
 /**
- * @type {import('@nx/next/plugins/with-nx').WithNxOptions}
- **/
+ * File: apps/builder/next.config.js
+ * Module: builder
+ * Purpose: Next.js config for the Builder app
+ * Author: Cursor / Aman
+ * Last-updated: 2025-12-16
+ * Notes:
+ * - Temporarily avoid Nx Next plugin because Turbopack attempts to bundle Nx internals and fails on optional deps.
+ * - Nx still orchestrates builds/serves; this config focuses on runtime behavior (API rewrites).
+ */
+
+/** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Use this to set Nx-specific options
-  // See: https://nx.dev/recipes/next/next-config-setup
-  nx: {},
   async rewrites() {
     return [
       {
@@ -21,9 +23,4 @@ const nextConfig = {
   },
 };
 
-const plugins = [
-  // Add more Next.js plugins to this list if needed.
-  withNx,
-];
-
-module.exports = composePlugins(...plugins)(nextConfig);
+module.exports = nextConfig;
