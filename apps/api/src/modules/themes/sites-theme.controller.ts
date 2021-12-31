@@ -25,6 +25,27 @@ export class SitesThemeController {
   getInstalled(@Param('siteId') siteId: string) {
     return this.themesService.getInstallForSite(siteId);
   }
+
+  @Post(':siteId/theme/publish')
+  publish(
+    @Param('siteId') siteId: string,
+    @Body() body: { themeVersionId?: string; actor?: string },
+  ) {
+    return this.themesService.publishThemeForSite(siteId, body.themeVersionId, body.actor || 'system');
+  }
+
+  @Post(':siteId/theme/rollback')
+  rollback(
+    @Param('siteId') siteId: string,
+    @Body() body: { toThemeVersionId: string; actor?: string },
+  ) {
+    return this.themesService.rollbackPublishedTheme(siteId, body.toThemeVersionId, body.actor || 'system');
+  }
+
+  @Get(':siteId/theme/audits')
+  audits(@Param('siteId') siteId: string) {
+    return this.themesService.listPublishAudits(siteId);
+  }
 }
 
 
