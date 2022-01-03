@@ -85,6 +85,16 @@ export default function ThemeVersionEditorClient({ themeVersionId }: { themeVers
     alert('Installed as draft');
   };
 
+  const publish = async () => {
+    if (!siteId) return alert('Enter siteId');
+    const res = await apiPost(`/api/sites/${siteId}/theme/publish`, { themeVersionId });
+    console.debug('[builder-themes] publish result', res);
+    alert('Published!');
+  };
+
+  const storefrontBase = (process.env.NEXT_PUBLIC_STOREFRONT_URL as string) || 'http://localhost:4201';
+  const previewUrl = `${storefrontBase}/?previewThemeVersionId=${encodeURIComponent(themeVersionId)}`;
+
   if (loading) return <div className="p-6">Loading…</div>;
 
   return (
@@ -146,6 +156,18 @@ export default function ThemeVersionEditorClient({ themeVersionId }: { themeVers
               <button onClick={install} className="px-3 py-2 rounded bg-green-600 text-white text-sm">
                 Install (Draft)
               </button>
+              <button onClick={publish} className="px-3 py-2 rounded bg-indigo-600 text-white text-sm">
+                Publish
+              </button>
+              <a
+                href={previewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-2 rounded border text-sm"
+                title="Preview draft theme in storefront"
+              >
+                Preview
+              </a>
             </div>
           </div>
 
