@@ -16,7 +16,13 @@ import { loadThemeComponent } from '../../lib/theme-runtime';
 
 registerCoreComponents();
 
-export default async function SlugPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function SlugPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { slug } = await params;
   const h = await headers();
   const host = h.get('x-tenant-host') || h.get('host') || 'unknown';
@@ -31,9 +37,12 @@ export default async function SlugPage({ params }: { params: Promise<{ slug: str
     );
   }
 
-  // Prefer theme runtime if installed. For now, we render the theme root for any slug.
+  const sp = (await searchParams) || {};
+  const previewThemeVersionId = typeof sp.previewThemeVersionId === 'string' ? sp.previewThemeVersionId : null;
+
+  // Published only, unless previewThemeVersionId is explicitly provided (builder preview mode)
   const installed = await resolveInstalledThemeVersion(site.id);
-  const themeVersionId = installed?.published || installed?.draft || null;
+  const themeVersionId = previewThemeVersionId || installed?.published || null;
   if (themeVersionId) {
     const ThemeRoot = await loadThemeComponent(themeVersionId);
     if (ThemeRoot) {
