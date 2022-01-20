@@ -9,6 +9,10 @@ This docs site is generated from **in-repo module documentation** and curated ov
 ## Quick Links
 - [Architecture overview](./generated/overview/architecture.md)
 - [Getting started](./generated/overview/getting-started.md)
+- [Diagrams: Tenant resolution](./generated/diagrams/tenant-resolution.md)
+- [Diagrams: Theme lifecycle](./generated/diagrams/theme-lifecycle.md)
+- [Diagrams: Editor action model](./generated/diagrams/editor-action-model.md)
+- [Diagrams: Build pipeline](./generated/diagrams/build-pipeline.md)
 - [API: Sites](./generated/modules/api/sites.md)
 - [API: Themes](./generated/modules/api/themes.md)
 - [API: Domains](./generated/modules/api/domains.md)
