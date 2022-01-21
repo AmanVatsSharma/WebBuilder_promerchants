@@ -9,6 +9,8 @@ This docs site is generated from **in-repo module documentation** and curated ov
 ## Quick Links
 - [Architecture overview](./generated/overview/architecture.md)
 - [Getting started](./generated/overview/getting-started.md)
+- [Runbook: Local setup](./generated/runbook/local-setup.md)
+- [Runbook: Theme debugging](./generated/runbook/theme-debugging.md)
 - [Diagrams: Tenant resolution](./generated/diagrams/tenant-resolution.md)
 - [Diagrams: Theme lifecycle](./generated/diagrams/theme-lifecycle.md)
 - [Diagrams: Editor action model](./generated/diagrams/editor-action-model.md)

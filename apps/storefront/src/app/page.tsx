@@ -47,6 +47,16 @@ export default async function Home({ searchParams }: { searchParams?: Promise<Re
     }
   }
 
+  if (installed?.published && !themeVersionId) {
+    return (
+      <main style={{ padding: 24 }}>
+        <h1>{site.name}</h1>
+        <p>Theme is published but could not be loaded.</p>
+        <p style={{ opacity: 0.7 }}>publishedThemeVersionId={installed.published}</p>
+      </main>
+    );
+  }
+
   const content = await resolvePageContentBySlug(site.id, 'home');
   if (!content) {
     return (
