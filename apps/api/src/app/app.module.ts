@@ -15,6 +15,7 @@ import { GlobalExceptionFilter } from '../common/filters/global-exception.filter
 import { SitesModule } from '../modules/sites/sites.module';
 import { DomainsModule } from '../modules/domains/domains.module';
 import { ThemesModule } from '../modules/themes/themes.module';
+import { CommerceModule } from '../modules/commerce/commerce.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ThemesModule } from '../modules/themes/themes.module';
     SitesModule,
     DomainsModule,
     ThemesModule,
+    CommerceModule,
     TypeOrmModule.forRootAsync({
       useFactory: () => ({
         type: 'postgres',
