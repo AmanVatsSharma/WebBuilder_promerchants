@@ -6,8 +6,10 @@
  * Last-updated: 2025-12-16
  */
 
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
 import { ThemesService } from './themes.service';
+import { UpdateThemeSettingsDto } from './dto/update-theme-settings.dto';
+import { PublishThemeSettingsDto } from './dto/publish-theme-settings.dto';
 
 @Controller('sites')
 export class SitesThemeController {
@@ -24,6 +26,21 @@ export class SitesThemeController {
   @Get(':siteId/theme')
   getInstalled(@Param('siteId') siteId: string) {
     return this.themesService.getInstallForSite(siteId);
+  }
+
+  @Get(':siteId/theme/settings')
+  getSettings(@Param('siteId') siteId: string) {
+    return this.themesService.getThemeSettings(siteId);
+  }
+
+  @Put(':siteId/theme/settings/draft')
+  updateDraftSettings(@Param('siteId') siteId: string, @Body() dto: UpdateThemeSettingsDto) {
+    return this.themesService.updateDraftThemeSettings(siteId, dto);
+  }
+
+  @Post(':siteId/theme/settings/publish')
+  publishSettings(@Param('siteId') siteId: string, @Body() dto: PublishThemeSettingsDto) {
+    return this.themesService.publishThemeSettings(siteId, dto);
   }
 
   @Post(':siteId/theme/publish')

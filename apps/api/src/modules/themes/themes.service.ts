@@ -18,12 +18,15 @@ import { ThemeFile } from './entities/theme-file.entity';
 import { ThemeInstall } from './entities/theme-install.entity';
 import { ThemePublishAudit } from './entities/theme-publish-audit.entity';
 import { UploadThemeDto } from './dto/upload-theme.dto';
+import type { UpdateThemeSettingsDto } from './dto/update-theme-settings.dto';
+import type { PublishThemeSettingsDto } from './dto/publish-theme-settings.dto';
 import { STORAGE_PROVIDER } from '../../shared/storage/storage.constants';
 import type { StorageProvider } from '../../shared/storage/storage.types';
 import * as unzipper from 'unzipper';
 import { Inject } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { assertThemeManifestV1 } from '@web-builder/contracts';
 
 function defaultVersion() {
   // POC versioning; real pipeline will compute or read from manifest
@@ -34,6 +37,11 @@ function isAllowedThemePath(p: string) {
   // allow typical theme source files
   return /\.(tsx|ts|jsx|js|css|json|md)$/i.test(p);
 }
+
+type SiteThemeSettingsStored = {
+  themeVersionId: string | null;
+  settings: Record<string, unknown>;
+};
 
 @Injectable()
 export class ThemesService {
@@ -47,6 +55,29 @@ export class ThemesService {
     @InjectRepository(ThemePublishAudit) private readonly auditRepo: Repository<ThemePublishAudit>,
     @Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider,
   ) {}
+
+  private draftSettingsKey(siteId: string) {
+    return `sites/${siteId}/theme/settings/draft.json`;
+  }
+
+  private publishedSettingsKey(siteId: string) {
+    return `sites/${siteId}/theme/settings/published.json`;
+  }
+
+  private async readSettingsKey(key: string): Promise<SiteThemeSettingsStored> {
+    const exists = await this.storage.exists(key);
+    if (!exists) return { themeVersionId: null, settings: {} };
+    const text = await this.storage.readText(key);
+    try {
+      const parsed = JSON.parse(text) as SiteThemeSettingsStored;
+      return {
+        themeVersionId: typeof parsed?.themeVersionId === 'string' ? parsed.themeVersionId : null,
+        settings: parsed?.settings && typeof parsed.settings === 'object' ? (parsed.settings as Record<string, unknown>) : {},
+      };
+    } catch {
+      return { themeVersionId: null, settings: {} };
+    }
+  }
 
   async listThemes() {
     return await this.themeRepo.find({ relations: ['versions'] });
@@ -62,6 +93,53 @@ export class ThemesService {
     const v = await this.versionRepo.findOne({ where: { id: themeVersionId } });
     if (!v) throw new NotFoundException(`ThemeVersion not found: ${themeVersionId}`);
     return v;
+  }
+
+  async getThemeSettings(siteId: string) {
+    const [draft, published] = await Promise.all([
+      this.readSettingsKey(this.draftSettingsKey(siteId)),
+      this.readSettingsKey(this.publishedSettingsKey(siteId)),
+    ]);
+    return { siteId, draft, published };
+  }
+
+  async updateDraftThemeSettings(siteId: string, dto: UpdateThemeSettingsDto) {
+    const install = await this.getInstallForSite(siteId);
+    const themeVersionId = dto.themeVersionId || install.draftThemeVersionId || install.publishedThemeVersionId;
+    if (!themeVersionId) throw new BadRequestException('themeVersionId is required (or install a theme first)');
+
+    const v = await this.getThemeVersion(themeVersionId);
+    // Shallow validation against manifest existence (deeper schema validation comes later)
+    if (v.manifest) assertThemeManifestV1(v.manifest as any);
+
+    const stored: SiteThemeSettingsStored = {
+      themeVersionId,
+      settings: dto.settings || {},
+    };
+
+    await this.storage.ensurePrefix(path.posix.dirname(this.draftSettingsKey(siteId)));
+    await this.storage.writeText(this.draftSettingsKey(siteId), JSON.stringify(stored, null, 2));
+    this.logger.log(`updateDraftThemeSettings siteId=${siteId} themeVersionId=${themeVersionId}`);
+
+    return { siteId, draft: stored };
+  }
+
+  async publishThemeSettings(siteId: string, dto: PublishThemeSettingsDto) {
+    const install = await this.getInstallForSite(siteId);
+    const themeVersionId = dto.themeVersionId || install.draftThemeVersionId || install.publishedThemeVersionId;
+    if (!themeVersionId) throw new BadRequestException('themeVersionId is required (or install a theme first)');
+
+    const draft = await this.readSettingsKey(this.draftSettingsKey(siteId));
+    const toPublish: SiteThemeSettingsStored = {
+      themeVersionId,
+      settings: draft.settings || {},
+    };
+
+    await this.storage.ensurePrefix(path.posix.dirname(this.publishedSettingsKey(siteId)));
+    await this.storage.writeText(this.publishedSettingsKey(siteId), JSON.stringify(toPublish, null, 2));
+    this.logger.log(`publishThemeSettings siteId=${siteId} themeVersionId=${themeVersionId}`);
+
+    return { siteId, published: toPublish };
   }
 
   async uploadThemeBundle(dto: UploadThemeDto, file: Express.Multer.File) {

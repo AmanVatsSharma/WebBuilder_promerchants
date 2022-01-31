@@ -14,6 +14,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { build, type Plugin } from 'esbuild';
 import * as path from 'path';
+import * as fs from 'fs/promises';
+import { assertThemeManifestV1, type ThemeManifestV1 } from '@web-builder/contracts';
 import { ThemeVersion } from './entities/theme-version.entity';
 
 function storageRootDir() {
@@ -49,6 +51,44 @@ function importAllowlistPlugin(): Plugin {
   };
 }
 
+function toSafeIdent(input: string) {
+  return input.replace(/[^a-zA-Z0-9_]/g, '_');
+}
+
+function normalizeThemeRelPath(p: string) {
+  const clean = p.replaceAll('\\', '/').replace(/^\.\//, '');
+  return clean.startsWith('/') ? clean.slice(1) : clean;
+}
+
+function buildWrapperSource(manifest: ThemeManifestV1) {
+  const entryRel = normalizeThemeRelPath(manifest.entry || 'entry.tsx');
+  const routes = manifest.routes || [];
+
+  const importLines: string[] = [];
+  const templateLines: string[] = [];
+
+  routes.forEach((r, i) => {
+    const tpl = normalizeThemeRelPath(r.template);
+    const ident = `Template_${toSafeIdent(tpl)}_${i}`;
+    importLines.push(`import ${ident} from './${tpl}';`);
+    templateLines.push(`  ${JSON.stringify(tpl)}: ${ident},`);
+  });
+
+  // Note: default export is treated as the Theme Layout by the storefront runtime.
+  // It should accept optional `children` (recommended) so storefront can inject the matched template.
+  return [
+    `import ThemeLayout from './${entryRel}';`,
+    ...importLines,
+    '',
+    `export const manifest = ${JSON.stringify(manifest)};`,
+    `export const templates = {`,
+    ...templateLines,
+    `};`,
+    `export default ThemeLayout;`,
+    '',
+  ].join('\n');
+}
+
 @Injectable()
 export class ThemeBuildService {
   private readonly logger = new Logger(ThemeBuildService.name);
@@ -61,14 +101,21 @@ export class ThemeBuildService {
     const version = await this.versionRepo.findOne({ where: { id: themeVersionId } });
     if (!version) throw new NotFoundException(`ThemeVersion not found: ${themeVersionId}`);
 
-    const manifest = version.manifest as any;
-    const entryRel = manifest?.entry || 'entry.tsx';
+    const manifest = assertThemeManifestV1(
+      version.manifest || {
+        schemaVersion: 1,
+        name: 'Unnamed Theme',
+        version: version.version || '0.0.0',
+        entry: 'entry.tsx',
+        routes: [],
+      },
+    );
 
     const srcRoot = path.join(storageRootDir(), 'themes', themeVersionId, 'src');
     const buildRoot = path.join(storageRootDir(), 'themes', themeVersionId, 'build');
-    const entryAbs = path.join(srcRoot, entryRel);
+    await fs.mkdir(buildRoot, { recursive: true });
 
-    this.logger.log(`buildThemeVersion id=${themeVersionId} entry=${entryRel}`);
+    this.logger.log(`buildThemeVersion id=${themeVersionId} entry=${manifest.entry}`);
 
     version.status = 'BUILDING';
     version.buildLog = null;
@@ -76,13 +123,18 @@ export class ThemeBuildService {
 
     const logs: string[] = [];
     try {
+      const wrapperSource = buildWrapperSource(manifest);
       await build({
-        entryPoints: [entryAbs],
+        stdin: {
+          contents: wrapperSource,
+          resolveDir: srcRoot,
+          sourcefile: '__webbuilder_entry.tsx',
+          loader: 'tsx',
+        },
         bundle: true,
         platform: 'node',
         format: 'cjs',
         target: 'es2020',
-        outdir: buildRoot,
         outfile: path.join(buildRoot, 'theme.cjs'),
         sourcemap: true,
         jsx: 'automatic',
