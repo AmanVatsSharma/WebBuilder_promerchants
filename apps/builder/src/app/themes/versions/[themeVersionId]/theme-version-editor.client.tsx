@@ -85,6 +85,13 @@ export default function ThemeVersionEditorClient({ themeVersionId }: { themeVers
     alert('Installed as draft');
   };
 
+  const seedDemoProduct = async () => {
+    if (!siteId) return alert('Enter siteId');
+    const res = await apiPost(`/api/commerce/sites/${siteId}/products/seed`);
+    console.debug('[builder-themes] seed demo product result', res);
+    alert('Seeded demo product (if not already present).');
+  };
+
   const publish = async () => {
     if (!siteId) return alert('Enter siteId');
     const res = await apiPost(`/api/sites/${siteId}/theme/publish`, { themeVersionId });
@@ -156,6 +163,9 @@ export default function ThemeVersionEditorClient({ themeVersionId }: { themeVers
               />
               <button onClick={install} className="px-3 py-2 rounded bg-green-600 text-white text-sm">
                 Install (Draft)
+              </button>
+              <button onClick={seedDemoProduct} className="px-3 py-2 rounded bg-amber-600 text-white text-sm">
+                Seed Demo Product
               </button>
               <button onClick={publish} className="px-3 py-2 rounded bg-indigo-600 text-white text-sm">
                 Publish
