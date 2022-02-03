@@ -11,8 +11,10 @@
 
 import { headers } from 'next/headers';
 import { PageRenderer, registerCoreComponents } from '@web-builder/builder-core';
-import { resolveInstalledThemeVersion, resolvePageContentBySlug, resolveSiteByHost } from '../../lib/tenant';
-import { loadThemeComponent } from '../../lib/theme-runtime';
+import { resolveInstalledThemeVersion, resolvePageContentBySlug, resolveSiteByHost, resolveThemeSettings } from '../../lib/tenant';
+import { loadThemeModule } from '../../lib/theme-runtime';
+import { resolveTemplateForPath } from '../../lib/theme-routing';
+import { createApiCommerceAdapter } from '../../lib/commerce-adapter';
 
 registerCoreComponents();
 
@@ -44,11 +46,29 @@ export default async function SlugPage({
   const installed = await resolveInstalledThemeVersion(site.id);
   const themeVersionId = previewThemeVersionId || installed?.published || null;
   if (themeVersionId) {
-    const ThemeRoot = await loadThemeComponent(themeVersionId);
-    if (ThemeRoot) {
+    const mod = await loadThemeModule(themeVersionId);
+    const Layout = mod?.default || null;
+    const pathname = `/${slug}`;
+    const Template =
+      mod?.manifest && mod?.templates ? resolveTemplateForPath({ manifest: mod.manifest, templates: mod.templates, pathname }) : null;
+    const settings = await resolveThemeSettings(site.id);
+    const selectedSettings = previewThemeVersionId ? settings?.draft?.settings : settings?.published?.settings;
+    const commerce = createApiCommerceAdapter(site.id);
+
+    if (Layout && Template) {
       return (
         <main>
-          <ThemeRoot />
+          <Layout sdk={{ settings: selectedSettings || {}, commerce }}>
+            <Template />
+          </Layout>
+        </main>
+      );
+    }
+
+    if (Layout) {
+      return (
+        <main>
+          <Layout sdk={{ settings: selectedSettings || {}, commerce }} />
         </main>
       );
     }

@@ -106,4 +106,29 @@ export async function resolveInstalledThemeVersion(siteId: string): Promise<{ pu
   }
 }
 
+export async function resolveThemeSettings(siteId: string): Promise<{
+  draft: { themeVersionId: string | null; settings: Record<string, unknown> };
+  published: { themeVersionId: string | null; settings: Record<string, unknown> };
+} | null> {
+  try {
+    const res = await fetch(`${apiBase()}/sites/${siteId}/theme/settings`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = (await res.json()) as any;
+    return {
+      draft: {
+        themeVersionId: typeof data?.draft?.themeVersionId === 'string' ? data.draft.themeVersionId : null,
+        settings: (data?.draft?.settings && typeof data.draft.settings === 'object' ? data.draft.settings : {}) as Record<string, unknown>,
+      },
+      published: {
+        themeVersionId: typeof data?.published?.themeVersionId === 'string' ? data.published.themeVersionId : null,
+        settings:
+          (data?.published?.settings && typeof data.published.settings === 'object' ? data.published.settings : {}) as Record<string, unknown>,
+      },
+    };
+  } catch (e) {
+    console.error('[storefront] resolveThemeSettings error', e);
+    return null;
+  }
+}
+
 
