@@ -17,6 +17,8 @@ import vm from 'node:vm';
 
 type ThemeModule = {
   default?: React.ComponentType<any>;
+  manifest?: any;
+  templates?: Record<string, React.ComponentType<any>>;
   [key: string]: any;
 };
 
@@ -37,13 +39,13 @@ function allowedRequire(spec: string) {
   return false;
 }
 
-export async function loadThemeComponent(themeVersionId: string): Promise<React.ComponentType<any> | null> {
+export async function loadThemeModule(themeVersionId: string): Promise<ThemeModule | null> {
   const bundle = themeBundlePath(themeVersionId);
   try {
     const st = await fs.stat(bundle);
     const cached = cache.get(themeVersionId);
     if (cached && cached.mtimeMs === st.mtimeMs) {
-      return cached.mod.default || null;
+      return cached.mod;
     }
 
     const code = await fs.readFile(bundle, 'utf-8');
@@ -74,11 +76,16 @@ export async function loadThemeComponent(themeVersionId: string): Promise<React.
 
     const mod = moduleObj.exports as ThemeModule;
     cache.set(themeVersionId, { mtimeMs: st.mtimeMs, mod });
-    return mod.default || null;
+    return mod;
   } catch (e) {
-    console.error('[storefront] loadThemeComponent failed', { themeVersionId, bundle }, e);
+    console.error('[storefront] loadThemeModule failed', { themeVersionId, bundle }, e);
     return null;
   }
+}
+
+export async function loadThemeComponent(themeVersionId: string): Promise<React.ComponentType<any> | null> {
+  const mod = await loadThemeModule(themeVersionId);
+  return mod?.default || null;
 }
 
 
