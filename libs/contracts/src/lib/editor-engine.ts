@@ -33,6 +33,51 @@ function insertNode(root: PageNode, parentId: string, index: number, node: PageN
   });
 }
 
+function containsNode(root: PageNode, id: string): boolean {
+  if (root.id === id) return true;
+  for (const c of root.children || []) {
+    if (containsNode(c, id)) return true;
+  }
+  return false;
+}
+
+function removeNode(root: PageNode, id: string): { next: PageNode; removed: PageNode | null } {
+  if (!root.children?.length) return { next: root, removed: null };
+
+  // Direct child removal
+  const idx = root.children.findIndex((c) => c.id === id);
+  if (idx !== -1) {
+    const removed = root.children[idx];
+    const nextChildren = [...root.children.slice(0, idx), ...root.children.slice(idx + 1)];
+    return { next: { ...root, children: nextChildren }, removed };
+  }
+
+  // Recurse into children
+  let removed: PageNode | null = null;
+  const nextChildren = root.children.map((c) => {
+    if (removed) return c;
+    const res = removeNode(c, id);
+    removed = res.removed;
+    return res.next;
+  });
+  return { next: { ...root, children: nextChildren }, removed };
+}
+
+function moveNode(root: PageNode, nodeId: string, newParentId: string, newIndex: number): PageNode {
+  // Cannot move root
+  if (nodeId === root.id) return root;
+
+  const { next: without, removed } = removeNode(root, nodeId);
+  if (!removed) return root;
+
+  // Prevent moving a node into its own subtree
+  if (containsNode(removed, newParentId)) {
+    return root;
+  }
+
+  return insertNode(without, newParentId, newIndex, removed);
+}
+
 /**
  * Apply an action to PageContentV1.
  * Returns the new content; does not mutate the input.
@@ -55,17 +100,7 @@ export function applyEditorAction(content: PageContentV1, action: EditorAction):
     case 'DeleteNode':
       return { ...content, root: deleteNode(content.root, action.nodeId) };
     case 'MoveNode': {
-      // Minimal v1: support moving within root only.
-      if (action.newParentId !== 'root') return content;
-      const root = content.root;
-      const children = root.children || [];
-      const idx = children.findIndex((c) => c.id === action.nodeId);
-      if (idx === -1) return content;
-      const node = children[idx];
-      const removed = [...children.slice(0, idx), ...children.slice(idx + 1)];
-      const newIndex = Math.max(0, Math.min(action.newIndex, removed.length));
-      const nextChildren = [...removed.slice(0, newIndex), node, ...removed.slice(newIndex)];
-      return { ...content, root: { ...root, children: nextChildren } };
+      return { ...content, root: moveNode(content.root, action.nodeId, action.newParentId, action.newIndex) };
     }
     default:
       return content;

@@ -64,8 +64,26 @@ export interface ThemeManifestV1 {
   entry: string;
   /** Optional supported routes/pages */
   routes?: Array<{ path: string; template: string }>;
+  /**
+   * Optional list of sections/components that the Builder can offer in its palette.
+   * This is intentionally lightweight in v1; richer schemas come later.
+   */
+  sections?: Array<{ type: string; label: string }>;
   /** Settings schema (theme-level customization) */
   settingsSchema?: ThemeSettingsSchemaV1;
+}
+
+/**
+ * Theme runtime bundle contract (what `storage/.../build/theme.cjs` should export).
+ * - Storefront loads this in a VM sandbox and uses the exports to render routes.
+ */
+export interface ThemeRuntimeModuleV1 {
+  /** Theme layout/root component. Recommended to accept `children` and an optional `sdk` prop. */
+  default?: unknown;
+  /** Parsed theme manifest used for routing and settings */
+  manifest?: ThemeManifestV1;
+  /** Template components keyed by `manifest.routes[].template` */
+  templates?: Record<string, unknown>;
 }
 
 /**
