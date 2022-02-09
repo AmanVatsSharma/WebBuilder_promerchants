@@ -35,6 +35,14 @@ export default function EditorClient({ pageId }: { pageId: string }) {
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [siteId, setSiteId] = useState<string | null>(null);
+  const [palette, setPalette] = useState<Array<{ type: string; label: string }>>([
+    { type: 'HeroSection', label: 'Hero Section' },
+    { type: 'TextBlock', label: 'Text Block' },
+  ]);
+  const [isDirty, setIsDirty] = useState(false);
+  const didLoadInitialRef = React.useRef(false);
+  const autosaveTimerRef = React.useRef<number | null>(null);
 
   type HistoryState = {
     past: PageContentV1[];
@@ -47,7 +55,7 @@ export default function EditorClient({ pageId }: { pageId: string }) {
     | { type: 'InsertNode'; parentId: string; node: PageNode; index?: number }
     | { type: 'UpdateNodeProps'; nodeId: string; patch: Record<string, JsonValue> }
     | { type: 'DeleteNode'; nodeId: string }
-    | { type: 'ReorderRoot'; activeId: string; overId: string }
+    | { type: 'MoveNode'; nodeId: string; newParentId: string; newIndex: number }
     | { type: 'Undo' }
     | { type: 'Redo' };
 
@@ -130,19 +138,12 @@ export default function EditorClient({ pageId }: { pageId: string }) {
         console.debug('[builder-editor] action', envelope);
         return commit(applyEditorAction(state.present, envelope.action));
       }
-      case 'ReorderRoot': {
-        // Map root reorder to a MoveNode action (v1 supports moving within root)
-        const root = state.present.root;
-        const children = root.children || [];
-        const oldIndex = children.findIndex((c) => c.id === action.activeId);
-        const newIndex = children.findIndex((c) => c.id === action.overId);
-        if (oldIndex === -1 || newIndex === -1) return state;
-
+      case 'MoveNode': {
         const envelope: EditorActionEnvelope = {
           id: crypto.randomUUID(),
           actor: 'user:local',
           createdAt: new Date().toISOString(),
-          action: { type: 'MoveNode', nodeId: action.activeId, newParentId: 'root', newIndex },
+          action: { type: 'MoveNode', nodeId: action.nodeId, newParentId: action.newParentId, newIndex: action.newIndex },
         };
         console.debug('[builder-editor] action', envelope);
         return commit(applyEditorAction(state.present, envelope.action));
@@ -170,12 +171,38 @@ export default function EditorClient({ pageId }: { pageId: string }) {
       })
       .then(data => {
         if (data && data.content) {
+           if (typeof data.siteId === 'string') setSiteId(data.siteId);
            dispatch({ type: 'SetContent', content: { schemaVersion: 1, root: data.content } });
+           didLoadInitialRef.current = true;
+           setIsDirty(false);
         }
       })
       .catch(err => console.error('[builder-editor] load failed', err))
       .finally(() => setLoading(false));
   }, [pageId]);
+
+  useEffect(() => {
+    if (!siteId) return;
+    // Palette: derive from installed theme manifest.sections (fallback to defaults)
+    console.debug('[builder-editor] loading theme palette', { siteId });
+    fetch(`/api/sites/${siteId}/theme`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((install) => {
+        const themeVersionId = install?.draftThemeVersionId || install?.publishedThemeVersionId || null;
+        if (!themeVersionId) return null;
+        return fetch(`/api/themes/versions/${themeVersionId}`).then((r) => (r.ok ? r.json() : null));
+      })
+      .then((version) => {
+        const sections = version?.manifest?.sections;
+        if (Array.isArray(sections) && sections.length) {
+          const mapped = sections
+            .filter((s: any) => s && typeof s.type === 'string' && typeof s.label === 'string')
+            .map((s: any) => ({ type: s.type, label: s.label }));
+          if (mapped.length) setPalette(mapped);
+        }
+      })
+      .catch((e) => console.error('[builder-editor] palette load failed', e));
+  }, [siteId]);
 
   const handleAddComponent = (type: string) => {
     console.debug('[builder-editor] add component', { type, selectedId });
@@ -243,8 +270,6 @@ export default function EditorClient({ pageId }: { pageId: string }) {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-  const rootChildIds = useMemo(() => (content.root.children || []).map((c) => c.id), [content.root.children]);
-
   const canvasWidth = viewport === 'desktop' ? '100%' : viewport === 'tablet' ? 768 : 375;
 
   const RenderNode: React.FC<{ node: PageNode }> = ({ node }) => {
@@ -276,8 +301,11 @@ export default function EditorClient({ pageId }: { pageId: string }) {
     );
   };
 
-  const SortableBlock: React.FC<{ node: PageNode }> = ({ node }) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: node.id });
+  const SortableBlock: React.FC<{ node: PageNode; parentId: string }> = ({ node, parentId }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+      id: node.id,
+      data: { parentId },
+    });
     const style: React.CSSProperties = {
       transform: CSS.Transform.toString(transform),
       transition,
@@ -298,6 +326,23 @@ export default function EditorClient({ pageId }: { pageId: string }) {
     );
   };
 
+  const SortableContainer: React.FC<{ node: PageNode }> = ({ node }) => {
+    if (node.type !== 'Container') return <RenderNode node={node} />;
+    const items = (node.children || []).map((c) => c.id);
+    return (
+      <SortableContext items={items} strategy={verticalListSortingStrategy}>
+        <div className="p-2">
+          {(node.children || []).map((child) => (
+            <SortableBlock key={child.id} node={child} parentId={node.id} />
+          ))}
+          {!node.children?.length && (
+            <div className="p-10 text-center text-gray-500">Drop components here…</div>
+          )}
+        </div>
+      </SortableContext>
+    );
+  };
+
   if (loading) return <div>Loading page...</div>;
 
   return (
@@ -306,18 +351,15 @@ export default function EditorClient({ pageId }: { pageId: string }) {
       <div className="w-64 bg-white border-r p-4">
         <h2 className="font-bold mb-4">Components</h2>
         <div className="space-y-2">
-          <button 
-            onClick={() => handleAddComponent('HeroSection')}
-            className="w-full p-2 bg-blue-100 hover:bg-blue-200 rounded text-left"
-          >
-            Hero Section
-          </button>
-          <button 
-             onClick={() => handleAddComponent('TextBlock')}
-             className="w-full p-2 bg-blue-100 hover:bg-blue-200 rounded text-left"
-          >
-            Text Block
-          </button>
+          {palette.map((p) => (
+            <button
+              key={p.type}
+              onClick={() => handleAddComponent(p.type)}
+              className="w-full p-2 bg-blue-100 hover:bg-blue-200 rounded text-left"
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
         <div className="mt-8">
            <button onClick={savePage} className="w-full p-2 bg-green-600 text-white rounded">
@@ -376,20 +418,23 @@ export default function EditorClient({ pageId }: { pageId: string }) {
                 const activeId = String(event.active.id);
                 const overId = event.over ? String(event.over.id) : null;
                 if (!overId || activeId === overId) return;
-                console.debug('[builder-editor] reorder root', { activeId, overId });
-                dispatch({ type: 'ReorderRoot', activeId, overId });
+
+                const activeParentId = (event.active.data.current as any)?.parentId as string | undefined;
+                const overParentId = (event.over?.data.current as any)?.parentId as string | undefined;
+                const newParentId = overParentId || activeParentId || 'root';
+
+                const parentNode = findNode(content.root, newParentId);
+                const siblings = parentNode?.children || [];
+                const oldIndex = siblings.findIndex((c) => c.id === activeId);
+                const newIndex = siblings.findIndex((c) => c.id === overId);
+                const resolvedNewIndex = newIndex === -1 ? siblings.length : newIndex;
+
+                console.debug('[builder-editor] move node', { activeId, overId, activeParentId, overParentId, newParentId, oldIndex, resolvedNewIndex });
+                dispatch({ type: 'MoveNode', nodeId: activeId, newParentId, newIndex: resolvedNewIndex });
+                setIsDirty(true);
               }}
             >
-              <SortableContext items={rootChildIds} strategy={verticalListSortingStrategy}>
-                <div className="p-2">
-                  {(content.root.children || []).map((child) => (
-                    <SortableBlock key={child.id} node={child} />
-                  ))}
-                  {!content.root.children?.length && (
-                    <div className="p-10 text-center text-gray-500">Add components to start building…</div>
-                  )}
-                </div>
-              </SortableContext>
+              <SortableContainer node={content.root} />
             </DndContext>
           </div>
         </div>
@@ -398,6 +443,9 @@ export default function EditorClient({ pageId }: { pageId: string }) {
       {/* Right Sidebar */}
       <div className="w-64 bg-white border-l p-4">
         <h2 className="font-bold mb-4">Properties</h2>
+        <div className="text-xs text-gray-500 mb-3">
+          {isDirty ? 'Unsaved changes (autosave soon)…' : 'All changes saved'}
+        </div>
         {selectedNode ? (
           <div className="space-y-4">
             <div className="text-sm text-gray-500 mb-2">ID: {selectedNode.id}</div>

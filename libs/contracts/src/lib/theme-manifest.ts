@@ -33,14 +33,14 @@ export function parseThemeManifestV1(input: unknown): ValidationResult<ThemeMani
     return { ok: false, errors: ['manifest: must be an object'] };
   }
 
-  const schemaVersion = input.schemaVersion;
+  const schemaVersion = input['schemaVersion'];
   if (schemaVersion !== 1) pushErr(errors, 'schemaVersion', 'must be 1');
 
-  if (!isNonEmptyString(input.name)) pushErr(errors, 'name', 'must be a non-empty string');
-  if (!isNonEmptyString(input.version)) pushErr(errors, 'version', 'must be a non-empty string');
-  if (!isNonEmptyString(input.entry)) pushErr(errors, 'entry', 'must be a non-empty string');
+  if (!isNonEmptyString(input['name'])) pushErr(errors, 'name', 'must be a non-empty string');
+  if (!isNonEmptyString(input['version'])) pushErr(errors, 'version', 'must be a non-empty string');
+  if (!isNonEmptyString(input['entry'])) pushErr(errors, 'entry', 'must be a non-empty string');
 
-  const routes = input.routes;
+  const routes = input['routes'];
   if (routes !== undefined) {
     if (!Array.isArray(routes)) {
       pushErr(errors, 'routes', 'must be an array');
@@ -51,11 +51,28 @@ export function parseThemeManifestV1(input: unknown): ValidationResult<ThemeMani
           pushErr(errors, p, 'must be an object');
           return;
         }
-        if (!isNonEmptyString(r.path)) pushErr(errors, `${p}.path`, 'must be a non-empty string');
-        if (isNonEmptyString(r.path) && !r.path.startsWith('/')) {
+        if (!isNonEmptyString(r['path'])) pushErr(errors, `${p}.path`, 'must be a non-empty string');
+        if (isNonEmptyString(r['path']) && !r['path'].startsWith('/')) {
           pushErr(errors, `${p}.path`, 'must start with "/"');
         }
-        if (!isNonEmptyString(r.template)) pushErr(errors, `${p}.template`, 'must be a non-empty string');
+        if (!isNonEmptyString(r['template'])) pushErr(errors, `${p}.template`, 'must be a non-empty string');
+      });
+    }
+  }
+
+  const sections = input['sections'];
+  if (sections !== undefined) {
+    if (!Array.isArray(sections)) {
+      pushErr(errors, 'sections', 'must be an array');
+    } else {
+      sections.forEach((s, i) => {
+        const p = `sections[${i}]`;
+        if (!isRecord(s)) {
+          pushErr(errors, p, 'must be an object');
+          return;
+        }
+        if (!isNonEmptyString(s['type'])) pushErr(errors, `${p}.type`, 'must be a non-empty string');
+        if (!isNonEmptyString(s['label'])) pushErr(errors, `${p}.label`, 'must be a non-empty string');
       });
     }
   }
