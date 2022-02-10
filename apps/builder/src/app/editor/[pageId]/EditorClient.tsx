@@ -213,12 +213,14 @@ export default function EditorClient({ pageId }: { pageId: string }) {
     };
     const targetId = selectedId || 'root';
     dispatch({ type: 'InsertNode', parentId: targetId, node: newComponent });
+    setIsDirty(true);
   };
 
   const handleUpdateProp = (key: string, value: JsonValue) => {
     if (!selectedId) return;
     console.debug('[builder-editor] update prop', { selectedId, key, value });
     dispatch({ type: 'UpdateNodeProps', nodeId: selectedId, patch: { [key]: value } });
+    setIsDirty(true);
   };
 
   const handleDeleteSelected = () => {
@@ -226,9 +228,10 @@ export default function EditorClient({ pageId }: { pageId: string }) {
     console.debug('[builder-editor] delete node', { selectedId });
     dispatch({ type: 'DeleteNode', nodeId: selectedId });
     setSelectedId(undefined);
+    setIsDirty(true);
   };
 
-  const savePage = async () => {
+  const savePage = async (opts?: { silent?: boolean }) => {
     try {
       console.debug('[builder-editor] saving page', { pageId });
       await fetch(`/api/sites/pages/${pageId}`, {
@@ -236,12 +239,30 @@ export default function EditorClient({ pageId }: { pageId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: content.root })
       });
-      alert('Saved!');
+      setIsDirty(false);
+      if (!opts?.silent) alert('Saved!');
     } catch (e) {
       console.error('[builder-editor] save failed', e);
-      alert('Error saving');
+      if (!opts?.silent) alert('Error saving');
     }
   };
+
+  // Autosave (debounced) after any mutation
+  useEffect(() => {
+    if (loading) return;
+    if (!didLoadInitialRef.current) return;
+    if (!isDirty) return;
+
+    if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = window.setTimeout(() => {
+      void savePage({ silent: true });
+    }, 1200);
+
+    return () => {
+      if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDirty, content, loading, pageId]);
 
   const selectedNode = selectedId ? findNode(content.root, selectedId) : undefined;
 
@@ -253,9 +274,11 @@ export default function EditorClient({ pageId }: { pageId: string }) {
       if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         e.preventDefault();
         dispatch({ type: 'Undo' });
+        setIsDirty(true);
       } else if ((mod && e.key.toLowerCase() === 'z' && e.shiftKey) || (mod && e.key.toLowerCase() === 'y')) {
         e.preventDefault();
         dispatch({ type: 'Redo' });
+        setIsDirty(true);
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         // Avoid deleting while typing in inputs
         const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
@@ -287,9 +310,7 @@ export default function EditorClient({ pageId }: { pageId: string }) {
       >
         {node.type === 'Container' ? (
           <div className="min-h-[40px]">
-            {(node.children || []).map((c) => (
-              <RenderNode key={c.id} node={c} />
-            ))}
+            <SortableContainer node={node} />
           </div>
         ) : Comp ? (
           // eslint-disable-next-line react/jsx-props-no-spreading

@@ -6,6 +6,10 @@
   "routes": [
     { "path": "/", "template": "pages/home" }
   ],
+  "sections": [
+    { "type": "HeroSection", "label": "Hero Section" },
+    { "type": "TextBlock", "label": "Text Block" }
+  ],
   "settingsSchema": {
     "schemaVersion": 1,
     "groups": [

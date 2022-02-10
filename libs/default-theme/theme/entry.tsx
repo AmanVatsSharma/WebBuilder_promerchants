@@ -10,15 +10,20 @@
  */
 
 import React from 'react';
-import { Footer, Header, ThemeSdkProvider } from '@web-builder/theme-sdk';
-import HomePage from './pages/home';
+import { Footer, Header, ThemeSdkProvider, type CommerceAdapter } from '@web-builder/theme-sdk';
 
-export default function ThemeEntry() {
+export default function ThemeEntry({
+  children,
+  sdk,
+}: {
+  children?: React.ReactNode;
+  sdk?: { commerce?: CommerceAdapter; settings?: Record<string, unknown> };
+}) {
   return (
-    <ThemeSdkProvider>
+    <ThemeSdkProvider commerce={sdk?.commerce} settings={sdk?.settings}>
       <div style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
         <Header />
-        <HomePage />
+        {children || <div style={{ padding: 24 }}>No template selected for this route.</div>}
         <Footer />
       </div>
     </ThemeSdkProvider>
