@@ -16,6 +16,7 @@ export interface ThemeSdkContextValue {
   site: ThemeSite | null;
   products: ThemeProduct[];
   cart: ThemeCart | null;
+  settings: Record<string, unknown>;
   commerce: CommerceAdapter;
   refresh(): Promise<void>;
 }
@@ -41,22 +42,26 @@ class DevCommerceAdapter implements CommerceAdapter {
   async getCart(): Promise<ThemeCart> {
     return { lines: [], currency: 'USD' };
   }
-  async addToCart(): Promise<ThemeCart> {
-    return { lines: [], currency: 'USD' };
+  async addToCart(productId: string, quantity: number): Promise<ThemeCart> {
+    console.debug('[theme-sdk] DevCommerceAdapter.addToCart', { productId, quantity });
+    return { lines: [{ productId, quantity }], currency: 'USD' };
   }
 }
 
 export function ThemeSdkProvider({
   children,
   commerce,
+  settings,
 }: {
   children: React.ReactNode;
   commerce?: CommerceAdapter;
+  settings?: Record<string, unknown>;
 }) {
-  const adapter = commerce ?? new DevCommerceAdapter();
+  const adapter = useMemo(() => commerce ?? new DevCommerceAdapter(), [commerce]);
   const [site, setSite] = useState<ThemeSite | null>(null);
   const [products, setProducts] = useState<ThemeProduct[]>([]);
   const [cart, setCart] = useState<ThemeCart | null>(null);
+  const [themeSettings, setThemeSettings] = useState<Record<string, unknown>>(settings || {});
 
   const refresh = async () => {
     try {
@@ -75,15 +80,32 @@ export function ThemeSdkProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (settings) setThemeSettings(settings);
+  }, [settings]);
+
+  const commerceProxy = useMemo<CommerceAdapter>(
+    () => ({
+      ...adapter,
+      addToCart: async (productId: string, quantity: number) => {
+        const next = await adapter.addToCart(productId, quantity);
+        setCart(next);
+        return next;
+      },
+    }),
+    [adapter],
+  );
+
   const value = useMemo<ThemeSdkContextValue>(
     () => ({
       site,
       products,
       cart,
-      commerce: adapter,
+      settings: themeSettings,
+      commerce: commerceProxy,
       refresh,
     }),
-    [site, products, cart, adapter],
+    [site, products, cart, commerceProxy, adapter, themeSettings],
   );
 
   return <ThemeSdkContext.Provider value={value}>{children}</ThemeSdkContext.Provider>;

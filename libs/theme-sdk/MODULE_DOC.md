@@ -11,7 +11,7 @@ This keeps themes portable and lets the platform safely compile/run uploaded the
 - Provider:
   - `ThemeSdkProvider`
 - Hooks:
-  - `useSite()`, `useProducts()`, `useCart()`
+  - `useSite()`, `useProducts()`, `useCart()`, `useThemeSettings()`
 - Components:
   - `Header`, `Footer`, `ProductCard`, `Money`, `Image`, `Link`
 
@@ -21,5 +21,8 @@ The SDK is built around a `CommerceAdapter` interface so the storefront can prov
 Recommended reading:
 - `libs/theme-sdk/src/lib/theme-sdk.tsx`
 - `libs/theme-sdk/src/lib/types.ts`
+
+## Changelog
+- 2026-01-24: ThemeSdkProvider now accepts `settings` and exposes them via `useThemeSettings()`.
 
 

@@ -20,4 +20,8 @@ export function useCart() {
   return useThemeSdk().cart;
 }
 
+export function useThemeSettings() {
+  return useThemeSdk().settings;
+}
+
 

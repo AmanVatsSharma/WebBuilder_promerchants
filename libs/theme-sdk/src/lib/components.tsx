@@ -34,10 +34,11 @@ export function Image({ src, alt }: { src: string; alt?: string }) {
 }
 
 export function Header() {
-  const { site } = useThemeSdk();
+  const { site, settings } = useThemeSdk();
+  const brandName = typeof settings.brandName === 'string' ? settings.brandName : null;
   return (
     <header style={{ padding: 16, borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between' }}>
-      <strong>{site?.name || 'Store'}</strong>
+      <strong>{brandName || site?.name || 'Store'}</strong>
       <nav style={{ display: 'flex', gap: 12 }}>
         <a href="/">Home</a>
         <a href="/products">Products</a>
