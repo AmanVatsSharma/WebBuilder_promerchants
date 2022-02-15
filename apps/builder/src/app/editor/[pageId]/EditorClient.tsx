@@ -41,6 +41,7 @@ export default function EditorClient({ pageId }: { pageId: string }) {
     { type: 'TextBlock', label: 'Text Block' },
   ]);
   const [isDirty, setIsDirty] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const didLoadInitialRef = React.useRef(false);
   const autosaveTimerRef = React.useRef<number | null>(null);
 
@@ -240,6 +241,7 @@ export default function EditorClient({ pageId }: { pageId: string }) {
         body: JSON.stringify({ content: content.root })
       });
       setIsDirty(false);
+      setLastSavedAt(new Date().toISOString());
       if (!opts?.silent) alert('Saved!');
     } catch (e) {
       console.error('[builder-editor] save failed', e);
@@ -466,6 +468,24 @@ export default function EditorClient({ pageId }: { pageId: string }) {
         <h2 className="font-bold mb-4">Properties</h2>
         <div className="text-xs text-gray-500 mb-3">
           {isDirty ? 'Unsaved changes (autosave soon)…' : 'All changes saved'}
+          {lastSavedAt ? <div className="mt-1">Last save: {new Date(lastSavedAt).toLocaleTimeString()}</div> : null}
+          <div className="mt-1">History: {history.past.length} undo · {history.future.length} redo</div>
+          <div className="mt-2 flex gap-2">
+            <button
+              className="px-2 py-1 text-xs rounded border disabled:opacity-50"
+              onClick={() => { dispatch({ type: 'Undo' }); setIsDirty(true); }}
+              disabled={!history.past.length}
+            >
+              Undo
+            </button>
+            <button
+              className="px-2 py-1 text-xs rounded border disabled:opacity-50"
+              onClick={() => { dispatch({ type: 'Redo' }); setIsDirty(true); }}
+              disabled={!history.future.length}
+            >
+              Redo
+            </button>
+          </div>
         </div>
         {selectedNode ? (
           <div className="space-y-4">
