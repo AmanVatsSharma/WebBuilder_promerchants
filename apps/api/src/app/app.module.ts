@@ -16,6 +16,7 @@ import { SitesModule } from '../modules/sites/sites.module';
 import { DomainsModule } from '../modules/domains/domains.module';
 import { ThemesModule } from '../modules/themes/themes.module';
 import { CommerceModule } from '../modules/commerce/commerce.module';
+import { MediaModule } from '../modules/media/media.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { CommerceModule } from '../modules/commerce/commerce.module';
     DomainsModule,
     ThemesModule,
     CommerceModule,
+    MediaModule,
     TypeOrmModule.forRootAsync({
       useFactory: () => ({
         type: 'postgres',
