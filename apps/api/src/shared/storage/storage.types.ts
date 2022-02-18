@@ -17,6 +17,7 @@ export interface StorageProvider {
   ensurePrefix(prefix: string): Promise<void>;
   writeBytes(key: string, content: Buffer): Promise<StorageWriteResult>;
   writeText(key: string, content: string): Promise<StorageWriteResult>;
+  readBytes(key: string): Promise<Buffer>;
   readText(key: string): Promise<string>;
   exists(key: string): Promise<boolean>;
   list(prefix: string): Promise<string[]>;

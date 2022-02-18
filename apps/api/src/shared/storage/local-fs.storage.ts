@@ -52,6 +52,11 @@ export class LocalFsStorageProvider implements StorageProvider {
     return await this.writeBytes(key, Buffer.from(content, 'utf-8'));
   }
 
+  async readBytes(key: string): Promise<Buffer> {
+    const abs = this.safeResolve(key);
+    return await fs.readFile(abs);
+  }
+
   async readText(key: string): Promise<string> {
     const abs = this.safeResolve(key);
     return await fs.readFile(abs, 'utf-8');

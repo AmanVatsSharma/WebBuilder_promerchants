@@ -18,3 +18,4 @@ The **seller-facing editor** for:
 
 ## Changelog
 - 2026-01-24: Theme version editor can seed a demo product via Commerce API for faster end-to-end theme testing.
+- 2026-01-24: Editor palette now loads from theme manifest sections, supports nested drag-reorder, and autosaves edits.
