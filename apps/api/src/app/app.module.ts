@@ -27,17 +27,32 @@ import { MediaModule } from '../modules/media/media.module';
     CommerceModule,
     MediaModule,
     TypeOrmModule.forRootAsync({
-      useFactory: () => ({
-        type: 'postgres',
-        host: process.env.DB_HOST || 'localhost',
-        port: parseInt(process.env.DB_PORT || '5432', 10),
-        username: process.env.DB_USERNAME || 'postgres',
-        password: process.env.DB_PASSWORD || 'postgres',
-        database: process.env.DB_NAME || 'webbuilder',
-        entities: [],
-        autoLoadEntities: true,
-        synchronize: process.env.NODE_ENV !== 'production', // true for dev
-      }),
+      useFactory: () => {
+        // For CI/e2e we support a pure-JS in-memory DB (sql.js) to avoid external Postgres dependency.
+        // Default remains Postgres for real deployments.
+        if (process.env.DB_TYPE === 'sqljs') {
+          return {
+            type: 'sqljs',
+            autoSave: false,
+            location: ':memory:',
+            entities: [],
+            autoLoadEntities: true,
+            synchronize: true,
+          } as const;
+        }
+
+        return {
+          type: 'postgres',
+          host: process.env.DB_HOST || 'localhost',
+          port: parseInt(process.env.DB_PORT || '5432', 10),
+          username: process.env.DB_USERNAME || 'postgres',
+          password: process.env.DB_PASSWORD || 'postgres',
+          database: process.env.DB_NAME || 'webbuilder',
+          entities: [],
+          autoLoadEntities: true,
+          synchronize: process.env.NODE_ENV !== 'production', // true for dev
+        } as const;
+      },
     }),
   ],
   controllers: [AppController],

@@ -95,6 +95,7 @@
     "react-dom": "^19.0.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.0",
+    "sql.js": "^1.13.0",
     "typeorm": "^0.3.28",
     "unzipper": "^0.12.3"
   }
