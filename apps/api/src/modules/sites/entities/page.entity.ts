@@ -19,7 +19,11 @@ export class Page {
   @Column()
   slug: string;
 
-  @Column({ type: 'jsonb', default: {} })
+  @Column({
+    // Keep Postgres-optimized jsonb in real deployments, but allow sqljs for e2e/CI.
+    type: (process.env.DB_TYPE === 'sqljs' ? 'simple-json' : 'jsonb') as any,
+    default: () => "'{}'",
+  })
   content: Record<string, any>;
 
   @Column({ name: 'site_id' })

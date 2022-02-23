@@ -15,7 +15,7 @@ import { randomUUID } from 'crypto';
 
 function safeName(name: string) {
   return (name || 'file')
-    .replaceAll('\\', '/')
+    .replace(/\\/g, '/')
     .split('/')
     .pop()!
     .replace(/[^a-zA-Z0-9._-]/g, '_')

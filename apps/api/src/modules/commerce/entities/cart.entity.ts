@@ -19,7 +19,10 @@ export class Cart {
   @Column({ name: 'site_id' })
   siteId: string;
 
-  @Column({ type: 'jsonb', default: () => "'[]'" })
+  @Column({
+    type: (process.env.DB_TYPE === 'sqljs' ? 'simple-json' : 'jsonb') as any,
+    default: () => "'[]'",
+  })
   lines: CartLine[];
 
   @Column({ type: 'varchar', default: 'USD' })
