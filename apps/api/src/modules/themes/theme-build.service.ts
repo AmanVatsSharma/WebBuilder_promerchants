@@ -45,6 +45,10 @@ function importAllowlistPlugin(): Plugin {
             ],
           };
         }
+        // Keep platform-provided deps as externals (runtime provides them).
+        if (spec === 'react' || spec === 'react/jsx-runtime' || spec === '@web-builder/theme-sdk') {
+          return { path: spec, external: true };
+        }
         return null;
       });
     },
@@ -56,7 +60,7 @@ function toSafeIdent(input: string) {
 }
 
 function normalizeThemeRelPath(p: string) {
-  const clean = p.replaceAll('\\', '/').replace(/^\.\//, '');
+  const clean = p.replace(/\\/g, '/').replace(/^\.\//, '');
   return clean.startsWith('/') ? clean.slice(1) : clean;
 }
 
@@ -135,6 +139,7 @@ export class ThemeBuildService {
         platform: 'node',
         format: 'cjs',
         target: 'es2020',
+        external: ['react', 'react/jsx-runtime', '@web-builder/theme-sdk'],
         outfile: path.join(buildRoot, 'theme.cjs'),
         sourcemap: true,
         jsx: 'automatic',
