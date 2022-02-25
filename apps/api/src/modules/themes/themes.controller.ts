@@ -13,13 +13,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ThemesService } from './themes.service';
 import { UploadThemeDto } from './dto/upload-theme.dto';
 import { UpdateThemeFileDto } from './dto/update-theme-file.dto';
-import { ThemeBuildService } from './theme-build.service';
+import { ThemeBuildQueueService } from './theme-build-queue.service';
 
 @Controller('themes')
 export class ThemesController {
   constructor(
     private readonly themesService: ThemesService,
-    private readonly themeBuildService: ThemeBuildService,
+    private readonly buildQueue: ThemeBuildQueueService,
   ) {}
 
   @Get()
@@ -58,7 +58,12 @@ export class ThemesController {
    */
   @Post('versions/:themeVersionId/build')
   build(@Param('themeVersionId') themeVersionId: string) {
-    return this.themeBuildService.buildThemeVersion(themeVersionId);
+    return this.buildQueue.enqueue(themeVersionId);
+  }
+
+  @Get('build-jobs/:jobId')
+  getBuildJob(@Param('jobId') jobId: string) {
+    return this.buildQueue.getJob(jobId);
   }
 
   @Get('versions/:themeVersionId/files')

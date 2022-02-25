@@ -13,7 +13,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { Theme } from './theme.entity';
 import { ThemeFile } from './theme-file.entity';
 
-export type ThemeVersionStatus = 'DRAFT' | 'BUILDING' | 'BUILT' | 'PUBLISHED' | 'FAILED';
+export type ThemeVersionStatus = 'DRAFT' | 'QUEUED' | 'BUILDING' | 'BUILT' | 'PUBLISHED' | 'FAILED';
 
 @Entity('theme_versions')
 export class ThemeVersion {
@@ -33,7 +33,10 @@ export class ThemeVersion {
   @Column({ type: 'varchar', default: 'DRAFT' })
   status: ThemeVersionStatus;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({
+    type: (process.env.DB_TYPE === 'sqljs' ? 'simple-json' : 'jsonb') as any,
+    nullable: true,
+  })
   manifest?: Record<string, any> | null;
 
   @Column({ type: 'text', nullable: true })
