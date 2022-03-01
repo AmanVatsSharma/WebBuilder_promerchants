@@ -89,7 +89,7 @@ export function parseThemeManifestV1(input: unknown): ValidationResult<ThemeMani
 
 export function assertThemeManifestV1(input: unknown): ThemeManifestV1 {
   const res = parseThemeManifestV1(input);
-  if (!res.ok) {
+  if (res.ok === false) {
     const msg = res.errors.join('; ');
     throw new Error(`Invalid ThemeManifestV1: ${msg}`);
   }

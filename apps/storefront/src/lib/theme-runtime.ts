@@ -14,6 +14,7 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { createRequire } from 'module';
 import vm from 'node:vm';
+import * as ThemeSdk from '@web-builder/theme-sdk';
 
 type ThemeModule = {
   default?: React.ComponentType<any>;
@@ -57,14 +58,22 @@ export async function loadThemeModule(themeVersionId: string): Promise<ThemeModu
       if (!allowedRequire(spec)) {
         throw new Error(`Disallowed require in theme runtime: ${spec}`);
       }
+      if (spec === '@web-builder/theme-sdk') {
+        return ThemeSdk;
+      }
       return realRequire(spec);
     };
+
+    const safeConsole =
+      process.env.NODE_ENV === 'production'
+        ? { log: () => undefined, warn: () => undefined, error: () => undefined, debug: () => undefined }
+        : console;
 
     const context = vm.createContext({
       module: moduleObj,
       exports: exportsObj,
       require: sandboxRequire,
-      console,
+      console: safeConsole,
       process: { env: {} }, // do not expose full process
       __dirname: path.dirname(bundle),
       __filename: bundle,

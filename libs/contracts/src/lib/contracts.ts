@@ -38,7 +38,7 @@ export interface PageContentV1 {
  * - Theme code is uploaded as a bundle (zip) and compiled by ThemeBuildService
  * - Theme settings are JSON (validated by schema) and applied at render time
  */
-export type ThemeVersionStatus = 'DRAFT' | 'BUILDING' | 'BUILT' | 'PUBLISHED' | 'FAILED';
+export type ThemeVersionStatus = 'DRAFT' | 'QUEUED' | 'BUILDING' | 'BUILT' | 'PUBLISHED' | 'FAILED';
 
 export interface ThemeSettingsSchemaV1 {
   schemaVersion: 1;
