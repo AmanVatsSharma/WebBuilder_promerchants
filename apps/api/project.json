@@ -76,6 +76,13 @@
         }
       }
     },
+    "worker": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": {
+        "command": "node dist/apps/api/main.worker.js"
+      }
+    },
     "test": {
       "options": {
         "passWithNoTests": true
