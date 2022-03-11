@@ -6,25 +6,26 @@
  * @created 2025-02-09
  */
 
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AppError } from '../errors/app.error';
+import { LoggerService } from '../../shared/logger/logger.service';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(GlobalExceptionFilter.name);
+  constructor(private readonly logger: LoggerService) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const requestId = (request.headers as any)?.requestId || request.headers['x-request-id'] || 'unknown';
+    const requestId = (request as any)?.id || (request.headers as any)?.requestId || request.headers['x-request-id'] || 'unknown';
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
     let code = 'INTERNAL_ERROR';
-    let stack: string | undefined;
+    const stack = exception instanceof Error ? exception.stack : undefined;
 
     if (exception instanceof AppError) {
       status = exception.statusCode;
@@ -37,13 +38,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       code = 'HTTP_ERROR';
     } else if (exception instanceof Error) {
       message = exception.message;
-      stack = exception.stack;
     }
 
-    this.logger.error({
-      message,
-      code,
+    // Always log stack trace + requestId for traceability.
+    this.logger.error('request failed', {
       requestId,
+      code,
+      statusCode: status,
+      message,
       stack,
       path: request.url,
       method: request.method,
