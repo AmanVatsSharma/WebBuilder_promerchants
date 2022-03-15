@@ -7,6 +7,8 @@
  */
 import { Module } from '@nestjs/common';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
+import { randomUUID } from 'crypto';
+import { LoggerService } from './logger.service';
 
 @Module({
   imports: [
@@ -16,6 +18,13 @@ import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
           ? { target: 'pino-pretty' }
           : undefined,
         autoLogging: true,
+        genReqId: (req, res) => {
+          // Reuse inbound correlation id if provided; otherwise generate a new one.
+          const header = req.headers?.['x-request-id'];
+          const requestId = (typeof header === 'string' && header.trim()) ? header.trim() : randomUUID();
+          res.setHeader('x-request-id', requestId);
+          return requestId;
+        },
         serializers: {
           req: (req) => ({
             id: req.id,
@@ -26,7 +35,8 @@ import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
       },
     }),
   ],
-  exports: [PinoLoggerModule],
+  providers: [LoggerService],
+  exports: [PinoLoggerModule, LoggerService],
 })
 export class LoggerModule {}
 
