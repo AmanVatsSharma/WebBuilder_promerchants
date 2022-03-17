@@ -16,3 +16,6 @@ The **seller-facing editor** for:
 - API calls go through `/api/*` rewrite to Nest API.
 - Builder production build is forced to webpack via `apps/builder/project.json`.
 
+## Changelog
+- 2026-01-24: Theme version editor can seed a demo product via Commerce API for faster end-to-end theme testing.
+- 2026-01-24: Editor palette now loads from theme manifest sections, supports nested drag-reorder, and autosaves edits.
