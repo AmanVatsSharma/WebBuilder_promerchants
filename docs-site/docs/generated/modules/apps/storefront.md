@@ -12,6 +12,7 @@ The **buyer-facing storefront** that serves many tenants (stores) from one deplo
 ## Theme Runtime
 - Loads compiled bundle from `storage/themes/<themeVersionId>/build/theme.cjs`
 - Uses a strict allowlisted `require` in the VM sandbox
+- Uses `manifest.routes[]` + exported `templates` to resolve which template renders for a given URL
 
 ## Preview Support
 - Builder can open: `/?previewThemeVersionId=<id>` to preview an unpublished build.
@@ -19,3 +20,5 @@ The **buyer-facing storefront** that serves many tenants (stores) from one deplo
 ## Notes
 - For dev fallback, tenant resolution may fall back to `Site.domain` or first site.
 
+## Changelog
+- 2026-01-24: Storefront now supports manifest-driven template routing (with previewThemeVersionId).
