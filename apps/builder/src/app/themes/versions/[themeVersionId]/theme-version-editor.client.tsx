@@ -116,6 +116,9 @@ export default function ThemeVersionEditorClient({ themeVersionId }: { themeVers
           <Link href="/themes" className="px-3 py-2 rounded border">
             Back
           </Link>
+          <Link href={`/themes/versions/${themeVersionId}/settings`} className="px-3 py-2 rounded border">
+            Settings
+          </Link>
           <button onClick={save} className="px-3 py-2 rounded bg-blue-600 text-white">
             Save
           </button>
