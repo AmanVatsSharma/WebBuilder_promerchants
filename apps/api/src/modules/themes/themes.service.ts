@@ -20,6 +20,8 @@ import { ThemePublishAudit } from './entities/theme-publish-audit.entity';
 import { UploadThemeDto } from './dto/upload-theme.dto';
 import type { UpdateThemeSettingsDto } from './dto/update-theme-settings.dto';
 import type { PublishThemeSettingsDto } from './dto/publish-theme-settings.dto';
+import type { UpdateThemeLayoutDto } from './dto/update-theme-layout.dto';
+import type { PublishThemeLayoutDto } from './dto/publish-theme-layout.dto';
 import { STORAGE_PROVIDER } from '../../shared/storage/storage.constants';
 import type { StorageProvider } from '../../shared/storage/storage.types';
 import * as unzipper from 'unzipper';
@@ -43,6 +45,11 @@ type SiteThemeSettingsStored = {
   settings: Record<string, unknown>;
 };
 
+type SiteThemeLayoutStored = {
+  themeVersionId: string | null;
+  layout: Record<string, unknown>;
+};
+
 @Injectable()
 export class ThemesService {
   private readonly logger = new Logger(ThemesService.name);
@@ -64,6 +71,23 @@ export class ThemesService {
     return `sites/${siteId}/theme/settings/published.json`;
   }
 
+  private normalizeTemplateId(templateId: string) {
+    const clean = String(templateId || '').replace(/\\/g, '/').replace(/^\/+/, '');
+    if (!clean) throw new BadRequestException('templateId is required');
+    if (clean.includes('..')) throw new BadRequestException('templateId traversal not allowed');
+    return clean;
+  }
+
+  private draftLayoutKey(siteId: string, templateId: string) {
+    const tid = this.normalizeTemplateId(templateId);
+    return `sites/${siteId}/theme/layouts/draft/${tid}.json`;
+  }
+
+  private publishedLayoutKey(siteId: string, templateId: string) {
+    const tid = this.normalizeTemplateId(templateId);
+    return `sites/${siteId}/theme/layouts/published/${tid}.json`;
+  }
+
   private async readSettingsKey(key: string): Promise<SiteThemeSettingsStored> {
     const exists = await this.storage.exists(key);
     if (!exists) return { themeVersionId: null, settings: {} };
@@ -76,6 +100,21 @@ export class ThemesService {
       };
     } catch {
       return { themeVersionId: null, settings: {} };
+    }
+  }
+
+  private async readLayoutKey(key: string): Promise<SiteThemeLayoutStored> {
+    const exists = await this.storage.exists(key);
+    if (!exists) return { themeVersionId: null, layout: {} };
+    const text = await this.storage.readText(key);
+    try {
+      const parsed = JSON.parse(text) as SiteThemeLayoutStored;
+      return {
+        themeVersionId: typeof parsed?.themeVersionId === 'string' ? parsed.themeVersionId : null,
+        layout: parsed?.layout && typeof parsed.layout === 'object' ? (parsed.layout as Record<string, unknown>) : {},
+      };
+    } catch {
+      return { themeVersionId: null, layout: {} };
     }
   }
 
@@ -140,6 +179,44 @@ export class ThemesService {
     this.logger.log(`publishThemeSettings siteId=${siteId} themeVersionId=${themeVersionId}`);
 
     return { siteId, published: toPublish };
+  }
+
+  async getThemeLayouts(siteId: string, templateId: string) {
+    const [draft, published] = await Promise.all([
+      this.readLayoutKey(this.draftLayoutKey(siteId, templateId)),
+      this.readLayoutKey(this.publishedLayoutKey(siteId, templateId)),
+    ]);
+    return { siteId, templateId: this.normalizeTemplateId(templateId), draft, published };
+  }
+
+  async updateDraftThemeLayout(siteId: string, dto: UpdateThemeLayoutDto) {
+    const install = await this.getInstallForSite(siteId);
+    const themeVersionId = dto.themeVersionId || install.draftThemeVersionId || install.publishedThemeVersionId;
+    if (!themeVersionId) throw new BadRequestException('themeVersionId is required (or install a theme first)');
+    if (!dto.templateId) throw new BadRequestException('templateId is required');
+    if (!dto.layout || typeof dto.layout !== 'object') throw new BadRequestException('layout is required');
+
+    const key = this.draftLayoutKey(siteId, dto.templateId);
+    const stored: SiteThemeLayoutStored = { themeVersionId, layout: dto.layout };
+    await this.storage.ensurePrefix(path.posix.dirname(key));
+    await this.storage.writeText(key, JSON.stringify(stored, null, 2));
+    this.logger.log(`updateDraftThemeLayout siteId=${siteId} themeVersionId=${themeVersionId} templateId=${dto.templateId}`);
+    return { siteId, templateId: this.normalizeTemplateId(dto.templateId), draft: stored };
+  }
+
+  async publishThemeLayout(siteId: string, dto: PublishThemeLayoutDto) {
+    const install = await this.getInstallForSite(siteId);
+    const themeVersionId = dto.themeVersionId || install.draftThemeVersionId || install.publishedThemeVersionId;
+    if (!themeVersionId) throw new BadRequestException('themeVersionId is required (or install a theme first)');
+    if (!dto.templateId) throw new BadRequestException('templateId is required');
+
+    const draft = await this.readLayoutKey(this.draftLayoutKey(siteId, dto.templateId));
+    const stored: SiteThemeLayoutStored = { themeVersionId, layout: draft.layout || {} };
+    const key = this.publishedLayoutKey(siteId, dto.templateId);
+    await this.storage.ensurePrefix(path.posix.dirname(key));
+    await this.storage.writeText(key, JSON.stringify(stored, null, 2));
+    this.logger.log(`publishThemeLayout siteId=${siteId} themeVersionId=${themeVersionId} templateId=${dto.templateId}`);
+    return { siteId, templateId: this.normalizeTemplateId(dto.templateId), published: stored };
   }
 
   async uploadThemeBundle(dto: UploadThemeDto, file: Express.Multer.File) {

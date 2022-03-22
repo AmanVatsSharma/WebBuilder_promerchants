@@ -33,6 +33,9 @@ This module supports:
 - `GET /api/sites/:siteId/theme/settings`
 - `PUT /api/sites/:siteId/theme/settings/draft` body `{ themeVersionId?, settings }`
 - `POST /api/sites/:siteId/theme/settings/publish` body `{ themeVersionId? }`
+- `GET /api/sites/:siteId/theme/layouts?templateId=...`
+- `PUT /api/sites/:siteId/theme/layouts/draft` body `{ themeVersionId?, templateId, layout }`
+- `POST /api/sites/:siteId/theme/layouts/publish` body `{ themeVersionId?, templateId }`
 
 ## Storage (temporary)
 Theme sources are stored on local filesystem under:
@@ -51,5 +54,6 @@ This will be migrated into a richer `StorageProvider` abstraction (S3 compatible
 ## Changelog
 - 2026-01-24: Theme build now exports `manifest` + `templates` to enable storefront manifest-driven routing.
 - 2026-01-24: Added per-site theme settings (draft + published) backed by StorageProvider.
+- 2026-01-24: Added per-site template layouts (draft + published) backed by StorageProvider.
 
 

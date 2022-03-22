@@ -6,10 +6,12 @@
  * Last-updated: 2025-12-16
  */
 
-import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { ThemesService } from './themes.service';
 import { UpdateThemeSettingsDto } from './dto/update-theme-settings.dto';
 import { PublishThemeSettingsDto } from './dto/publish-theme-settings.dto';
+import { UpdateThemeLayoutDto } from './dto/update-theme-layout.dto';
+import { PublishThemeLayoutDto } from './dto/publish-theme-layout.dto';
 
 @Controller('sites')
 export class SitesThemeController {
@@ -41,6 +43,21 @@ export class SitesThemeController {
   @Post(':siteId/theme/settings/publish')
   publishSettings(@Param('siteId') siteId: string, @Body() dto: PublishThemeSettingsDto) {
     return this.themesService.publishThemeSettings(siteId, dto);
+  }
+
+  @Get(':siteId/theme/layouts')
+  getLayouts(@Param('siteId') siteId: string, @Query('templateId') templateId: string) {
+    return this.themesService.getThemeLayouts(siteId, templateId);
+  }
+
+  @Put(':siteId/theme/layouts/draft')
+  updateDraftLayout(@Param('siteId') siteId: string, @Body() dto: UpdateThemeLayoutDto) {
+    return this.themesService.updateDraftThemeLayout(siteId, dto);
+  }
+
+  @Post(':siteId/theme/layouts/publish')
+  publishLayout(@Param('siteId') siteId: string, @Body() dto: PublishThemeLayoutDto) {
+    return this.themesService.publishThemeLayout(siteId, dto);
   }
 
   @Post(':siteId/theme/publish')
