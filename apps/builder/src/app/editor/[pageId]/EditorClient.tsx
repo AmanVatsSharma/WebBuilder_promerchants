@@ -40,6 +40,9 @@ export default function EditorClient({ pageId }: { pageId: string }) {
     { type: 'HeroSection', label: 'Hero Section' },
     { type: 'TextBlock', label: 'Text Block' },
   ]);
+  const [sectionSchemas, setSectionSchemas] = useState<
+    Record<string, { fields: Array<{ type: string; id: string; label: string; default: any; options?: any[]; min?: number; max?: number }> }>
+  >({});
   const [isDirty, setIsDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const didLoadInitialRef = React.useRef(false);
@@ -200,17 +203,40 @@ export default function EditorClient({ pageId }: { pageId: string }) {
             .filter((s: any) => s && typeof s.type === 'string' && typeof s.label === 'string')
             .map((s: any) => ({ type: s.type, label: s.label }));
           if (mapped.length) setPalette(mapped);
+
+          const schemas: Record<string, any> = {};
+          for (const s of sections) {
+            if (s?.type && s?.propsSchema?.fields && Array.isArray(s.propsSchema.fields)) {
+              schemas[String(s.type)] = { fields: s.propsSchema.fields };
+            }
+          }
+          setSectionSchemas(schemas);
         }
       })
       .catch((e) => console.error('[builder-editor] palette load failed', e));
   }, [siteId]);
+
+  const defaultPropsForType = (type: string): Record<string, JsonValue> => {
+    const schema = sectionSchemas[type];
+    if (schema?.fields?.length) {
+      const out: Record<string, JsonValue> = {};
+      for (const f of schema.fields) {
+        if (f?.id) out[String(f.id)] = (f.default ?? '') as JsonValue;
+      }
+      return out;
+    }
+    // fallback
+    if (type === 'HeroSection') return { title: 'New Hero' };
+    if (type === 'TextBlock') return { text: 'New Text' };
+    return {};
+  };
 
   const handleAddComponent = (type: string) => {
     console.debug('[builder-editor] add component', { type, selectedId });
     const newComponent: PageNode = {
       type,
       id: crypto.randomUUID(),
-      props: (type === 'HeroSection' ? { title: 'New Hero' } : { text: 'New Text' }) as Record<string, JsonValue>
+      props: defaultPropsForType(type),
     };
     const targetId = selectedId || 'root';
     dispatch({ type: 'InsertNode', parentId: targetId, node: newComponent });
@@ -491,17 +517,66 @@ export default function EditorClient({ pageId }: { pageId: string }) {
           <div className="space-y-4">
             <div className="text-sm text-gray-500 mb-2">ID: {selectedNode.id}</div>
             <div className="text-sm text-gray-500 mb-2">Type: {selectedNode.type}</div>
-            {Object.entries(selectedNode.props || {}).map(([key, val]) => (
-              <div key={key}>
-                <label className="block text-sm font-medium mb-1">{key}</label>
-                <input 
-                  type="text" 
-                  value={String(val ?? '')}
-                  onChange={(e) => handleUpdateProp(key, e.target.value)}
-                  className="w-full border p-1 rounded"
-                />
+            {sectionSchemas[selectedNode.type]?.fields?.length ? (
+              <div className="space-y-4">
+                {sectionSchemas[selectedNode.type].fields.map((f) => {
+                  const val = (selectedNode.props || {})[f.id] as any;
+                  return (
+                    <div key={f.id}>
+                      <label className="block text-sm font-medium mb-1">{f.label}</label>
+                      {f.type === 'color' ? (
+                        <input
+                          type="color"
+                          value={typeof val === 'string' ? val : String(f.default || '#000000')}
+                          onChange={(e) => handleUpdateProp(f.id, e.target.value)}
+                        />
+                      ) : f.type === 'number' ? (
+                        <input
+                          type="number"
+                          value={typeof val === 'number' ? val : Number(f.default || 0)}
+                          min={f.min}
+                          max={f.max}
+                          onChange={(e) => handleUpdateProp(f.id, Number(e.target.value))}
+                          className="w-full border p-1 rounded"
+                        />
+                      ) : f.type === 'select' ? (
+                        <select
+                          value={typeof val === 'string' ? val : String(f.default || '')}
+                          onChange={(e) => handleUpdateProp(f.id, e.target.value)}
+                          className="w-full border p-1 rounded"
+                        >
+                          {(f.options || []).map((o: any) => (
+                            <option key={String(o.value)} value={String(o.value)}>
+                              {String(o.label)}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={typeof val === 'string' ? val : String(f.default || '')}
+                          onChange={(e) => handleUpdateProp(f.id, e.target.value)}
+                          className="w-full border p-1 rounded"
+                        />
+                      )}
+                      <div className="text-xs text-gray-400 mt-1">id: {f.id}</div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            ) : (
+              Object.entries(selectedNode.props || {}).map(([key, val]) => (
+                <div key={key}>
+                  <label className="block text-sm font-medium mb-1">{key}</label>
+                  <input
+                    type="text"
+                    value={String(val ?? '')}
+                    onChange={(e) => handleUpdateProp(key, e.target.value)}
+                    className="w-full border p-1 rounded"
+                  />
+                </div>
+              ))
+            )}
           </div>
         ) : (
           <p className="text-gray-500">Select a component</p>

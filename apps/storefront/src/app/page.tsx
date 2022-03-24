@@ -11,9 +11,9 @@
 
 import { headers } from 'next/headers';
 import { PageRenderer, registerCoreComponents } from '@web-builder/builder-core';
-import { resolveInstalledThemeVersion, resolvePageContentBySlug, resolveSiteByHost, resolveThemeSettings } from '../lib/tenant';
+import { resolveInstalledThemeVersion, resolvePageContentBySlug, resolveSiteByHost, resolveThemeLayout, resolveThemeSettings } from '../lib/tenant';
 import { loadThemeModule } from '../lib/theme-runtime';
-import { resolveTemplateForPath } from '../lib/theme-routing';
+import { resolveTemplateMatchForPath } from '../lib/theme-routing';
 import { createApiCommerceAdapter } from '../lib/commerce-adapter';
 
 registerCoreComponents();
@@ -41,17 +41,20 @@ export default async function Home({ searchParams }: { searchParams?: Promise<Re
   if (themeVersionId) {
     const mod = await loadThemeModule(themeVersionId);
     const Layout = mod?.default || null;
-    const Template =
-      mod?.manifest && mod?.templates ? resolveTemplateForPath({ manifest: mod.manifest, templates: mod.templates, pathname: '/' }) : null;
+    const match =
+      mod?.manifest && mod?.templates ? resolveTemplateMatchForPath({ manifest: mod.manifest, templates: mod.templates, pathname: '/' }) : null;
+    const Template = match?.Template || null;
     const settings = await resolveThemeSettings(site.id);
     const selectedSettings = previewThemeVersionId ? settings?.draft?.settings : settings?.published?.settings;
+    const layouts = match?.templateId ? await resolveThemeLayout(site.id, match.templateId) : null;
+    const selectedLayout = previewThemeVersionId ? layouts?.draft?.layout : layouts?.published?.layout;
     const commerce = createApiCommerceAdapter(site.id);
 
     if (Layout && Template) {
       return (
         <main>
           <Layout sdk={{ settings: selectedSettings || {}, commerce }}>
-            <Template />
+            <Template layout={selectedLayout || null} />
           </Layout>
         </main>
       );
