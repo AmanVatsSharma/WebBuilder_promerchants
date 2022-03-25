@@ -131,4 +131,31 @@ export async function resolveThemeSettings(siteId: string): Promise<{
   }
 }
 
+export async function resolveThemeLayout(siteId: string, templateId: string): Promise<{
+  draft: { themeVersionId: string | null; layout: Record<string, unknown> };
+  published: { themeVersionId: string | null; layout: Record<string, unknown> };
+} | null> {
+  try {
+    const res = await fetch(
+      `${apiBase()}/sites/${encodeURIComponent(siteId)}/theme/layouts?templateId=${encodeURIComponent(templateId)}`,
+      { cache: 'no-store' },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as any;
+    return {
+      draft: {
+        themeVersionId: typeof data?.draft?.themeVersionId === 'string' ? data.draft.themeVersionId : null,
+        layout: (data?.draft?.layout && typeof data.draft.layout === 'object' ? data.draft.layout : {}) as Record<string, unknown>,
+      },
+      published: {
+        themeVersionId: typeof data?.published?.themeVersionId === 'string' ? data.published.themeVersionId : null,
+        layout: (data?.published?.layout && typeof data.published.layout === 'object' ? data.published.layout : {}) as Record<string, unknown>,
+      },
+    };
+  } catch (e) {
+    console.error('[storefront] resolveThemeLayout error', e);
+    return null;
+  }
+}
+
 

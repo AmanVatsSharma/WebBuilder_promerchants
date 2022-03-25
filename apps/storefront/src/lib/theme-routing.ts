@@ -32,11 +32,11 @@ function routePatternToRegex(pattern: string) {
   return new RegExp(re);
 }
 
-export function resolveTemplateForPath(opts: {
+export function resolveTemplateMatchForPath(opts: {
   manifest: unknown;
   templates: ThemeTemplateMap | undefined;
   pathname: string;
-}): React.ComponentType<any> | null {
+}): { templateId: string; Template: React.ComponentType<any> } | null {
   const templates = opts.templates || {};
   const manifest = assertThemeManifestV1(opts.manifest) as ThemeManifestV1;
   const pathname = normalizePathname(opts.pathname);
@@ -44,15 +44,29 @@ export function resolveTemplateForPath(opts: {
   const routes = manifest.routes || [];
   // First: exact match
   const exact = routes.find((r) => normalizePathname(r.path) === pathname);
-  if (exact) return templates[exact.template] || null;
+  if (exact) {
+    const Template = templates[exact.template] || null;
+    return Template ? { templateId: exact.template, Template } : null;
+  }
 
   // Second: basic param routes (e.g. "/:slug")
   for (const r of routes) {
     if (!r.path.includes(':')) continue;
     const re = routePatternToRegex(r.path);
-    if (re.test(pathname)) return templates[r.template] || null;
+    if (re.test(pathname)) {
+      const Template = templates[r.template] || null;
+      return Template ? { templateId: r.template, Template } : null;
+    }
   }
 
   return null;
 }
 
+export function resolveTemplateForPath(opts: {
+  manifest: unknown;
+  templates: ThemeTemplateMap | undefined;
+  pathname: string;
+}): React.ComponentType<any> | null {
+  const match = resolveTemplateMatchForPath(opts);
+  return match?.Template || null;
+}
