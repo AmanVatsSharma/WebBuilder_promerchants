@@ -66,9 +66,20 @@ export interface ThemeManifestV1 {
   routes?: Array<{ path: string; template: string }>;
   /**
    * Optional list of sections/components that the Builder can offer in its palette.
-   * This is intentionally lightweight in v1; richer schemas come later.
+   * v1 includes a simple props schema so the Builder can render a better property panel.
    */
-  sections?: Array<{ type: string; label: string }>;
+  sections?: Array<{
+    type: string;
+    label: string;
+    propsSchema?: {
+      fields: Array<
+        | { type: 'color'; id: string; label: string; default: string }
+        | { type: 'text'; id: string; label: string; default: string }
+        | { type: 'select'; id: string; label: string; default: string; options: Array<{ label: string; value: string }> }
+        | { type: 'number'; id: string; label: string; default: number; min?: number; max?: number }
+      >;
+    };
+  }>;
   /** Settings schema (theme-level customization) */
   settingsSchema?: ThemeSettingsSchemaV1;
 }

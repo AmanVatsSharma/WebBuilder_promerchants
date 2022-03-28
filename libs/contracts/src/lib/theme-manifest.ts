@@ -73,6 +73,29 @@ export function parseThemeManifestV1(input: unknown): ValidationResult<ThemeMani
         }
         if (!isNonEmptyString(s['type'])) pushErr(errors, `${p}.type`, 'must be a non-empty string');
         if (!isNonEmptyString(s['label'])) pushErr(errors, `${p}.label`, 'must be a non-empty string');
+
+        const propsSchema = s['propsSchema'];
+        if (propsSchema !== undefined) {
+          if (!isRecord(propsSchema)) {
+            pushErr(errors, `${p}.propsSchema`, 'must be an object');
+          } else {
+            const fields = propsSchema['fields'];
+            if (!Array.isArray(fields)) {
+              pushErr(errors, `${p}.propsSchema.fields`, 'must be an array');
+            } else {
+              fields.forEach((f, j) => {
+                const fp = `${p}.propsSchema.fields[${j}]`;
+                if (!isRecord(f)) {
+                  pushErr(errors, fp, 'must be an object');
+                  return;
+                }
+                if (!isNonEmptyString(f['type'])) pushErr(errors, `${fp}.type`, 'must be a non-empty string');
+                if (!isNonEmptyString(f['id'])) pushErr(errors, `${fp}.id`, 'must be a non-empty string');
+                if (!isNonEmptyString(f['label'])) pushErr(errors, `${fp}.label`, 'must be a non-empty string');
+              });
+            }
+          }
+        }
       });
     }
   }
