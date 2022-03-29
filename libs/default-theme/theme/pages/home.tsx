@@ -9,11 +9,23 @@
 import React from 'react';
 import { Money, ProductCard, useProducts } from '@web-builder/theme-sdk';
 
-export default function HomePage() {
-  const products = useProducts();
+type PageNode = { id?: string; type?: string; props?: any; children?: PageNode[] };
 
-  return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: 24 }}>
+function renderNode(node: PageNode): React.ReactNode {
+  if (!node || !node.type) return null;
+  if (node.type === 'Container') {
+    return (
+      <div>
+        {(node.children || []).map((c) => (
+          <React.Fragment key={c.id || Math.random()}>{renderNode(c)}</React.Fragment>
+        ))}
+      </div>
+    );
+  }
+  if (node.type === 'HeroSection') {
+    const title = node.props?.title || 'Welcome';
+    const subtitle = node.props?.subtitle || '';
+    return (
       <section
         style={{
           borderRadius: 18,
@@ -22,40 +34,30 @@ export default function HomePage() {
           color: '#fff',
         }}
       >
-        <div style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.05 }}>Build. Publish. Sell.</div>
-        <div style={{ fontSize: 18, opacity: 0.9, marginTop: 12 }}>
-          A default ecommerce theme designed for speed and conversion.
-        </div>
-        <div style={{ marginTop: 18, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <a
-            href="/products"
-            style={{
-              background: '#fff',
-              color: '#111',
-              padding: '10px 14px',
-              borderRadius: 12,
-              fontWeight: 600,
-              textDecoration: 'none',
-            }}
-          >
-            Shop products
-          </a>
-          <a
-            href="/"
-            style={{
-              background: 'rgba(255,255,255,0.18)',
-              color: '#fff',
-              padding: '10px 14px',
-              borderRadius: 12,
-              fontWeight: 600,
-              textDecoration: 'none',
-              border: '1px solid rgba(255,255,255,0.25)',
-            }}
-          >
-            Learn more
-          </a>
-        </div>
+        <div style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.05 }}>{String(title)}</div>
+        {subtitle ? (
+          <div style={{ fontSize: 18, opacity: 0.9, marginTop: 12 }}>{String(subtitle)}</div>
+        ) : null}
       </section>
+    );
+  }
+  if (node.type === 'TextBlock') {
+    return (
+      <div style={{ padding: 18, border: '1px solid #eee', borderRadius: 14, marginTop: 14 }}>
+        <div style={{ whiteSpace: 'pre-wrap' }}>{String(node.props?.text || '')}</div>
+      </div>
+    );
+  }
+  return null;
+}
+
+export default function HomePage({ layout }: { layout?: any }) {
+  const products = useProducts();
+
+  return (
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: 24 }}>
+      {/* Theme-driven layout (draft/published) if provided by storefront */}
+      {layout && typeof layout === 'object' ? renderNode(layout as PageNode) : null}
 
       <section style={{ marginTop: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16 }}>
