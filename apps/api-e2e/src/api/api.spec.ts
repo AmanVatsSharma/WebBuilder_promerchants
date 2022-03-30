@@ -1,4 +1,8 @@
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+import React from 'react';
+import { renderToString } from 'react-dom/server';
 
 describe('GET /api', () => {
   it('should return a message', async () => {
@@ -63,6 +67,38 @@ describe('Theme lifecycle (seed -> build -> install -> publish) + commerce + set
     const settingsRes = await axios.get(`/api/sites/${siteId}/theme/settings`);
     expect(settingsRes.status).toBe(200);
     expect(settingsRes.data.published.settings.brandName).toBe('E2E Brand');
+
+    // 5b) Template layouts (draft -> publish) and ensure theme templates consume `layout`
+    const draftLayoutRes = await axios.put(`/api/sites/${siteId}/theme/layouts/draft`, {
+      themeVersionId,
+      templateId: 'pages/home',
+      layout: {
+        type: 'Container',
+        id: 'root',
+        children: [
+          {
+            type: 'HeroSection',
+            id: 'hero-1',
+            props: { title: 'E2E Hero Title', subtitle: 'E2E Subtitle' },
+          },
+        ],
+        props: {},
+      },
+    });
+    expect(draftLayoutRes.status).toBe(200);
+
+    const publishLayoutRes = await axios.post(`/api/sites/${siteId}/theme/layouts/publish`, { themeVersionId, templateId: 'pages/home' });
+    expect(publishLayoutRes.status).toBe(201);
+
+    // Validate the built theme bundle can render the layout prop (storefront uses same contract)
+    const bundlePath = path.join(process.cwd(), 'storage', 'themes', themeVersionId, 'build', 'theme.cjs');
+    expect(fs.existsSync(bundlePath)).toBe(true);
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mod = require(bundlePath);
+    expect(mod?.templates?.['pages/home']).toBeTruthy();
+    const Home = mod.templates['pages/home'];
+    const html = renderToString(React.createElement(Home, { layout: draftLayoutRes.data?.draft?.layout || null }));
+    expect(html).toContain('E2E Hero Title');
 
     // 6) Commerce (seed product, list products, cart add)
     const seedProdRes = await axios.post(`/api/commerce/sites/${siteId}/products/seed`);

@@ -10,6 +10,9 @@ export default {
       tsconfig: '<rootDir>/tsconfig.spec.json',
     }],
   },
+  moduleNameMapper: {
+    '^@web-builder/theme-sdk$': '<rootDir>/src/support/theme-sdk-shim.js',
+  },
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: '../../coverage/api-e2e',
 };
