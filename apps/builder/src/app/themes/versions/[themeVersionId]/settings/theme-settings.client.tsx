@@ -168,6 +168,26 @@ export default function ThemeSettingsClient({ themeVersionId }: { themeVersionId
               </div>
             </div>
           ) : null}
+
+          {siteId && manifest?.routes?.length ? (
+            <div className="mt-6">
+              <div className="text-sm font-semibold">Template layouts</div>
+              <div className="text-xs text-gray-500 mt-1">
+                Edit per-template layouts (sections on page) that the storefront will render.
+              </div>
+              <div className="mt-3 space-y-2">
+                {Array.from(new Set(manifest.routes.map((r) => r.template))).map((tid) => (
+                  <Link
+                    key={tid}
+                    href={`/sites/${encodeURIComponent(siteId)}/theme/templates/${tid}`}
+                    className="block px-3 py-2 rounded border text-sm font-mono hover:bg-gray-50"
+                  >
+                    {tid}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </aside>
 
         <main className="flex-1 overflow-auto p-6 bg-gray-50">

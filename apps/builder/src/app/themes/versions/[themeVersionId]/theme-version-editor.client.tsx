@@ -29,6 +29,8 @@ export default function ThemeVersionEditorClient({ themeVersionId }: { themeVers
   const [siteId, setSiteId] = useState<string>('');
   const [themeVersion, setThemeVersion] = useState<ThemeVersion | null>(null);
   const [theme, setTheme] = useState<Theme | null>(null);
+  const [lastBuildJobId, setLastBuildJobId] = useState<string | null>(null);
+  const [buildJobStatus, setBuildJobStatus] = useState<string | null>(null);
 
   const selectedFile = useMemo(() => files.find((f) => f.path === selectedPath) || null, [files, selectedPath]);
 
@@ -66,12 +68,31 @@ export default function ThemeVersionEditorClient({ themeVersionId }: { themeVers
   };
 
   const build = async () => {
-    const res = await apiPost<{ themeVersionId: string; status: string; output?: string; error?: string }>(
+    const res = await apiPost<{ jobId: string; status: string; themeVersionId: string; error?: string }>(
       `/api/themes/versions/${themeVersionId}/build`,
     );
-    console.debug('[builder-themes] build result', res);
+    console.debug('[builder-themes] build enqueued', res);
+    setLastBuildJobId(res.jobId);
+    setBuildJobStatus(res.status);
+
+    // Poll job status
+    for (let i = 0; i < 40; i++) {
+      const job = await apiGet<{ jobId: string; status: string; error?: string }>(`/api/themes/build-jobs/${res.jobId}`);
+      setBuildJobStatus(job.status);
+      if (job.status === 'SUCCEEDED') {
+        await reload();
+        alert('Build: SUCCEEDED');
+        return;
+      }
+      if (job.status === 'FAILED') {
+        await reload();
+        alert(`Build: FAILED${job.error ? `\\n${job.error}` : ''}`);
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 250));
+    }
     await reload();
-    alert(`Build: ${res.status}`);
+    alert('Build: still running (check job status)');
   };
 
   const install = async () => {
@@ -94,6 +115,7 @@ export default function ThemeVersionEditorClient({ themeVersionId }: { themeVers
 
   const publish = async () => {
     if (!siteId) return alert('Enter siteId');
+    if (themeVersion?.status !== 'BUILT') return alert('Build the theme successfully before publishing.');
     const res = await apiPost(`/api/sites/${siteId}/theme/publish`, { themeVersionId });
     console.debug('[builder-themes] publish result', res);
     alert('Published!');
@@ -213,6 +235,11 @@ export default function ThemeVersionEditorClient({ themeVersionId }: { themeVers
             <div className="text-sm text-gray-600 mt-1">
               {themeVersion?.status ? <span>{themeVersion.status}</span> : <span>Unknown</span>}
             </div>
+            {lastBuildJobId ? (
+              <div className="text-xs text-gray-500 mt-1">
+                jobId: <span className="font-mono">{lastBuildJobId}</span> {buildJobStatus ? `(${buildJobStatus})` : ''}
+              </div>
+            ) : null}
             {themeVersion?.buildLog && (
               <pre className="mt-2 text-xs bg-gray-50 border rounded p-2 overflow-auto max-h-40">
                 {themeVersion.buildLog}

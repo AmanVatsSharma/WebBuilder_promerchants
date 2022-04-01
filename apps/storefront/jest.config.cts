@@ -12,7 +12,8 @@ const config = {
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   coverageDirectory: '../../coverage/apps/storefront',
-  testEnvironment: 'jsdom',
+  testEnvironment: 'node',
+  forceExit: true,
 };
 
 module.exports = createJestConfig(config);
