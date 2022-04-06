@@ -1,0 +1,18 @@
+{
+  "themeVersionId": "f6377318-0dad-40bc-a43e-4e561c19e854",
+  "layout": {
+    "type": "Container",
+    "id": "root",
+    "children": [
+      {
+        "type": "HeroSection",
+        "id": "hero-1",
+        "props": {
+          "title": "E2E Hero Title",
+          "subtitle": "E2E Subtitle"
+        }
+      }
+    ],
+    "props": {}
+  }
+}
