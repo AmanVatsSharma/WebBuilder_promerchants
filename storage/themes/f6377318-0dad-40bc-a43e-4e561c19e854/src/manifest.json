@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "name": "Default Ecommerce",
+  "version": "1.0.0",
+  "entry": "entry.tsx",
+  "routes": [
+    { "path": "/", "template": "pages/home" },
+    { "path": "/products/:handle", "template": "pages/product" }
+  ],
+  "sections": [
+    {
+      "type": "HeroSection",
+      "label": "Hero Section",
+      "propsSchema": {
+        "fields": [
+          { "type": "text", "id": "title", "label": "Title", "default": "Build. Publish. Sell." },
+          { "type": "text", "id": "subtitle", "label": "Subtitle", "default": "A default ecommerce theme designed for speed and conversion." }
+        ]
+      }
+    },
+    {
+      "type": "TextBlock",
+      "label": "Text Block",
+      "propsSchema": {
+        "fields": [
+          { "type": "text", "id": "text", "label": "Text", "default": "Your text here…" }
+        ]
+      }
+    }
+  ],
+  "settingsSchema": {
+    "schemaVersion": 1,
+    "groups": [
+      {
+        "id": "brand",
+        "label": "Brand",
+        "fields": [
+          { "type": "text", "id": "brandName", "label": "Brand name", "default": "Default Ecommerce" },
+          { "type": "color", "id": "primaryColor", "label": "Primary color", "default": "#2563eb" }
+        ]
+      }
+    ]
+  }
+}
+
+
