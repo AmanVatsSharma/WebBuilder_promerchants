@@ -8,8 +8,9 @@
  * - Upload uses multipart/form-data with field `bundle`
  */
 
-import { Body, Controller, Get, Param, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Request } from 'express';
 import { ThemesService } from './themes.service';
 import { UploadThemeDto } from './dto/upload-theme.dto';
 import { UpdateThemeFileDto } from './dto/update-theme-file.dto';
@@ -57,8 +58,11 @@ export class ThemesController {
    * Output: storage/themes/<themeVersionId>/build/theme.cjs
    */
   @Post('versions/:themeVersionId/build')
-  build(@Param('themeVersionId') themeVersionId: string) {
-    return this.buildQueue.enqueue(themeVersionId);
+  build(@Param('themeVersionId') themeVersionId: string, @Req() req: Request) {
+    // pino-http genReqId sets req.id; fallback to header if present.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const requestId = (req as any)?.id || (req.headers as any)?.requestId || req.headers['x-request-id'] || null;
+    return this.buildQueue.enqueue(themeVersionId, typeof requestId === 'string' ? requestId : null);
   }
 
   @Get('build-jobs/:jobId')

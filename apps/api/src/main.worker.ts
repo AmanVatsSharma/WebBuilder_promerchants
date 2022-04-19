@@ -6,15 +6,15 @@
  * Last-updated: 2026-01-24
  * Notes:
  * - Run this as a separate process from the API server for isolation and independent scaling.
- * - Uses AppModule so it shares DB, storage, and logging configuration.
+ * - Uses WorkerModule so processors don't run in the API HTTP process.
  */
 
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
-import { AppModule } from './app/app.module';
+import { WorkerModule } from './app/worker.module';
 
 async function bootstrapWorker() {
-  const app = await NestFactory.createApplicationContext(AppModule, { bufferLogs: true });
+  const app = await NestFactory.createApplicationContext(WorkerModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
 
   const logger = app.get(Logger);
