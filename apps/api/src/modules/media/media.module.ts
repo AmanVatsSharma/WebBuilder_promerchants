@@ -8,11 +8,12 @@
 
 import { Module } from '@nestjs/common';
 import { StorageModule } from '../../shared/storage/storage.module';
+import { LoggerModule } from '../../shared/logger/logger.module';
 import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
 
 @Module({
-  imports: [StorageModule],
+  imports: [StorageModule, LoggerModule],
   controllers: [MediaController],
   providers: [MediaService],
   exports: [MediaService],
