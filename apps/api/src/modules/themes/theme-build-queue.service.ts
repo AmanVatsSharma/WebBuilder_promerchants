@@ -9,7 +9,7 @@
  * - ThemeBuildJob is the durable API-facing ledger for job status.
  */
 
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Queue } from 'bullmq';
@@ -18,6 +18,7 @@ import { ThemeBuildService } from './theme-build.service';
 import { ThemeVersion } from './entities/theme-version.entity';
 import { ThemeBuildJob, type ThemeBuildJobStatus } from './entities/theme-build-job.entity';
 import { THEME_BUILD_QUEUE_NAME } from '../../shared/queue/queue.constants';
+import { LoggerService } from '../../shared/logger/logger.service';
 
 type PublicBuildJob = {
   jobId: string;
@@ -37,8 +38,6 @@ function parseIntSafe(v: string | undefined, fallback: number) {
 
 @Injectable()
 export class ThemeBuildQueueService {
-  private readonly logger = new Logger(ThemeBuildQueueService.name);
-
   constructor(
     // buildSvc is intentionally unused here; worker does the heavy lifting.
     // We keep it injected so older wiring/tests that expect it still compile.
@@ -47,6 +46,7 @@ export class ThemeBuildQueueService {
     @InjectRepository(ThemeVersion) private readonly versionRepo: Repository<ThemeVersion>,
     @InjectRepository(ThemeBuildJob) private readonly buildJobRepo: Repository<ThemeBuildJob>,
     @InjectQueue(THEME_BUILD_QUEUE_NAME) private readonly queue: Queue,
+    private readonly logger: LoggerService,
   ) {}
 
   async enqueue(themeVersionId: string, requestId?: string | null): Promise<PublicBuildJob> {
@@ -98,7 +98,12 @@ export class ThemeBuildQueueService {
 
     await this.buildJobRepo.update(saved.id, { bullJobId: String(bullJob.id) });
 
-    this.logger.log(`enqueue durable jobId=${saved.id} themeVersionId=${themeVersionId} bullJobId=${String(bullJob.id)}`);
+    this.logger.info('theme build enqueued', {
+      themeBuildJobId: saved.id,
+      themeVersionId,
+      bullJobId: String(bullJob.id),
+      requestId: requestId ?? null,
+    });
     return this.toPublic({ ...saved, bullJobId: String(bullJob.id) } as ThemeBuildJob);
   }
 

@@ -18,6 +18,7 @@ import { ThemeBuildService } from './theme-build.service';
 import { ThemeBuildJob } from './entities/theme-build-job.entity';
 import { ThemeBuildMetricsService } from './theme-build-metrics.service';
 import { LoggerService } from '../../shared/logger/logger.service';
+import { ThemeBuildFailedError } from '../../common/errors/theme-build-failed.error';
 
 type ThemeBuildPayload = {
   themeVersionId: string;
@@ -82,7 +83,7 @@ export class ThemeBuildProcessor extends WorkerHost {
     try {
       const res = await this.buildSvc.buildThemeVersion(themeVersionId);
       if (res?.status === 'FAILED') {
-        throw new Error(res.error || 'Build failed');
+        throw new ThemeBuildFailedError(themeVersionId, res.error || 'Build failed');
       }
 
       const finishedAt = now();
