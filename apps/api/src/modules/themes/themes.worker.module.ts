@@ -11,6 +11,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
 import { QueueModule } from '../../shared/queue/queue.module';
 import { THEME_BUILD_QUEUE_NAME } from '../../shared/queue/queue.constants';
+import { LoggerModule } from '../../shared/logger/logger.module';
 import { ThemeVersion } from './entities/theme-version.entity';
 import { ThemeBuildJob } from './entities/theme-build-job.entity';
 import { ThemeBuildService } from './theme-build.service';
@@ -22,6 +23,7 @@ import { ThemeBuildMetricsService } from './theme-build-metrics.service';
     TypeOrmModule.forFeature([ThemeVersion, ThemeBuildJob]),
     QueueModule,
     BullModule.registerQueue({ name: THEME_BUILD_QUEUE_NAME }),
+    LoggerModule,
   ],
   providers: [ThemeBuildService, ThemeBuildProcessor, ThemeBuildMetricsService],
 })

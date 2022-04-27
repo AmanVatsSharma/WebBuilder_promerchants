@@ -9,7 +9,7 @@
  * - Output is written to storage under: themes/<themeVersionId>/build/*
  */
 
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { build, type Plugin } from 'esbuild';
@@ -17,6 +17,8 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { assertThemeManifestV1, type ThemeManifestV1 } from '@web-builder/contracts';
 import { ThemeVersion } from './entities/theme-version.entity';
+import { LoggerService } from '../../shared/logger/logger.service';
+import { ThemeManifestValidationError } from '../../common/errors/theme-manifest-validation.error';
 
 function storageRootDir() {
   return process.env.STORAGE_DIR || path.resolve(process.cwd(), 'storage');
@@ -95,31 +97,38 @@ function buildWrapperSource(manifest: ThemeManifestV1) {
 
 @Injectable()
 export class ThemeBuildService {
-  private readonly logger = new Logger(ThemeBuildService.name);
-
   constructor(
     @InjectRepository(ThemeVersion) private readonly versionRepo: Repository<ThemeVersion>,
+    private readonly logger: LoggerService,
   ) {}
 
   async buildThemeVersion(themeVersionId: string) {
     const version = await this.versionRepo.findOne({ where: { id: themeVersionId } });
     if (!version) throw new NotFoundException(`ThemeVersion not found: ${themeVersionId}`);
 
-    const manifest = assertThemeManifestV1(
-      version.manifest || {
-        schemaVersion: 1,
-        name: 'Unnamed Theme',
-        version: version.version || '0.0.0',
-        entry: 'entry.tsx',
-        routes: [],
-      },
-    );
+    let manifest: ThemeManifestV1;
+    try {
+      manifest = assertThemeManifestV1(
+        version.manifest || {
+          schemaVersion: 1,
+          name: 'Unnamed Theme',
+          version: version.version || '0.0.0',
+          entry: 'entry.tsx',
+          routes: [],
+        },
+      );
+    } catch (e: any) {
+      // Normalize contract validation error into AppError so GlobalExceptionFilter can handle it consistently.
+      throw new ThemeManifestValidationError(e?.message || 'Invalid theme manifest', {
+        themeVersionId,
+      });
+    }
 
     const srcRoot = path.join(storageRootDir(), 'themes', themeVersionId, 'src');
     const buildRoot = path.join(storageRootDir(), 'themes', themeVersionId, 'build');
     await fs.mkdir(buildRoot, { recursive: true });
 
-    this.logger.log(`buildThemeVersion id=${themeVersionId} entry=${manifest.entry}`);
+    this.logger.info('theme build start', { themeVersionId, entry: manifest.entry });
 
     version.status = 'BUILDING';
     version.buildLog = null;
@@ -159,7 +168,7 @@ export class ThemeBuildService {
       return { themeVersionId, status: version.status, output: `themes/${themeVersionId}/build/theme.cjs` };
     } catch (e: any) {
       const msg = e?.message || String(e);
-      this.logger.error(`buildThemeVersion failed id=${themeVersionId} ${msg}`);
+      this.logger.error('theme build failed', { themeVersionId, errorMessage: msg, stack: e?.stack });
       logs.push('Build failed');
       logs.push(msg);
       version.status = 'FAILED';

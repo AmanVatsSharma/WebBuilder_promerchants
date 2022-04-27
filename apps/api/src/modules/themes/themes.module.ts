@@ -25,11 +25,13 @@ import { ThemeBuildService } from './theme-build.service';
 import { ThemeBuildQueueService } from './theme-build-queue.service';
 import { QueueModule } from '../../shared/queue/queue.module';
 import { THEME_BUILD_QUEUE_NAME } from '../../shared/queue/queue.constants';
+import { LoggerModule } from '../../shared/logger/logger.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Theme, ThemeVersion, ThemeFile, ThemeInstall, ThemePublishAudit, ThemeBuildJob]),
     StorageModule,
+    LoggerModule,
     QueueModule,
     BullModule.registerQueue({ name: THEME_BUILD_QUEUE_NAME }),
   ],
