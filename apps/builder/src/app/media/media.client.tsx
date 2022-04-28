@@ -9,6 +9,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { apiGet, apiUpload } from '../../lib/api';
 
 type MediaItem = { key: string; url: string };
 
@@ -24,9 +25,8 @@ export default function MediaClient() {
     if (!canLoad) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/media/sites/${encodeURIComponent(siteId)}/list`, { cache: 'no-store' });
-      if (!res.ok) throw new Error(`List failed: ${res.status}`);
-      setItems((await res.json()) as MediaItem[]);
+      const data = await apiGet<MediaItem[]>(`/api/media/sites/${encodeURIComponent(siteId)}/list`);
+      setItems(data);
     } finally {
       setLoading(false);
     }
@@ -44,12 +44,7 @@ export default function MediaClient() {
     form.append('file', file);
     setLoading(true);
     try {
-      const res = await fetch(`/api/media/sites/${encodeURIComponent(siteId)}/upload`, {
-        method: 'POST',
-        body: form,
-      });
-      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-      const data = await res.json();
+      const data = await apiUpload<any>(`/api/media/sites/${encodeURIComponent(siteId)}/upload`, form);
       console.debug('[builder-media] upload result', data);
       setFile(null);
       await load();

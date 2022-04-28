@@ -9,14 +9,16 @@
  * - Defends against path traversal
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { createHash } from 'crypto';
+import { LoggerService } from '../../../shared/logger/logger.service';
+import { ThemeFilePathInvalidError } from '../../../common/errors/theme-file-path-invalid.error';
 
 @Injectable()
 export class ThemeStorageService {
-  private readonly logger = new Logger(ThemeStorageService.name);
+  constructor(private readonly logger: LoggerService) {}
 
   private baseDir() {
     // repo-root/storage
@@ -32,7 +34,7 @@ export class ThemeStorageService {
     const resolved = path.resolve(this.themeSrcDir(themeVersionId), clean);
     const root = this.themeSrcDir(themeVersionId);
     if (!resolved.startsWith(root)) {
-      throw new Error(`Invalid path (traversal): ${filePath}`);
+      throw new ThemeFilePathInvalidError(filePath, { themeVersionId });
     }
     return resolved;
   }
@@ -49,7 +51,7 @@ export class ThemeStorageService {
     await fs.writeFile(abs, content);
     const stats = await fs.stat(abs);
     const sha256 = createHash('sha256').update(await fs.readFile(abs)).digest('hex');
-    this.logger.debug(`writeFile themeVersionId=${themeVersionId} path=${filePath} size=${stats.size}`);
+    this.logger.debug('theme storage writeFile', { themeVersionId, path: filePath, size: stats.size });
     return { size: stats.size, sha256 };
   }
 
@@ -82,7 +84,7 @@ export class ThemeStorageService {
     try {
       await walk(root);
     } catch (e) {
-      this.logger.warn(`listAllFiles failed themeVersionId=${themeVersionId} ${(e as Error).message}`);
+      this.logger.warn('theme storage listAllFiles failed', { themeVersionId, errorMessage: (e as Error).message });
     }
     return out.sort();
   }

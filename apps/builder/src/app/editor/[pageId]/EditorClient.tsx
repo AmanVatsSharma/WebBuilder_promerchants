@@ -17,6 +17,7 @@ import { applyEditorAction, type EditorActionEnvelope } from '@web-builder/contr
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { apiGet, apiPut } from '../../lib/api';
 
 // Initialize components
 registerCoreComponents();
@@ -168,35 +169,33 @@ export default function EditorClient({ pageId }: { pageId: string }) {
   useEffect(() => {
     // Fetch initial data
     console.debug('[builder-editor] loading page', { pageId });
-    fetch(`/api/sites/pages/${pageId}`)
-      .then(res => {
-         if (res.ok) return res.json();
-         throw new Error('Failed to load');
-      })
-      .then(data => {
+    (async () => {
+      try {
+        const data = await apiGet<{ siteId: string; content: any }>(`/api/sites/pages/${pageId}`);
         if (data && data.content) {
-           if (typeof data.siteId === 'string') setSiteId(data.siteId);
-           dispatch({ type: 'SetContent', content: { schemaVersion: 1, root: data.content } });
-           didLoadInitialRef.current = true;
-           setIsDirty(false);
+          if (typeof data.siteId === 'string') setSiteId(data.siteId);
+          dispatch({ type: 'SetContent', content: { schemaVersion: 1, root: data.content } });
+          didLoadInitialRef.current = true;
+          setIsDirty(false);
         }
-      })
-      .catch(err => console.error('[builder-editor] load failed', err))
-      .finally(() => setLoading(false));
+      } catch (err) {
+        console.error('[builder-editor] load failed', err);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [pageId]);
 
   useEffect(() => {
     if (!siteId) return;
     // Palette: derive from installed theme manifest.sections (fallback to defaults)
     console.debug('[builder-editor] loading theme palette', { siteId });
-    fetch(`/api/sites/${siteId}/theme`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((install) => {
+    (async () => {
+      try {
+        const install = await apiGet<any>(`/api/sites/${siteId}/theme`);
         const themeVersionId = install?.draftThemeVersionId || install?.publishedThemeVersionId || null;
-        if (!themeVersionId) return null;
-        return fetch(`/api/themes/versions/${themeVersionId}`).then((r) => (r.ok ? r.json() : null));
-      })
-      .then((version) => {
+        if (!themeVersionId) return;
+        const version = await apiGet<any>(`/api/themes/versions/${themeVersionId}`);
         const sections = version?.manifest?.sections;
         if (Array.isArray(sections) && sections.length) {
           const mapped = sections
@@ -212,8 +211,10 @@ export default function EditorClient({ pageId }: { pageId: string }) {
           }
           setSectionSchemas(schemas);
         }
-      })
-      .catch((e) => console.error('[builder-editor] palette load failed', e));
+      } catch (e) {
+        console.error('[builder-editor] palette load failed', e);
+      }
+    })();
   }, [siteId]);
 
   const defaultPropsForType = (type: string): Record<string, JsonValue> => {
@@ -261,11 +262,7 @@ export default function EditorClient({ pageId }: { pageId: string }) {
   const savePage = async (opts?: { silent?: boolean }) => {
     try {
       console.debug('[builder-editor] saving page', { pageId });
-      await fetch(`/api/sites/pages/${pageId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: content.root })
-      });
+      await apiPut(`/api/sites/pages/${pageId}`, { content: content.root });
       setIsDirty(false);
       setLastSavedAt(new Date().toISOString());
       if (!opts?.silent) alert('Saved!');
