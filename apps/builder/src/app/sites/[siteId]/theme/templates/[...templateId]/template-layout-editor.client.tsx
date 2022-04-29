@@ -19,6 +19,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { getComponent, registerCoreComponents } from '@web-builder/builder-core';
 import type { JsonValue, PageContentV1, PageNode } from '@web-builder/contracts';
 import { applyEditorAction, type EditorActionEnvelope } from '@web-builder/contracts';
+import { apiGet, apiPost, apiPut } from '../../../../../lib/api';
 
 registerCoreComponents();
 
@@ -147,7 +148,7 @@ export default function TemplateLayoutEditorClient({ siteId, templateId }: { sit
   };
 
   const loadThemeMeta = async (installedThemeVersionId: string) => {
-    const version: ThemeVersion = await fetch(`/api/themes/versions/${installedThemeVersionId}`).then((r) => r.json());
+    const version = await apiGet<ThemeVersion>(`/api/themes/versions/${installedThemeVersionId}`);
     const sections = version?.manifest?.sections;
     if (Array.isArray(sections)) {
       setPalette(sections.filter((s: any) => s?.type && s?.label).map((s: any) => ({ type: s.type, label: s.label })));
@@ -171,14 +172,12 @@ export default function TemplateLayoutEditorClient({ siteId, templateId }: { sit
       setLoading(true);
       try {
         console.debug('[builder-template-layout] load', { siteId, templateId });
-        const install: ThemeInstall = await fetch(`/api/sites/${siteId}/theme`).then((r) => r.json());
+        const install = await apiGet<ThemeInstall>(`/api/sites/${siteId}/theme`);
         const tv = install?.draftThemeVersionId || install?.publishedThemeVersionId || null;
         setThemeVersionId(tv);
         if (tv) await loadThemeMeta(tv);
 
-        const layouts = await fetch(`/api/sites/${siteId}/theme/layouts?templateId=${encodeURIComponent(templateId)}`).then((r) =>
-          r.ok ? r.json() : null,
-        );
+        const layouts = await apiGet<any>(`/api/sites/${siteId}/theme/layouts?templateId=${encodeURIComponent(templateId)}`);
         const root = layouts?.draft?.layout || null;
         if (root && typeof root === 'object') {
           dispatch({ type: 'SetContent', content: { schemaVersion: 1, root } });
@@ -202,11 +201,7 @@ export default function TemplateLayoutEditorClient({ siteId, templateId }: { sit
     if (!themeVersionId) return alert('Install a theme first');
     try {
       console.debug('[builder-template-layout] save draft', { siteId, templateId, themeVersionId });
-      await fetch(`/api/sites/${siteId}/theme/layouts/draft`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ themeVersionId, templateId, layout: content.root }),
-      });
+      await apiPut(`/api/sites/${siteId}/theme/layouts/draft`, { themeVersionId, templateId, layout: content.root });
       setIsDirty(false);
       setLastSavedAt(new Date().toISOString());
       if (!opts?.silent) alert('Saved draft layout');
@@ -218,11 +213,7 @@ export default function TemplateLayoutEditorClient({ siteId, templateId }: { sit
 
   const publish = async () => {
     if (!themeVersionId) return alert('Install a theme first');
-    await fetch(`/api/sites/${siteId}/theme/layouts/publish`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ themeVersionId, templateId }),
-    });
+    await apiPost(`/api/sites/${siteId}/theme/layouts/publish`, { themeVersionId, templateId });
     alert('Published layout');
   };
 
