@@ -10,6 +10,7 @@
  */
 
 import type { PageContentV1 } from '@web-builder/contracts';
+import { randomUUID } from 'crypto';
 
 export interface SiteDto {
   id: string;
@@ -37,22 +38,36 @@ function apiBase() {
   return process.env.API_BASE_URL || 'http://localhost:3000/api';
 }
 
-export async function resolveSiteByHost(host: string): Promise<SiteDto | null> {
+function requestHeaders(requestId?: string | null) {
+  return {
+    ...(requestId ? { 'x-request-id': requestId } : {}),
+  };
+}
+
+function ensureRequestId(requestId?: string | null) {
+  return requestId && requestId.trim() ? requestId : randomUUID();
+}
+
+export async function resolveSiteByHost(host: string, requestId?: string | null): Promise<SiteDto | null> {
   try {
-    console.debug('[storefront] resolveSiteByHost', { host });
+    const rid = ensureRequestId(requestId);
+    console.debug('[storefront] resolveSiteByHost', { host, requestId: rid });
     const normalizedHost = host.split(':')[0].toLowerCase();
 
     // Primary (enterprise): resolve via DomainMapping
-    const resolveRes = await fetch(`${apiBase()}/domains/resolve?host=${encodeURIComponent(normalizedHost)}`, { cache: 'no-store' });
+    const resolveRes = await fetch(`${apiBase()}/domains/resolve?host=${encodeURIComponent(normalizedHost)}`, {
+      cache: 'no-store',
+      headers: requestHeaders(rid),
+    });
     if (resolveRes.ok) {
       const resolved: { siteId: string } = await resolveRes.json();
-      const siteRes = await fetch(`${apiBase()}/sites/${resolved.siteId}`, { cache: 'no-store' });
+      const siteRes = await fetch(`${apiBase()}/sites/${resolved.siteId}`, { cache: 'no-store', headers: requestHeaders(rid) });
       if (siteRes.ok) return (await siteRes.json()) as SiteDto;
       console.error('[storefront] site get failed after domain resolve', { siteId: resolved.siteId, status: siteRes.status });
     }
 
     // Fallback (dev): match on Site.domain or use first site
-    const res = await fetch(`${apiBase()}/sites`, { cache: 'no-store' });
+    const res = await fetch(`${apiBase()}/sites`, { cache: 'no-store', headers: requestHeaders(rid) });
     if (!res.ok) {
       console.error('[storefront] sites list failed', { status: res.status });
       return null;
@@ -66,10 +81,11 @@ export async function resolveSiteByHost(host: string): Promise<SiteDto | null> {
   }
 }
 
-export async function resolvePageContentBySlug(siteId: string, slug: string): Promise<PageContentV1 | null> {
+export async function resolvePageContentBySlug(siteId: string, slug: string, requestId?: string | null): Promise<PageContentV1 | null> {
   try {
-    console.debug('[storefront] resolvePageContentBySlug', { siteId, slug });
-    const pagesRes = await fetch(`${apiBase()}/sites/${siteId}/pages`, { cache: 'no-store' });
+    const rid = ensureRequestId(requestId);
+    console.debug('[storefront] resolvePageContentBySlug', { siteId, slug, requestId: rid });
+    const pagesRes = await fetch(`${apiBase()}/sites/${siteId}/pages`, { cache: 'no-store', headers: requestHeaders(rid) });
     if (!pagesRes.ok) {
       console.error('[storefront] pages list failed', { status: pagesRes.status, siteId });
       return null;
@@ -78,7 +94,7 @@ export async function resolvePageContentBySlug(siteId: string, slug: string): Pr
     const match = pages.find((p) => p.slug === slug) || pages[0];
     if (!match) return null;
 
-    const pageRes = await fetch(`${apiBase()}/sites/pages/${match.id}`, { cache: 'no-store' });
+    const pageRes = await fetch(`${apiBase()}/sites/pages/${match.id}`, { cache: 'no-store', headers: requestHeaders(rid) });
     if (!pageRes.ok) {
       console.error('[storefront] page get failed', { status: pageRes.status, pageId: match.id });
       return null;
@@ -94,9 +110,13 @@ export async function resolvePageContentBySlug(siteId: string, slug: string): Pr
   }
 }
 
-export async function resolveInstalledThemeVersion(siteId: string): Promise<{ published?: string | null; draft?: string | null } | null> {
+export async function resolveInstalledThemeVersion(
+  siteId: string,
+  requestId?: string | null,
+): Promise<{ published?: string | null; draft?: string | null } | null> {
   try {
-    const res = await fetch(`${apiBase()}/sites/${siteId}/theme`, { cache: 'no-store' });
+    const rid = ensureRequestId(requestId);
+    const res = await fetch(`${apiBase()}/sites/${siteId}/theme`, { cache: 'no-store', headers: requestHeaders(rid) });
     if (!res.ok) return null;
     const install: ThemeInstallDto = await res.json();
     return { published: install.publishedThemeVersionId ?? null, draft: install.draftThemeVersionId ?? null };
@@ -106,12 +126,13 @@ export async function resolveInstalledThemeVersion(siteId: string): Promise<{ pu
   }
 }
 
-export async function resolveThemeSettings(siteId: string): Promise<{
+export async function resolveThemeSettings(siteId: string, requestId?: string | null): Promise<{
   draft: { themeVersionId: string | null; settings: Record<string, unknown> };
   published: { themeVersionId: string | null; settings: Record<string, unknown> };
 } | null> {
   try {
-    const res = await fetch(`${apiBase()}/sites/${siteId}/theme/settings`, { cache: 'no-store' });
+    const rid = ensureRequestId(requestId);
+    const res = await fetch(`${apiBase()}/sites/${siteId}/theme/settings`, { cache: 'no-store', headers: requestHeaders(rid) });
     if (!res.ok) return null;
     const data = (await res.json()) as any;
     return {
@@ -131,14 +152,15 @@ export async function resolveThemeSettings(siteId: string): Promise<{
   }
 }
 
-export async function resolveThemeLayout(siteId: string, templateId: string): Promise<{
+export async function resolveThemeLayout(siteId: string, templateId: string, requestId?: string | null): Promise<{
   draft: { themeVersionId: string | null; layout: Record<string, unknown> };
   published: { themeVersionId: string | null; layout: Record<string, unknown> };
 } | null> {
   try {
+    const rid = ensureRequestId(requestId);
     const res = await fetch(
       `${apiBase()}/sites/${encodeURIComponent(siteId)}/theme/layouts?templateId=${encodeURIComponent(templateId)}`,
-      { cache: 'no-store' },
+      { cache: 'no-store', headers: requestHeaders(rid) },
     );
     if (!res.ok) return null;
     const data = (await res.json()) as any;

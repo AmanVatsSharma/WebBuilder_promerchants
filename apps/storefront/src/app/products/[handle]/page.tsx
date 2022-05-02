@@ -11,6 +11,7 @@ import { resolveInstalledThemeVersion, resolveSiteByHost, resolveThemeLayout, re
 import { loadThemeModule } from '../../../lib/theme-runtime';
 import { resolveTemplateMatchForPath } from '../../../lib/theme-routing';
 import { createApiCommerceAdapter } from '../../../lib/commerce-adapter';
+import { randomUUID } from 'crypto';
 
 export default async function ProductPage({
   params,
@@ -22,8 +23,9 @@ export default async function ProductPage({
   const { handle } = await params;
   const h = await headers();
   const host = h.get('x-tenant-host') || h.get('host') || 'unknown';
+  const requestId = h.get('x-request-id') || randomUUID();
 
-  const site = await resolveSiteByHost(host);
+  const site = await resolveSiteByHost(host, requestId);
   if (!site) {
     return (
       <main style={{ padding: 24 }}>
@@ -36,7 +38,7 @@ export default async function ProductPage({
   const sp = (await searchParams) || {};
   const previewThemeVersionId = typeof sp.previewThemeVersionId === 'string' ? sp.previewThemeVersionId : null;
 
-  const installed = await resolveInstalledThemeVersion(site.id);
+  const installed = await resolveInstalledThemeVersion(site.id, requestId);
   const themeVersionId = previewThemeVersionId || installed?.published || null;
   if (!themeVersionId) {
     return (
@@ -54,9 +56,9 @@ export default async function ProductPage({
     mod?.manifest && mod?.templates ? resolveTemplateMatchForPath({ manifest: mod.manifest, templates: mod.templates, pathname }) : null;
   const Template = match?.Template || null;
 
-  const settings = await resolveThemeSettings(site.id);
+  const settings = await resolveThemeSettings(site.id, requestId);
   const selectedSettings = previewThemeVersionId ? settings?.draft?.settings : settings?.published?.settings;
-  const layouts = match?.templateId ? await resolveThemeLayout(site.id, match.templateId) : null;
+  const layouts = match?.templateId ? await resolveThemeLayout(site.id, match.templateId, requestId) : null;
   const selectedLayout = previewThemeVersionId ? layouts?.draft?.layout : layouts?.published?.layout;
   const commerce = createApiCommerceAdapter(site.id);
 
