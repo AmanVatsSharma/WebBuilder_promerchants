@@ -45,12 +45,26 @@ export class SitesService {
   }
 
   async findAllPages(siteId: string) {
-    return await this.pageRepository.find({ where: { siteId } });
+    const pages = await this.pageRepository.find({ where: { siteId } });
+    // Add small publish metadata useful for the builder.
+    return pages.map((p) => ({
+      ...p,
+      isPublished: Boolean(p.publishedContent),
+    }));
   }
 
-  async findOnePage(id: string) {
+  async findOnePage(id: string, mode?: 'draft' | 'published') {
     const page = await this.pageRepository.findOne({ where: { id } });
     if (!page) throw new NotFoundException(`Page with ID ${id} not found`);
+
+    // Storefront default should be published; builder default should be draft.
+    if (mode === 'published') {
+      return {
+        ...page,
+        content: page.publishedContent || page.content,
+      };
+    }
+
     return page;
   }
 
@@ -58,6 +72,19 @@ export class SitesService {
     const page = await this.findOnePage(id);
     Object.assign(page, updatePageDto);
     return await this.pageRepository.save(page);
+  }
+
+  async publishPage(id: string) {
+    const page = await this.findOnePage(id);
+    page.publishedContent = page.content || {};
+    page.publishedAt = new Date();
+    const saved = await this.pageRepository.save(page);
+    return {
+      id: saved.id,
+      siteId: saved.siteId,
+      publishedAt: saved.publishedAt,
+      status: 'PUBLISHED',
+    };
   }
 }
 

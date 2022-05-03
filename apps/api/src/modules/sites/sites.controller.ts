@@ -5,7 +5,7 @@
  * @author BharatERP
  * @created 2025-02-09
  */
-import { Controller, Get, Post, Body, Param, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Query } from '@nestjs/common';
 import { SitesService } from './sites.service';
 import { CreateSiteDto } from './dto/create-site.dto';
 import { CreatePageDto } from './dto/create-page.dto';
@@ -41,13 +41,22 @@ export class SitesController {
   }
 
   @Get('pages/:pageId')
-  findOnePage(@Param('pageId') pageId: string) {
-    return this.sitesService.findOnePage(pageId);
+  findOnePage(@Param('pageId') pageId: string, @Query('mode') mode?: 'draft' | 'published') {
+    return this.sitesService.findOnePage(pageId, mode);
   }
 
   @Put('pages/:pageId')
   updatePage(@Param('pageId') pageId: string, @Body() updatePageDto: UpdatePageDto) {
     return this.sitesService.updatePage(pageId, updatePageDto);
+  }
+
+  /**
+   * Publish a page: snapshot draft `content` into `publishedContent`.
+   * Storefront should read published content by default.
+   */
+  @Post('pages/:pageId/publish')
+  publishPage(@Param('pageId') pageId: string) {
+    return this.sitesService.publishPage(pageId);
   }
 }
 
