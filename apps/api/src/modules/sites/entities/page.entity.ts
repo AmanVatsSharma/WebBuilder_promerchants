@@ -26,6 +26,19 @@ export class Page {
   })
   content: Record<string, any>;
 
+  /**
+   * Published snapshot of the page content (what storefront serves by default).
+   * Draft remains in `content` to keep backwards compatibility with the builder editor.
+   */
+  @Column({
+    type: (process.env.DB_TYPE === 'sqljs' ? 'simple-json' : 'jsonb') as any,
+    nullable: true,
+  })
+  publishedContent?: Record<string, any> | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  publishedAt?: Date | null;
+
   @Column({ name: 'site_id' })
   siteId: string;
 
