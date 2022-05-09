@@ -94,7 +94,7 @@ export async function resolvePageContentBySlug(siteId: string, slug: string, req
     const match = pages.find((p) => p.slug === slug) || pages[0];
     if (!match) return null;
 
-    const pageRes = await fetch(`${apiBase()}/sites/pages/${match.id}`, { cache: 'no-store', headers: requestHeaders(rid) });
+    const pageRes = await fetch(`${apiBase()}/sites/pages/${match.id}?mode=published`, { cache: 'no-store', headers: requestHeaders(rid) });
     if (!pageRes.ok) {
       console.error('[storefront] page get failed', { status: pageRes.status, pageId: match.id });
       return null;

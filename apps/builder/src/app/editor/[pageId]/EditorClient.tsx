@@ -18,6 +18,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { apiGet, apiPut } from '../../lib/api';
+import { MediaPickerModal } from '../../app/media/media-picker-modal.client';
 
 // Initialize components
 registerCoreComponents();
@@ -46,6 +47,8 @@ export default function EditorClient({ pageId }: { pageId: string }) {
   >({});
   const [isDirty, setIsDirty] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [mediaTargetKey, setMediaTargetKey] = useState<string | null>(null);
   const didLoadInitialRef = React.useRef(false);
   const autosaveTimerRef = React.useRef<number | null>(null);
 
@@ -251,6 +254,13 @@ export default function EditorClient({ pageId }: { pageId: string }) {
     setIsDirty(true);
   };
 
+  const openMediaPickerFor = (propKey: string) => {
+    if (!siteId) return alert('Missing siteId (save/load page first)');
+    if (!selectedId) return alert('Select a component first');
+    setMediaTargetKey(propKey);
+    setMediaPickerOpen(true);
+  };
+
   const handleDeleteSelected = () => {
     if (!selectedId || selectedId === 'root') return;
     console.debug('[builder-editor] delete node', { selectedId });
@@ -393,6 +403,14 @@ export default function EditorClient({ pageId }: { pageId: string }) {
 
   return (
     <div className="flex h-full">
+      {siteId && mediaTargetKey ? (
+        <MediaPickerModal
+          siteId={siteId}
+          isOpen={mediaPickerOpen}
+          onClose={() => setMediaPickerOpen(false)}
+          onPickUrl={(url) => handleUpdateProp(mediaTargetKey, url)}
+        />
+      ) : null}
       {/* Left Sidebar */}
       <div className="w-64 bg-white border-r p-4">
         <h2 className="font-bold mb-4">Components</h2>
@@ -521,7 +539,20 @@ export default function EditorClient({ pageId }: { pageId: string }) {
                   return (
                     <div key={f.id}>
                       <label className="block text-sm font-medium mb-1">{f.label}</label>
-                      {f.type === 'color' ? (
+                      {f.type === 'media' ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={typeof val === 'string' ? val : String(f.default || '')}
+                            onChange={(e) => handleUpdateProp(f.id, e.target.value)}
+                            className="w-full border p-1 rounded"
+                            placeholder="Pick media or paste URL"
+                          />
+                          <button className="px-2 py-1 rounded border text-xs" onClick={() => openMediaPickerFor(f.id)}>
+                            Browse
+                          </button>
+                        </div>
+                      ) : f.type === 'color' ? (
                         <input
                           type="color"
                           value={typeof val === 'string' ? val : String(f.default || '#000000')}
