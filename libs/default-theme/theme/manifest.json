@@ -14,7 +14,8 @@
       "propsSchema": {
         "fields": [
           { "type": "text", "id": "title", "label": "Title", "default": "Build. Publish. Sell." },
-          { "type": "text", "id": "subtitle", "label": "Subtitle", "default": "A default ecommerce theme designed for speed and conversion." }
+          { "type": "text", "id": "subtitle", "label": "Subtitle", "default": "A default ecommerce theme designed for speed and conversion." },
+          { "type": "media", "id": "backgroundImageUrl", "label": "Background image", "default": "" }
         ]
       }
     },
