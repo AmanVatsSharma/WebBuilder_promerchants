@@ -20,6 +20,7 @@ import { getComponent, registerCoreComponents } from '@web-builder/builder-core'
 import type { JsonValue, PageContentV1, PageNode } from '@web-builder/contracts';
 import { applyEditorAction, type EditorActionEnvelope } from '@web-builder/contracts';
 import { apiGet, apiPost, apiPut } from '../../../../../lib/api';
+import { MediaPickerModal } from '../../../../media/media-picker-modal.client';
 
 registerCoreComponents();
 
@@ -44,6 +45,8 @@ export default function TemplateLayoutEditorClient({ siteId, templateId }: { sit
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const autosaveTimerRef = React.useRef<number | null>(null);
   const didLoadInitialRef = React.useRef(false);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [mediaTargetKey, setMediaTargetKey] = useState<string | null>(null);
 
   type HistoryState = { past: PageContentV1[]; present: PageContentV1; future: PageContentV1[] };
   type Action =
@@ -306,6 +309,12 @@ export default function TemplateLayoutEditorClient({ siteId, templateId }: { sit
     setIsDirty(true);
   };
 
+  const openMediaPickerFor = (propKey: string) => {
+    if (!selectedId) return alert('Select a node first');
+    setMediaTargetKey(propKey);
+    setMediaPickerOpen(true);
+  };
+
   const handleDelete = () => {
     if (!selectedId || selectedId === 'root') return;
     dispatch({ type: 'DeleteNode', nodeId: selectedId });
@@ -317,6 +326,14 @@ export default function TemplateLayoutEditorClient({ siteId, templateId }: { sit
 
   return (
     <div className="flex h-screen">
+      {mediaTargetKey ? (
+        <MediaPickerModal
+          siteId={siteId}
+          isOpen={mediaPickerOpen}
+          onClose={() => setMediaPickerOpen(false)}
+          onPickUrl={(url) => handleUpdateProp(mediaTargetKey, url)}
+        />
+      ) : null}
       <div className="w-72 bg-white border-r p-4">
         <div className="text-sm text-gray-500">Site</div>
         <div className="font-mono text-xs break-all">{siteId}</div>
@@ -427,7 +444,20 @@ export default function TemplateLayoutEditorClient({ siteId, templateId }: { sit
                   return (
                     <div key={f.id}>
                       <label className="block text-sm font-medium mb-1">{f.label}</label>
-                      {f.type === 'color' ? (
+                      {f.type === 'media' ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={typeof val === 'string' ? val : String(f.default || '')}
+                            onChange={(e) => handleUpdateProp(f.id, e.target.value)}
+                            className="w-full border p-1 rounded"
+                            placeholder="Pick media or paste URL"
+                          />
+                          <button className="px-2 py-1 rounded border text-xs" onClick={() => openMediaPickerFor(f.id)}>
+                            Browse
+                          </button>
+                        </div>
+                      ) : f.type === 'color' ? (
                         <input
                           type="color"
                           value={typeof val === 'string' ? val : String(f.default || '#000000')}

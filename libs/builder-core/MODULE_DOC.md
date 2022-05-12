@@ -14,3 +14,5 @@ Provides the **rendering engine** and **component registry** used by:
 - Typing is intentionally flexible (`ComponentType<any>`) because themes/components evolve dynamically.
 - Editor selection overlays and DnD happen at the app layer (builder), not inside this library.
 
+## Changelog
+- 2026-01-24: HeroSection now supports optional `backgroundImageUrl` (used by builder media picker via propsSchema field type `media`).
