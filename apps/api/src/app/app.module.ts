@@ -17,6 +17,7 @@ import { DomainsModule } from '../modules/domains/domains.module';
 import { ThemesModule } from '../modules/themes/themes.module';
 import { CommerceModule } from '../modules/commerce/commerce.module';
 import { MediaModule } from '../modules/media/media.module';
+import { ExtensionsModule } from '../modules/extensions/extensions.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { MediaModule } from '../modules/media/media.module';
     ThemesModule,
     CommerceModule,
     MediaModule,
+    ExtensionsModule,
     TypeOrmModule.forRootAsync({
       useFactory: () => {
         // For CI/e2e we support a pure-JS in-memory DB (sql.js) to avoid external Postgres dependency.
