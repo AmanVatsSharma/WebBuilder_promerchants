@@ -197,23 +197,47 @@ export default function EditorClient({ pageId }: { pageId: string }) {
       try {
         const install = await apiGet<any>(`/api/sites/${siteId}/theme`);
         const themeVersionId = install?.draftThemeVersionId || install?.publishedThemeVersionId || null;
-        if (!themeVersionId) return;
-        const version = await apiGet<any>(`/api/themes/versions/${themeVersionId}`);
-        const sections = version?.manifest?.sections;
-        if (Array.isArray(sections) && sections.length) {
-          const mapped = sections
-            .filter((s: any) => s && typeof s.type === 'string' && typeof s.label === 'string')
-            .map((s: any) => ({ type: s.type, label: s.label }));
-          if (mapped.length) setPalette(mapped);
+        const schemas: Record<string, any> = {};
+        const paletteItems: Array<{ type: string; label: string }> = [];
 
-          const schemas: Record<string, any> = {};
-          for (const s of sections) {
-            if (s?.type && s?.propsSchema?.fields && Array.isArray(s.propsSchema.fields)) {
-              schemas[String(s.type)] = { fields: s.propsSchema.fields };
+        if (themeVersionId) {
+          const version = await apiGet<any>(`/api/themes/versions/${themeVersionId}`);
+          const sections = version?.manifest?.sections;
+          if (Array.isArray(sections) && sections.length) {
+            const mapped = sections
+              .filter((s: any) => s && typeof s.type === 'string' && typeof s.label === 'string')
+              .map((s: any) => ({ type: s.type, label: s.label }));
+            paletteItems.push(...mapped);
+
+            for (const s of sections) {
+              if (s?.type && s?.propsSchema?.fields && Array.isArray(s.propsSchema.fields)) {
+                schemas[String(s.type)] = { fields: s.propsSchema.fields };
+              }
             }
           }
-          setSectionSchemas(schemas);
         }
+
+        // Extension blocks (app blocks)
+        try {
+          const extBlocks = await apiGet<any[]>(`/api/sites/${siteId}/extensions/blocks`);
+          if (Array.isArray(extBlocks) && extBlocks.length) {
+            paletteItems.push(
+              ...extBlocks
+                .filter((b) => b && typeof b.type === 'string' && typeof b.label === 'string')
+                .map((b) => ({ type: String(b.type), label: String(b.label) })),
+            );
+            for (const b of extBlocks) {
+              if (b?.type && b?.propsSchema?.fields && Array.isArray(b.propsSchema.fields)) {
+                schemas[String(b.type)] = { fields: b.propsSchema.fields };
+              }
+            }
+          }
+        } catch (e) {
+          console.debug('[builder-editor] extension blocks not available', e);
+        }
+
+        if (paletteItems.length) setPalette(paletteItems);
+        setSectionSchemas(schemas);
       } catch (e) {
         console.error('[builder-editor] palette load failed', e);
       }

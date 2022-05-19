@@ -180,6 +180,31 @@ export default function TemplateLayoutEditorClient({ siteId, templateId }: { sit
         setThemeVersionId(tv);
         if (tv) await loadThemeMeta(tv);
 
+        // Merge extension blocks into palette (app blocks)
+        try {
+          const extBlocks = await apiGet<any[]>(`/api/sites/${siteId}/extensions/blocks`);
+          if (Array.isArray(extBlocks) && extBlocks.length) {
+            setPalette((prev) => [
+              ...prev,
+              ...extBlocks
+                .filter((b) => b && typeof b.type === 'string' && typeof b.label === 'string')
+                .map((b) => ({ type: String(b.type), label: String(b.label) })),
+            ]);
+
+            setSectionSchemas((prev) => {
+              const next = { ...(prev || {}) } as Record<string, any>;
+              for (const b of extBlocks) {
+                if (b?.type && b?.propsSchema?.fields && Array.isArray(b.propsSchema.fields)) {
+                  next[String(b.type)] = { fields: b.propsSchema.fields };
+                }
+              }
+              return next;
+            });
+          }
+        } catch (e) {
+          console.debug('[builder-template-layout] extension blocks not available', e);
+        }
+
         const layouts = await apiGet<any>(`/api/sites/${siteId}/theme/layouts?templateId=${encodeURIComponent(templateId)}`);
         const root = layouts?.draft?.layout || null;
         if (root && typeof root === 'object') {
