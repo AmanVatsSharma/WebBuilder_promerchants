@@ -11,3 +11,4 @@
 export * from './lib/contracts';
 export * from './lib/editor-engine';
 export * from './lib/theme-manifest';
+export * from './lib/extension-manifest';

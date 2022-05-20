@@ -98,6 +98,43 @@ export interface ThemeRuntimeModuleV1 {
 }
 
 /**
+ * Extensions (App Blocks) v1
+ * - Extensions can contribute blocks/components to the builder palette and storefront runtime.
+ * - Extensions are built and sandboxed similarly to themes.
+ */
+export interface ExtensionManifestV1 {
+  schemaVersion: 1;
+  /** Display name shown in Extensions list */
+  name: string;
+  /** Extension semantic version (extension author controlled) */
+  version: string;
+  /**
+   * Blocks contributed by this extension.
+   * Each block points to an entry file inside the extension bundle that exports a default React component.
+   */
+  blocks?: Array<{
+    type: string;
+    label: string;
+    entry: string;
+    propsSchema?: {
+      fields: Array<
+        | { type: 'color'; id: string; label: string; default: string }
+        | { type: 'text'; id: string; label: string; default: string }
+        | { type: 'select'; id: string; label: string; default: string; options: Array<{ label: string; value: string }> }
+        | { type: 'number'; id: string; label: string; default: number; min?: number; max?: number }
+        // v1 builder extension: media picker support (URL string)
+        | { type: 'media'; id: string; label: string; default: string }
+      >;
+    };
+  }>;
+}
+
+export interface ExtensionRuntimeModuleV1 {
+  manifest?: ExtensionManifestV1;
+  blocks?: Record<string, unknown>;
+}
+
+/**
  * Editor action model (foundation for undo/redo + future AI agent)
  * - Every editor mutation should be representable as an action.
  */
