@@ -12,3 +12,4 @@ export * from './lib/theme-sdk';
 export * from './lib/types';
 export * from './lib/hooks';
 export * from './lib/components';
+export * from './lib/node-renderer';
