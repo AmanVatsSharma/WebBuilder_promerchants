@@ -10,7 +10,7 @@
  */
 
 import React, { createContext, useMemo, useState, useEffect } from 'react';
-import type { CommerceAdapter, ThemeCart, ThemeProduct, ThemeSite } from './types';
+import type { CommerceAdapter, ThemeCart, ThemeExtensionBlocks, ThemeProduct, ThemeSite } from './types';
 
 export interface ThemeSdkContextValue {
   site: ThemeSite | null;
@@ -18,6 +18,7 @@ export interface ThemeSdkContextValue {
   cart: ThemeCart | null;
   settings: Record<string, unknown>;
   commerce: CommerceAdapter;
+  extensions: { blocks: ThemeExtensionBlocks };
   refresh(): Promise<void>;
 }
 
@@ -52,16 +53,19 @@ export function ThemeSdkProvider({
   children,
   commerce,
   settings,
+  extensions,
 }: {
   children: React.ReactNode;
   commerce?: CommerceAdapter;
   settings?: Record<string, unknown>;
+  extensions?: { blocks?: ThemeExtensionBlocks };
 }) {
   const adapter = useMemo(() => commerce ?? new DevCommerceAdapter(), [commerce]);
   const [site, setSite] = useState<ThemeSite | null>(null);
   const [products, setProducts] = useState<ThemeProduct[]>([]);
   const [cart, setCart] = useState<ThemeCart | null>(null);
   const [themeSettings, setThemeSettings] = useState<Record<string, unknown>>(settings || {});
+  const [extBlocks, setExtBlocks] = useState<ThemeExtensionBlocks>((extensions?.blocks || {}) as ThemeExtensionBlocks);
 
   const refresh = async () => {
     try {
@@ -84,6 +88,10 @@ export function ThemeSdkProvider({
     if (settings) setThemeSettings(settings);
   }, [settings]);
 
+  useEffect(() => {
+    if (extensions?.blocks) setExtBlocks(extensions.blocks);
+  }, [extensions]);
+
   const commerceProxy = useMemo<CommerceAdapter>(
     () => ({
       ...adapter,
@@ -103,9 +111,10 @@ export function ThemeSdkProvider({
       cart,
       settings: themeSettings,
       commerce: commerceProxy,
+      extensions: { blocks: extBlocks },
       refresh,
     }),
-    [site, products, cart, commerceProxy, adapter, themeSettings],
+    [site, products, cart, commerceProxy, adapter, themeSettings, extBlocks],
   );
 
   return <ThemeSdkContext.Provider value={value}>{children}</ThemeSdkContext.Provider>;

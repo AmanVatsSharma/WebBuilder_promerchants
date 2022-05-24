@@ -8,6 +8,8 @@
  * - These are minimal for now; will expand with full commerce models later
  */
 
+import type React from 'react';
+
 export interface ThemeSite {
   id: string;
   name: string;
@@ -41,5 +43,12 @@ export interface CommerceAdapter {
   getCart(): Promise<ThemeCart>;
   addToCart(productId: string, quantity: number): Promise<ThemeCart>;
 }
+
+/**
+ * Extension blocks (\"App Blocks\") available to themes at runtime.
+ * - Keys are block `type` strings.
+ * - Values are React components exported by extension bundles.
+ */
+export type ThemeExtensionBlocks = Record<string, React.ComponentType<any>>;
 
 
