@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { getComponent, registerCoreComponents } from '@web-builder/builder-core';
+import { getComponent, registerComponent, registerCoreComponents } from '@web-builder/builder-core';
 import type { JsonValue, PageContentV1, PageNode } from '@web-builder/contracts';
 import { applyEditorAction, type EditorActionEnvelope } from '@web-builder/contracts';
 import { apiGet, apiPost, apiPut } from '../../../../../lib/api';
@@ -200,6 +200,25 @@ export default function TemplateLayoutEditorClient({ siteId, templateId }: { sit
               }
               return next;
             });
+
+            // Placeholder rendering in builder canvas for extension blocks.
+            for (const b of extBlocks) {
+              if (!b?.type || typeof b.type !== 'string') continue;
+              const type = String(b.type);
+              const label = typeof b.label === 'string' ? b.label : type;
+              registerComponent(type, (props: any) => (
+                <div className="border border-dashed border-gray-300 rounded p-4 bg-white">
+                  <div className="text-xs text-gray-500">App Block</div>
+                  <div className="font-semibold">{label}</div>
+                  <div className="text-xs text-gray-400 mt-1 font-mono break-all">{type}</div>
+                  {props && Object.keys(props).length ? (
+                    <pre className="mt-2 text-xs bg-gray-50 border rounded p-2 overflow-auto">{JSON.stringify(props, null, 2)}</pre>
+                  ) : (
+                    <div className="text-xs text-gray-500 mt-2">No props</div>
+                  )}
+                </div>
+              ));
+            }
           }
         } catch (e) {
           console.debug('[builder-template-layout] extension blocks not available', e);

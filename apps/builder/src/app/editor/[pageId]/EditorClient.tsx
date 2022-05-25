@@ -11,7 +11,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useReducer, useState } from 'react';
-import { getComponent, registerCoreComponents } from '@web-builder/builder-core';
+import { getComponent, registerComponent, registerCoreComponents } from '@web-builder/builder-core';
 import type { PageContentV1, PageNode, JsonValue } from '@web-builder/contracts';
 import { applyEditorAction, type EditorActionEnvelope } from '@web-builder/contracts';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -230,6 +230,26 @@ export default function EditorClient({ pageId }: { pageId: string }) {
               if (b?.type && b?.propsSchema?.fields && Array.isArray(b.propsSchema.fields)) {
                 schemas[String(b.type)] = { fields: b.propsSchema.fields };
               }
+            }
+
+            // Register lightweight placeholder components for extension blocks so the builder canvas can render them.
+            // Real extension block rendering happens in storefront (ThemeSdkProvider + ThemeNodeRenderer).
+            for (const b of extBlocks) {
+              if (!b?.type || typeof b.type !== 'string') continue;
+              const type = String(b.type);
+              const label = typeof b.label === 'string' ? b.label : type;
+              registerComponent(type, (props: any) => (
+                <div className="border border-dashed border-gray-300 rounded p-4 bg-white">
+                  <div className="text-xs text-gray-500">App Block</div>
+                  <div className="font-semibold">{label}</div>
+                  <div className="text-xs text-gray-400 mt-1 font-mono break-all">{type}</div>
+                  {props && Object.keys(props).length ? (
+                    <pre className="mt-2 text-xs bg-gray-50 border rounded p-2 overflow-auto">{JSON.stringify(props, null, 2)}</pre>
+                  ) : (
+                    <div className="text-xs text-gray-500 mt-2">No props</div>
+                  )}
+                </div>
+              ));
             }
           }
         } catch (e) {
