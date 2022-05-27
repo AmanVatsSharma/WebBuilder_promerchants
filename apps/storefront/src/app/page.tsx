@@ -11,11 +11,12 @@
 
 import { headers } from 'next/headers';
 import { PageRenderer, registerCoreComponents } from '@web-builder/builder-core';
-import { resolveInstalledThemeVersion, resolvePageContentBySlug, resolveSiteByHost, resolveThemeLayout, resolveThemeSettings } from '../lib/tenant';
+import { resolveInstalledExtensions, resolveInstalledThemeVersion, resolvePageContentBySlug, resolveSiteByHost, resolveThemeLayout, resolveThemeSettings } from '../lib/tenant';
 import { loadThemeModule } from '../lib/theme-runtime';
 import { resolveTemplateMatchForPath } from '../lib/theme-routing';
 import { createApiCommerceAdapter } from '../lib/commerce-adapter';
 import { randomUUID } from 'crypto';
+import { loadExtensionModule } from '../lib/extension-runtime';
 
 registerCoreComponents();
 
@@ -52,10 +53,19 @@ export default async function Home({ searchParams }: { searchParams?: Promise<Re
     const selectedLayout = previewThemeVersionId ? layouts?.draft?.layout : layouts?.published?.layout;
     const commerce = createApiCommerceAdapter(site.id);
 
+    // Load installed extension blocks (app blocks) and pass to ThemeSdkProvider via sdk.extensions.blocks
+    const extInstalls = await resolveInstalledExtensions(site.id, requestId);
+    const extMods = await Promise.all(extInstalls.map((i) => loadExtensionModule(i.extensionVersionId)));
+    const extBlocks = extMods.reduce<Record<string, any>>((acc, m) => {
+      const blocks = (m as any)?.blocks;
+      if (blocks && typeof blocks === 'object') Object.assign(acc, blocks);
+      return acc;
+    }, {});
+
     if (Layout && Template) {
       return (
         <main>
-          <Layout sdk={{ settings: selectedSettings || {}, commerce }}>
+          <Layout sdk={{ settings: selectedSettings || {}, commerce, extensions: { blocks: extBlocks } }}>
             <Template layout={selectedLayout || null} />
           </Layout>
         </main>
@@ -65,7 +75,7 @@ export default async function Home({ searchParams }: { searchParams?: Promise<Re
     if (Layout) {
       return (
         <main>
-          <Layout sdk={{ settings: selectedSettings || {}, commerce }} />
+          <Layout sdk={{ settings: selectedSettings || {}, commerce, extensions: { blocks: extBlocks } }} />
         </main>
       );
     }
