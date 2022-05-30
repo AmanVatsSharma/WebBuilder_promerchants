@@ -34,6 +34,14 @@ export interface ThemeInstallDto {
   publishedThemeVersionId?: string | null;
 }
 
+export interface ExtensionInstallDto {
+  id: string;
+  siteId: string;
+  extensionId: string;
+  extensionVersionId: string;
+  enabled: boolean;
+}
+
 function apiBase() {
   return process.env.API_BASE_URL || 'http://localhost:3000/api';
 }
@@ -177,6 +185,19 @@ export async function resolveThemeLayout(siteId: string, templateId: string, req
   } catch (e) {
     console.error('[storefront] resolveThemeLayout error', e);
     return null;
+  }
+}
+
+export async function resolveInstalledExtensions(siteId: string, requestId?: string | null): Promise<ExtensionInstallDto[]> {
+  try {
+    const rid = ensureRequestId(requestId);
+    const res = await fetch(`${apiBase()}/sites/${encodeURIComponent(siteId)}/extensions`, { cache: 'no-store', headers: requestHeaders(rid) });
+    if (!res.ok) return [];
+    const data = (await res.json()) as any;
+    return Array.isArray(data) ? (data as ExtensionInstallDto[]) : [];
+  } catch (e) {
+    console.error('[storefront] resolveInstalledExtensions error', e);
+    return [];
   }
 }
 
