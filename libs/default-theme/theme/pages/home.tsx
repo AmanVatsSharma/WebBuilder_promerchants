@@ -7,49 +7,8 @@
  */
 
 import React from 'react';
-import { Money, ProductCard, useProducts } from '@web-builder/theme-sdk';
-
-type PageNode = { id?: string; type?: string; props?: any; children?: PageNode[] };
-
-function renderNode(node: PageNode): React.ReactNode {
-  if (!node || !node.type) return null;
-  if (node.type === 'Container') {
-    return (
-      <div>
-        {(node.children || []).map((c) => (
-          <React.Fragment key={c.id || Math.random()}>{renderNode(c)}</React.Fragment>
-        ))}
-      </div>
-    );
-  }
-  if (node.type === 'HeroSection') {
-    const title = node.props?.title || 'Welcome';
-    const subtitle = node.props?.subtitle || '';
-    return (
-      <section
-        style={{
-          borderRadius: 18,
-          padding: 28,
-          background: 'linear-gradient(135deg,#2563eb,#60a5fa)',
-          color: '#fff',
-        }}
-      >
-        <div style={{ fontSize: 42, fontWeight: 800, lineHeight: 1.05 }}>{String(title)}</div>
-        {subtitle ? (
-          <div style={{ fontSize: 18, opacity: 0.9, marginTop: 12 }}>{String(subtitle)}</div>
-        ) : null}
-      </section>
-    );
-  }
-  if (node.type === 'TextBlock') {
-    return (
-      <div style={{ padding: 18, border: '1px solid #eee', borderRadius: 14, marginTop: 14 }}>
-        <div style={{ whiteSpace: 'pre-wrap' }}>{String(node.props?.text || '')}</div>
-      </div>
-    );
-  }
-  return null;
-}
+import { Money, ProductCard, ThemeNodeRenderer, useProducts } from '@web-builder/theme-sdk';
+import type { PageNode } from '@web-builder/contracts';
 
 export default function HomePage({ layout }: { layout?: any }) {
   const products = useProducts();
@@ -57,7 +16,7 @@ export default function HomePage({ layout }: { layout?: any }) {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: 24 }}>
       {/* Theme-driven layout (draft/published) if provided by storefront */}
-      {layout && typeof layout === 'object' ? renderNode(layout as PageNode) : null}
+      {layout && typeof layout === 'object' ? <ThemeNodeRenderer node={layout as PageNode} /> : null}
 
       <section style={{ marginTop: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16 }}>

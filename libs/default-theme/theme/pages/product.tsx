@@ -7,9 +7,10 @@
  */
 
 import React from 'react';
-import { Money, ProductCard, useProducts } from '@web-builder/theme-sdk';
+import { Money, ProductCard, ThemeNodeRenderer, useProducts } from '@web-builder/theme-sdk';
+import type { PageNode } from '@web-builder/contracts';
 
-export default function ProductPage({ handle }: { handle?: string }) {
+export default function ProductPage({ handle, layout }: { handle?: string; layout?: any }) {
   const products = useProducts();
   const product = handle ? products.find((p) => p.handle === handle) : products[0];
 
@@ -24,6 +25,7 @@ export default function ProductPage({ handle }: { handle?: string }) {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: 24 }}>
+      {layout && typeof layout === 'object' ? <ThemeNodeRenderer node={layout as PageNode} /> : null}
       <h1 style={{ fontSize: 32, fontWeight: 900, margin: 0 }}>{product.title}</h1>
       <div style={{ marginTop: 10, fontSize: 18 }}>
         <Money cents={product.priceCents} currency={product.currency} />
