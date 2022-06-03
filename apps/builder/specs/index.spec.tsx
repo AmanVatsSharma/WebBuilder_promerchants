@@ -1,3 +1,10 @@
+/**
+ * File: apps/builder/specs/index.spec.tsx
+ * Module: builder
+ * Purpose: Smoke tests for builder dashboard root route
+ * Author: Cursor / Aman
+ * Last-updated: 2026-02-15
+ */
 import React from 'react';
 import { render, waitFor } from '@testing-library/react';
 import Page from '../src/app/page';
