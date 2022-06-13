@@ -7,21 +7,28 @@
  */
 import React from 'react';
 
-export const HeroSection: React.FC<{ title: string; subtitle?: string; backgroundImageUrl?: string }> = ({
+export const HeroSection: React.FC<{
+  title: string;
+  subtitle?: string;
+  backgroundImageUrl?: string;
+  style?: React.CSSProperties;
+}> = ({
   title,
   subtitle,
   backgroundImageUrl,
+  style,
 }) => {
-  const style: React.CSSProperties | undefined = backgroundImageUrl
+  const computedStyle: React.CSSProperties | undefined = backgroundImageUrl
     ? {
         backgroundImage: `linear-gradient(rgba(37,99,235,0.75), rgba(37,99,235,0.75)), url(${backgroundImageUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
+        ...style,
       }
-    : undefined;
+    : style;
 
   return (
-    <div className="bg-blue-600 text-white py-20 px-8 text-center" style={style}>
+    <div className="bg-blue-600 text-white py-20 px-8 text-center" style={computedStyle}>
       <h1 className="text-4xl font-bold mb-4">{title}</h1>
       {subtitle && <p className="text-xl">{subtitle}</p>}
     </div>
