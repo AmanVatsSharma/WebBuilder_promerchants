@@ -7,9 +7,12 @@
  */
 import React from 'react';
 
-export const TextBlock: React.FC<{ text: string }> = ({ text }) => {
+export const TextBlock: React.FC<{
+  text: string;
+  style?: React.CSSProperties;
+}> = ({ text, style }) => {
   return (
-    <div className="prose max-w-none p-8">
+    <div className="prose max-w-none p-8" style={style}>
       <p>{text}</p>
     </div>
   );
