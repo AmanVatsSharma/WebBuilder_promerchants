@@ -21,3 +21,6 @@ This is intentional so a future AI agent can emit the **same actions** as the UI
 - `libs/contracts/src/lib/contracts.ts`
 - `libs/contracts/src/lib/editor-engine.ts`
 
+## Changelog
+- 2026-02-15: Added `editor-engine.spec.ts` coverage for insert/update/delete/move behavior and subtree-move safety guard in editor action engine.
+
