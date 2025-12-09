@@ -44,3 +44,8 @@ Thumbs.db
 # Next.js
 .next
 out
+
+.cursor
+.cursor/
+.cursor/*
+
