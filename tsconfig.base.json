@@ -20,6 +20,9 @@
     "paths": {
       "@web-builder/builder-core": [
         "libs/builder-core/src/index.ts"
+      ],
+      "@web-builder/contracts": [
+        "libs/contracts/src/index.ts"
       ]
     }
   },
