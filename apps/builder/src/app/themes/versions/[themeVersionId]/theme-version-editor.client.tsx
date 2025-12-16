@@ -94,6 +94,7 @@ export default function ThemeVersionEditorClient({ themeVersionId }: { themeVers
 
   const storefrontBase = (process.env.NEXT_PUBLIC_STOREFRONT_URL as string) || 'http://localhost:4201';
   const previewUrl = `${storefrontBase}/?previewThemeVersionId=${encodeURIComponent(themeVersionId)}`;
+  const publishedUrl = `${storefrontBase}/`;
 
   if (loading) return <div className="p-6">Loading…</div>;
 
@@ -167,6 +168,15 @@ export default function ThemeVersionEditorClient({ themeVersionId }: { themeVers
                 title="Preview draft theme in storefront"
               >
                 Preview
+              </a>
+              <a
+                href={publishedUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-2 rounded border text-sm"
+                title="Open published storefront"
+              >
+                Open Storefront
               </a>
             </div>
           </div>
