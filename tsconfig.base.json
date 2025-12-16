@@ -23,6 +23,9 @@
       ],
       "@web-builder/contracts": [
         "libs/contracts/src/index.ts"
+      ],
+      "@web-builder/theme-sdk": [
+        "libs/theme-sdk/src/index.ts"
       ]
     }
   },
