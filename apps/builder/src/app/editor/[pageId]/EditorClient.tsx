@@ -1,18 +1,21 @@
 /**
  * File: apps/builder/src/app/editor/[pageId]/EditorClient.tsx
  * Module: builder-editor
- * Purpose: Client-side editor POC (will evolve into enterprise WYSIWYG)
+ * Purpose: Client-side editor (WYSIWYG foundations: history, shortcuts, basic DnD reorder)
  * Author: Cursor / Aman
  * Last-updated: 2025-12-16
  * Notes:
  * - Currently edits PageContentV1 JSON and persists to /api/sites/pages/:pageId
- * - Adds basic debug logs to help future troubleshooting
+ * - Implements a basic command/history model for undo/redo and AI-agent readiness
  */
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { PageRenderer, registerCoreComponents } from '@web-builder/builder-core';
+import React, { useEffect, useMemo, useReducer, useState } from 'react';
+import { getComponent, registerCoreComponents } from '@web-builder/builder-core';
 import type { PageContentV1, PageNode, JsonValue } from '@web-builder/contracts';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // Initialize components
 registerCoreComponents();
@@ -28,9 +31,116 @@ const initialContent: PageContentV1 = {
 };
 
 export default function EditorClient({ pageId }: { pageId: string }) {
-  const [content, setContent] = useState<PageContentV1>(initialContent);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+
+  type HistoryState = {
+    past: PageContentV1[];
+    present: PageContentV1;
+    future: PageContentV1[];
+  };
+
+  type Action =
+    | { type: 'SetContent'; content: PageContentV1 }
+    | { type: 'InsertNode'; parentId: string; node: PageNode; index?: number }
+    | { type: 'UpdateNodeProps'; nodeId: string; patch: Record<string, JsonValue> }
+    | { type: 'DeleteNode'; nodeId: string }
+    | { type: 'ReorderRoot'; activeId: string; overId: string }
+    | { type: 'Undo' }
+    | { type: 'Redo' };
+
+  const updateNode = (root: PageNode, id: string, updateFn: (node: PageNode) => PageNode): PageNode => {
+    if (root.id === id) return updateFn(root);
+    if (!root.children) return root;
+    return { ...root, children: root.children.map((c) => updateNode(c, id, updateFn)) };
+  };
+
+  const findNode = (node: PageNode, id: string): PageNode | undefined => {
+    if (node.id === id) return node;
+    for (const child of node.children || []) {
+      const found = findNode(child, id);
+      if (found) return found;
+    }
+    return undefined;
+  };
+
+  const deleteNode = (node: PageNode, id: string): PageNode => {
+    if (!node.children?.length) return node;
+    const filtered = node.children.filter((c) => c.id !== id).map((c) => deleteNode(c, id));
+    return { ...node, children: filtered };
+  };
+
+  const historyReducer = (state: HistoryState, action: Action): HistoryState => {
+    const commit = (next: PageContentV1): HistoryState => ({
+      past: [...state.past, state.present],
+      present: next,
+      future: [],
+    });
+
+    switch (action.type) {
+      case 'SetContent':
+        return { past: [], present: action.content, future: [] };
+      case 'Undo': {
+        const prev = state.past[state.past.length - 1];
+        if (!prev) return state;
+        return {
+          past: state.past.slice(0, -1),
+          present: prev,
+          future: [state.present, ...state.future],
+        };
+      }
+      case 'Redo': {
+        const next = state.future[0];
+        if (!next) return state;
+        return {
+          past: [...state.past, state.present],
+          present: next,
+          future: state.future.slice(1),
+        };
+      }
+      case 'InsertNode': {
+        const node = action.node;
+        const parentId = action.parentId;
+        const nextRoot = updateNode(state.present.root, parentId, (p) => {
+          const children = p.children || [];
+          const idx = action.index ?? children.length;
+          return { ...p, children: [...children.slice(0, idx), node, ...children.slice(idx)] };
+        });
+        return commit({ ...state.present, root: nextRoot });
+      }
+      case 'UpdateNodeProps': {
+        const nextRoot = updateNode(state.present.root, action.nodeId, (n) => ({
+          ...n,
+          props: { ...(n.props || {}), ...action.patch },
+        }));
+        return commit({ ...state.present, root: nextRoot });
+      }
+      case 'DeleteNode': {
+        const nextRoot = deleteNode(state.present.root, action.nodeId);
+        return commit({ ...state.present, root: nextRoot });
+      }
+      case 'ReorderRoot': {
+        const root = state.present.root;
+        const children = root.children || [];
+        const oldIndex = children.findIndex((c) => c.id === action.activeId);
+        const newIndex = children.findIndex((c) => c.id === action.overId);
+        if (oldIndex === -1 || newIndex === -1) return state;
+        const reordered = arrayMove(children, oldIndex, newIndex);
+        return commit({ ...state.present, root: { ...root, children: reordered } });
+      }
+      default:
+        return state;
+    }
+  };
+
+  const [history, dispatch] = useReducer(historyReducer, {
+    past: [],
+    present: initialContent,
+    future: [],
+  });
+
+  const content = history.present;
 
   useEffect(() => {
     // Fetch initial data
@@ -42,26 +152,12 @@ export default function EditorClient({ pageId }: { pageId: string }) {
       })
       .then(data => {
         if (data && data.content) {
-           setContent({ schemaVersion: 1, root: data.content });
+           dispatch({ type: 'SetContent', content: { schemaVersion: 1, root: data.content } });
         }
       })
       .catch(err => console.error('[builder-editor] load failed', err))
       .finally(() => setLoading(false));
   }, [pageId]);
-
-  // Helper to find node by ID and update it (immutable-ish)
-  const updateNode = (root: PageNode, id: string, updateFn: (node: PageNode) => PageNode): PageNode => {
-    if (root.id === id) {
-      return updateFn(root);
-    }
-    if (root.children) {
-      return {
-        ...root,
-        children: root.children.map(child => updateNode(child, id, updateFn))
-      };
-    }
-    return root;
-  };
 
   const handleAddComponent = (type: string) => {
     console.debug('[builder-editor] add component', { type, selectedId });
@@ -70,38 +166,21 @@ export default function EditorClient({ pageId }: { pageId: string }) {
       id: crypto.randomUUID(),
       props: (type === 'HeroSection' ? { title: 'New Hero' } : { text: 'New Text' }) as Record<string, JsonValue>
     };
-
-    setContent(prev => {
-      // Add to root for simplicity in POC, or selected container
-      const targetId = selectedId || 'root';
-      
-      // Simple recursive finder/updater
-      const add = (node: PageNode): PageNode => {
-        if (node.id === targetId) {
-           // check if container or assumes root is container
-           const children = node.children || [];
-           return { ...node, children: [...children, newComponent] };
-        }
-        if (node.children) {
-          return { ...node, children: node.children.map(add) };
-        }
-        return node;
-      };
-      
-      return { ...prev, root: add(prev.root) };
-    });
+    const targetId = selectedId || 'root';
+    dispatch({ type: 'InsertNode', parentId: targetId, node: newComponent });
   };
 
   const handleUpdateProp = (key: string, value: JsonValue) => {
     if (!selectedId) return;
     console.debug('[builder-editor] update prop', { selectedId, key, value });
-    setContent(prev => ({
-      ...prev,
-      root: updateNode(prev.root, selectedId, (node) => ({
-        ...node,
-        props: { ...node.props, [key]: value }
-      }))
-    }));
+    dispatch({ type: 'UpdateNodeProps', nodeId: selectedId, patch: { [key]: value } });
+  };
+
+  const handleDeleteSelected = () => {
+    if (!selectedId || selectedId === 'root') return;
+    console.debug('[builder-editor] delete node', { selectedId });
+    dispatch({ type: 'DeleteNode', nodeId: selectedId });
+    setSelectedId(undefined);
   };
 
   const savePage = async () => {
@@ -119,19 +198,87 @@ export default function EditorClient({ pageId }: { pageId: string }) {
     }
   };
 
-  // Find selected node to show props
-  const findNode = (node: PageNode, id: string): PageNode | undefined => {
-    if (node.id === id) return node;
-    if (node.children) {
-      for (const child of node.children) {
-        const found = findNode(child, id);
-        if (found) return found;
+  const selectedNode = selectedId ? findNode(content.root, selectedId) : undefined;
+
+  // Keyboard shortcuts: undo/redo/delete
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toLowerCase().includes('mac');
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+      if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        dispatch({ type: 'Undo' });
+      } else if ((mod && e.key.toLowerCase() === 'z' && e.shiftKey) || (mod && e.key.toLowerCase() === 'y')) {
+        e.preventDefault();
+        dispatch({ type: 'Redo' });
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        // Avoid deleting while typing in inputs
+        const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
+        if (tag === 'input' || tag === 'textarea') return;
+        handleDeleteSelected();
       }
-    }
-    return undefined;
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const rootChildIds = useMemo(() => (content.root.children || []).map((c) => c.id), [content.root.children]);
+
+  const canvasWidth = viewport === 'desktop' ? '100%' : viewport === 'tablet' ? 768 : 375;
+
+  const RenderNode: React.FC<{ node: PageNode }> = ({ node }) => {
+    const Comp = getComponent(node.type);
+    const isSelected = selectedId === node.id;
+    const style = isSelected ? { outline: '2px solid #2563eb' } : undefined;
+    return (
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          setSelectedId(node.id);
+        }}
+        style={style}
+        className="relative"
+      >
+        {node.type === 'Container' ? (
+          <div className="min-h-[40px]">
+            {(node.children || []).map((c) => (
+              <RenderNode key={c.id} node={c} />
+            ))}
+          </div>
+        ) : Comp ? (
+          // eslint-disable-next-line react/jsx-props-no-spreading
+          <Comp {...(node.props || {})} />
+        ) : (
+          <div className="p-3 border border-red-400 text-red-700">Unknown component: {node.type}</div>
+        )}
+      </div>
+    );
   };
 
-  const selectedNode = selectedId ? findNode(content.root, selectedId) : undefined;
+  const SortableBlock: React.FC<{ node: PageNode }> = ({ node }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: node.id });
+    const style: React.CSSProperties = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.6 : 1,
+    };
+    return (
+      <div ref={setNodeRef} style={style} className="relative">
+        <div
+          className="absolute left-2 top-2 z-20 bg-white/90 border rounded px-2 py-1 text-xs cursor-grab select-none"
+          title="Drag to reorder"
+          {...attributes}
+          {...listeners}
+        >
+          Drag
+        </div>
+        <RenderNode node={node} />
+      </div>
+    );
+  };
 
   if (loading) return <div>Loading page...</div>;
 
@@ -159,16 +306,74 @@ export default function EditorClient({ pageId }: { pageId: string }) {
              Save Page
            </button>
         </div>
+        <div className="mt-3">
+          <button
+            onClick={handleDeleteSelected}
+            className="w-full p-2 bg-red-600 text-white rounded disabled:opacity-50"
+            disabled={!selectedId || selectedId === 'root'}
+          >
+            Delete Selected
+          </button>
+        </div>
+        <div className="mt-6">
+          <h3 className="font-bold mb-2">Viewport</h3>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => setViewport('desktop')}
+              className={`p-2 rounded border ${viewport === 'desktop' ? 'bg-blue-100' : ''}`}
+            >
+              Desktop
+            </button>
+            <button
+              onClick={() => setViewport('tablet')}
+              className={`p-2 rounded border ${viewport === 'tablet' ? 'bg-blue-100' : ''}`}
+            >
+              Tablet
+            </button>
+            <button
+              onClick={() => setViewport('mobile')}
+              className={`p-2 rounded border ${viewport === 'mobile' ? 'bg-blue-100' : ''}`}
+            >
+              Mobile
+            </button>
+          </div>
+          <div className="text-xs text-gray-500 mt-2">
+            Undo: Ctrl/Cmd+Z · Redo: Ctrl/Cmd+Shift+Z · Delete: Del
+          </div>
+        </div>
       </div>
 
       {/* Canvas */}
       <div className="flex-1 bg-gray-50 p-8 overflow-auto">
-        <div className="bg-white min-h-[500px] shadow-lg">
-          <PageRenderer 
-            content={content} 
-            onComponentClick={(id) => setSelectedId(id)}
-            selectedId={selectedId}
-          />
+        <div className="flex justify-center">
+          <div
+            className="bg-white min-h-[500px] shadow-lg w-full"
+            style={{ maxWidth: typeof canvasWidth === 'number' ? `${canvasWidth}px` : canvasWidth }}
+            onClick={() => setSelectedId('root')}
+          >
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={(event) => {
+                const activeId = String(event.active.id);
+                const overId = event.over ? String(event.over.id) : null;
+                if (!overId || activeId === overId) return;
+                console.debug('[builder-editor] reorder root', { activeId, overId });
+                dispatch({ type: 'ReorderRoot', activeId, overId });
+              }}
+            >
+              <SortableContext items={rootChildIds} strategy={verticalListSortingStrategy}>
+                <div className="p-2">
+                  {(content.root.children || []).map((child) => (
+                    <SortableBlock key={child.id} node={child} />
+                  ))}
+                  {!content.root.children?.length && (
+                    <div className="p-10 text-center text-gray-500">Add components to start building…</div>
+                  )}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
         </div>
       </div>
 
