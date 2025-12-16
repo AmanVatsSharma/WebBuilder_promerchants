@@ -1,21 +1,22 @@
 /**
- * File: apps/storefront/src/app/page.tsx
+ * File: apps/storefront/src/app/[slug]/page.tsx
  * Module: storefront
- * Purpose: Tenant-aware homepage (SSR)
+ * Purpose: Tenant-aware dynamic page rendering by slug (SSR)
  * Author: Cursor / Aman
  * Last-updated: 2025-12-16
  * Notes:
- * - For now, renders a page from existing Sites/Pages API (slug=home fallback)
- * - Once Themes are live, this will render published theme templates instead
+ * - Temporary: renders stored page layout JSON using builder-core renderer
+ * - Future: this route will map to published theme templates and commerce data
  */
 
 import { headers } from 'next/headers';
 import { PageRenderer, registerCoreComponents } from '@web-builder/builder-core';
-import { resolvePageContentBySlug, resolveSiteByHost } from '../lib/tenant';
+import { resolvePageContentBySlug, resolveSiteByHost } from '../../lib/tenant';
 
 registerCoreComponents();
 
-export default async function Home() {
+export default async function SlugPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   const h = await headers();
   const host = h.get('x-tenant-host') || h.get('host') || 'unknown';
 
@@ -29,12 +30,12 @@ export default async function Home() {
     );
   }
 
-  const content = await resolvePageContentBySlug(site.id, 'home');
+  const content = await resolvePageContentBySlug(site.id, slug);
   if (!content) {
     return (
       <main style={{ padding: 24 }}>
         <h1>{site.name}</h1>
-        <p>No pages found yet. Create a page for this site in the Builder.</p>
+        <p>Page not found: /{slug}</p>
         <p style={{ opacity: 0.7 }}>host={host} siteId={site.id}</p>
       </main>
     );
@@ -46,3 +47,5 @@ export default async function Home() {
     </main>
   );
 }
+
+
