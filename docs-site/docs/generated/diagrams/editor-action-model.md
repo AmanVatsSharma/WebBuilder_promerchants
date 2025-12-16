@@ -25,5 +25,5 @@ sequenceDiagram
 ```
 
 ## Why this matters
-An AI agent can produce the **same `EditorAction`** objects instead of directly mutating state.\n+
+An AI agent can produce the **same `EditorAction`** objects instead of directly mutating state.
 
