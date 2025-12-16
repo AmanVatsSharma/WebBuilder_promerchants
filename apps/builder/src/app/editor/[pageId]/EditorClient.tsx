@@ -1,19 +1,24 @@
 /**
- * @file EditorClient.tsx
- * @module editor
- * @description Client-side editor logic
- * @author BharatERP
- * @created 2025-02-09
+ * File: apps/builder/src/app/editor/[pageId]/EditorClient.tsx
+ * Module: builder-editor
+ * Purpose: Client-side editor POC (will evolve into enterprise WYSIWYG)
+ * Author: Cursor / Aman
+ * Last-updated: 2025-12-16
+ * Notes:
+ * - Currently edits PageContentV1 JSON and persists to /api/sites/pages/:pageId
+ * - Adds basic debug logs to help future troubleshooting
  */
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PageRenderer, registerCoreComponents, PageContent, ComponentData } from '@web-builder/builder-core';
+import { PageRenderer, registerCoreComponents } from '@web-builder/builder-core';
+import type { PageContentV1, PageNode, JsonValue } from '@web-builder/contracts';
 
 // Initialize components
 registerCoreComponents();
 
-const initialContent: PageContent = {
+const initialContent: PageContentV1 = {
+  schemaVersion: 1,
   root: {
     type: 'Container',
     id: 'root',
@@ -23,12 +28,13 @@ const initialContent: PageContent = {
 };
 
 export default function EditorClient({ pageId }: { pageId: string }) {
-  const [content, setContent] = useState<PageContent>(initialContent);
+  const [content, setContent] = useState<PageContentV1>(initialContent);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Fetch initial data
+    console.debug('[builder-editor] loading page', { pageId });
     fetch(`/api/sites/pages/${pageId}`)
       .then(res => {
          if (res.ok) return res.json();
@@ -36,15 +42,15 @@ export default function EditorClient({ pageId }: { pageId: string }) {
       })
       .then(data => {
         if (data && data.content) {
-           setContent({ root: data.content });
+           setContent({ schemaVersion: 1, root: data.content });
         }
       })
-      .catch(err => console.error(err))
+      .catch(err => console.error('[builder-editor] load failed', err))
       .finally(() => setLoading(false));
   }, [pageId]);
 
   // Helper to find node by ID and update it (immutable-ish)
-  const updateNode = (root: ComponentData, id: string, updateFn: (node: ComponentData) => ComponentData): ComponentData => {
+  const updateNode = (root: PageNode, id: string, updateFn: (node: PageNode) => PageNode): PageNode => {
     if (root.id === id) {
       return updateFn(root);
     }
@@ -58,10 +64,11 @@ export default function EditorClient({ pageId }: { pageId: string }) {
   };
 
   const handleAddComponent = (type: string) => {
-    const newComponent: ComponentData = {
+    console.debug('[builder-editor] add component', { type, selectedId });
+    const newComponent: PageNode = {
       type,
       id: crypto.randomUUID(),
-      props: type === 'HeroSection' ? { title: 'New Hero' } : { text: 'New Text' }
+      props: (type === 'HeroSection' ? { title: 'New Hero' } : { text: 'New Text' }) as Record<string, JsonValue>
     };
 
     setContent(prev => {
@@ -69,7 +76,7 @@ export default function EditorClient({ pageId }: { pageId: string }) {
       const targetId = selectedId || 'root';
       
       // Simple recursive finder/updater
-      const add = (node: ComponentData): ComponentData => {
+      const add = (node: PageNode): PageNode => {
         if (node.id === targetId) {
            // check if container or assumes root is container
            const children = node.children || [];
@@ -81,13 +88,15 @@ export default function EditorClient({ pageId }: { pageId: string }) {
         return node;
       };
       
-      return { root: add(prev.root) };
+      return { ...prev, root: add(prev.root) };
     });
   };
 
-  const handleUpdateProp = (key: string, value: any) => {
+  const handleUpdateProp = (key: string, value: JsonValue) => {
     if (!selectedId) return;
+    console.debug('[builder-editor] update prop', { selectedId, key, value });
     setContent(prev => ({
+      ...prev,
       root: updateNode(prev.root, selectedId, (node) => ({
         ...node,
         props: { ...node.props, [key]: value }
@@ -97,20 +106,21 @@ export default function EditorClient({ pageId }: { pageId: string }) {
 
   const savePage = async () => {
     try {
+      console.debug('[builder-editor] saving page', { pageId });
       await fetch(`/api/sites/pages/${pageId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: content.root }) 
+        body: JSON.stringify({ content: content.root })
       });
       alert('Saved!');
     } catch (e) {
-      console.error(e);
+      console.error('[builder-editor] save failed', e);
       alert('Error saving');
     }
   };
 
   // Find selected node to show props
-  const findNode = (node: ComponentData, id: string): ComponentData | undefined => {
+  const findNode = (node: PageNode, id: string): PageNode | undefined => {
     if (node.id === id) return node;
     if (node.children) {
       for (const child of node.children) {
