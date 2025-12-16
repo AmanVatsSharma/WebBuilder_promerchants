@@ -18,11 +18,12 @@ import { ThemesService } from './themes.service';
 import { ThemesController } from './themes.controller';
 import { SitesThemeController } from './sites-theme.controller';
 import { StorageModule } from '../../shared/storage/storage.module';
+import { ThemeBuildService } from './theme-build.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Theme, ThemeVersion, ThemeFile, ThemeInstall]), StorageModule],
   controllers: [ThemesController, SitesThemeController],
-  providers: [ThemesService],
+  providers: [ThemesService, ThemeBuildService],
   exports: [ThemesService],
 })
 export class ThemesModule {}

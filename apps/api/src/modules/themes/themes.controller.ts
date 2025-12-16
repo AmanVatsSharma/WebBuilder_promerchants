@@ -13,10 +13,14 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ThemesService } from './themes.service';
 import { UploadThemeDto } from './dto/upload-theme.dto';
 import { UpdateThemeFileDto } from './dto/update-theme-file.dto';
+import { ThemeBuildService } from './theme-build.service';
 
 @Controller('themes')
 export class ThemesController {
-  constructor(private readonly themesService: ThemesService) {}
+  constructor(
+    private readonly themesService: ThemesService,
+    private readonly themeBuildService: ThemeBuildService,
+  ) {}
 
   @Get()
   listThemes() {
@@ -41,6 +45,15 @@ export class ThemesController {
   @Post('seed/default')
   seedDefault() {
     return this.themesService.seedDefaultTheme();
+  }
+
+  /**
+   * Build (bundle) a ThemeVersion into runtime artifacts.
+   * Output: storage/themes/<themeVersionId>/build/theme.cjs
+   */
+  @Post('versions/:themeVersionId/build')
+  build(@Param('themeVersionId') themeVersionId: string) {
+    return this.themeBuildService.buildThemeVersion(themeVersionId);
   }
 
   @Get('versions/:themeVersionId/files')
