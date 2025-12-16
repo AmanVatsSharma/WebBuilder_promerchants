@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "name": "Default Ecommerce",
+  "version": "1.0.0",
+  "entry": "entry.tsx",
+  "routes": [
+    { "path": "/", "template": "pages/home" }
+  ],
+  "settingsSchema": {
+    "schemaVersion": 1,
+    "groups": [
+      {
+        "id": "brand",
+        "label": "Brand",
+        "fields": [
+          { "type": "text", "id": "brandName", "label": "Brand name", "default": "Default Ecommerce" },
+          { "type": "color", "id": "primaryColor", "label": "Primary color", "default": "#2563eb" }
+        ]
+      }
+    ]
+  }
+}
+
+
