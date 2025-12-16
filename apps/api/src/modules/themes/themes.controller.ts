@@ -32,6 +32,11 @@ export class ThemesController {
     return this.themesService.getTheme(themeId);
   }
 
+  @Get('versions/:themeVersionId')
+  getVersion(@Param('themeVersionId') themeVersionId: string) {
+    return this.themesService.getThemeVersion(themeVersionId);
+  }
+
   @Post('upload')
   @UseInterceptors(FileInterceptor('bundle'))
   upload(@Body() dto: UploadThemeDto, @UploadedFile() file: Express.Multer.File) {
