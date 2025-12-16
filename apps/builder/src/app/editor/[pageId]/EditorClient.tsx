@@ -13,6 +13,7 @@
 import React, { useEffect, useMemo, useReducer, useState } from 'react';
 import { getComponent, registerCoreComponents } from '@web-builder/builder-core';
 import type { PageContentV1, PageNode, JsonValue } from '@web-builder/contracts';
+import { applyEditorAction, type EditorActionEnvelope } from '@web-builder/contracts';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -100,34 +101,51 @@ export default function EditorClient({ pageId }: { pageId: string }) {
         };
       }
       case 'InsertNode': {
-        const node = action.node;
-        const parentId = action.parentId;
-        const nextRoot = updateNode(state.present.root, parentId, (p) => {
-          const children = p.children || [];
-          const idx = action.index ?? children.length;
-          return { ...p, children: [...children.slice(0, idx), node, ...children.slice(idx)] };
-        });
-        return commit({ ...state.present, root: nextRoot });
+        const envelope: EditorActionEnvelope = {
+          id: crypto.randomUUID(),
+          actor: 'user:local',
+          createdAt: new Date().toISOString(),
+          action: { type: 'InsertNode', parentId: action.parentId, index: action.index ?? 999999, node: action.node },
+        };
+        console.debug('[builder-editor] action', envelope);
+        return commit(applyEditorAction(state.present, envelope.action));
       }
       case 'UpdateNodeProps': {
-        const nextRoot = updateNode(state.present.root, action.nodeId, (n) => ({
-          ...n,
-          props: { ...(n.props || {}), ...action.patch },
-        }));
-        return commit({ ...state.present, root: nextRoot });
+        const envelope: EditorActionEnvelope = {
+          id: crypto.randomUUID(),
+          actor: 'user:local',
+          createdAt: new Date().toISOString(),
+          action: { type: 'UpdateNodeProps', nodeId: action.nodeId, patch: action.patch },
+        };
+        console.debug('[builder-editor] action', envelope);
+        return commit(applyEditorAction(state.present, envelope.action));
       }
       case 'DeleteNode': {
-        const nextRoot = deleteNode(state.present.root, action.nodeId);
-        return commit({ ...state.present, root: nextRoot });
+        const envelope: EditorActionEnvelope = {
+          id: crypto.randomUUID(),
+          actor: 'user:local',
+          createdAt: new Date().toISOString(),
+          action: { type: 'DeleteNode', nodeId: action.nodeId },
+        };
+        console.debug('[builder-editor] action', envelope);
+        return commit(applyEditorAction(state.present, envelope.action));
       }
       case 'ReorderRoot': {
+        // Map root reorder to a MoveNode action (v1 supports moving within root)
         const root = state.present.root;
         const children = root.children || [];
         const oldIndex = children.findIndex((c) => c.id === action.activeId);
         const newIndex = children.findIndex((c) => c.id === action.overId);
         if (oldIndex === -1 || newIndex === -1) return state;
-        const reordered = arrayMove(children, oldIndex, newIndex);
-        return commit({ ...state.present, root: { ...root, children: reordered } });
+
+        const envelope: EditorActionEnvelope = {
+          id: crypto.randomUUID(),
+          actor: 'user:local',
+          createdAt: new Date().toISOString(),
+          action: { type: 'MoveNode', nodeId: action.activeId, newParentId: 'root', newIndex },
+        };
+        console.debug('[builder-editor] action', envelope);
+        return commit(applyEditorAction(state.present, envelope.action));
       }
       default:
         return state;
