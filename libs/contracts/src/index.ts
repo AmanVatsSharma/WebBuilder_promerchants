@@ -9,3 +9,4 @@
  */
 
 export * from './lib/contracts';
+export * from './lib/editor-engine';

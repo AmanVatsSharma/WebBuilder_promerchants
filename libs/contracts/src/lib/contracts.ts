@@ -79,3 +79,14 @@ export type EditorAction =
   | { type: 'MoveNode'; nodeId: string; newParentId: string; newIndex: number }
   | { type: 'UpdateNodeProps'; nodeId: string; patch: Record<string, JsonValue> };
 
+/**
+ * EditorActionEnvelope
+ * - Wraps a single action with metadata so the editor (and future AI agent) can audit and replay changes.
+ */
+export interface EditorActionEnvelope {
+  id: string;
+  actor: string; // "user:<id>" | "ai:<id>" | "system"
+  createdAt: string; // ISO timestamp
+  action: EditorAction;
+}
+
