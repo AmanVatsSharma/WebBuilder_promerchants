@@ -16,7 +16,7 @@ import { loadThemeComponent } from '../lib/theme-runtime';
 
 registerCoreComponents();
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const h = await headers();
   const host = h.get('x-tenant-host') || h.get('host') || 'unknown';
 
@@ -30,9 +30,12 @@ export default async function Home() {
     );
   }
 
-  // Prefer published theme, fallback to draft (dev), then fallback to page-json renderer
+  const sp = (await searchParams) || {};
+  const previewThemeVersionId = typeof sp.previewThemeVersionId === 'string' ? sp.previewThemeVersionId : null;
+
+  // Published only, unless previewThemeVersionId is explicitly provided (builder preview mode)
   const installed = await resolveInstalledThemeVersion(site.id);
-  const themeVersionId = installed?.published || installed?.draft || null;
+  const themeVersionId = previewThemeVersionId || installed?.published || null;
   if (themeVersionId) {
     const ThemeRoot = await loadThemeComponent(themeVersionId);
     if (ThemeRoot) {

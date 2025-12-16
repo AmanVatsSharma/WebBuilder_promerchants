@@ -40,13 +40,24 @@ function apiBase() {
 export async function resolveSiteByHost(host: string): Promise<SiteDto | null> {
   try {
     console.debug('[storefront] resolveSiteByHost', { host });
+    const normalizedHost = host.split(':')[0].toLowerCase();
+
+    // Primary (enterprise): resolve via DomainMapping
+    const resolveRes = await fetch(`${apiBase()}/domains/resolve?host=${encodeURIComponent(normalizedHost)}`, { cache: 'no-store' });
+    if (resolveRes.ok) {
+      const resolved: { siteId: string } = await resolveRes.json();
+      const siteRes = await fetch(`${apiBase()}/sites/${resolved.siteId}`, { cache: 'no-store' });
+      if (siteRes.ok) return (await siteRes.json()) as SiteDto;
+      console.error('[storefront] site get failed after domain resolve', { siteId: resolved.siteId, status: siteRes.status });
+    }
+
+    // Fallback (dev): match on Site.domain or use first site
     const res = await fetch(`${apiBase()}/sites`, { cache: 'no-store' });
     if (!res.ok) {
       console.error('[storefront] sites list failed', { status: res.status });
       return null;
     }
     const sites: SiteDto[] = await res.json();
-    const normalizedHost = host.split(':')[0].toLowerCase();
     const match = sites.find((s) => (s.domain || '').toLowerCase() === normalizedHost);
     return match || sites[0] || null;
   } catch (e) {
