@@ -184,7 +184,7 @@ export default function EditorClient({ pageId }: { pageId: string }) {
                 <label className="block text-sm font-medium mb-1">{key}</label>
                 <input 
                   type="text" 
-                  value={val} 
+                  value={String(val ?? '')}
                   onChange={(e) => handleUpdateProp(key, e.target.value)}
                   className="w-full border p-1 rounded"
                 />
