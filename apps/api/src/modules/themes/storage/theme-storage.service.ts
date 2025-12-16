@@ -76,7 +76,7 @@ export class ThemeStorageService {
       for (const e of entries) {
         const full = path.join(dir, e.name);
         if (e.isDirectory()) await walk(full);
-        else out.push(path.relative(root, full).replaceAll('\\', '/'));
+        else out.push(path.relative(root, full).replace(/\\/g, '/'));
       }
     };
     try {
