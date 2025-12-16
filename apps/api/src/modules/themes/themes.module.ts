@@ -14,6 +14,7 @@ import { Theme } from './entities/theme.entity';
 import { ThemeVersion } from './entities/theme-version.entity';
 import { ThemeFile } from './entities/theme-file.entity';
 import { ThemeInstall } from './entities/theme-install.entity';
+import { ThemePublishAudit } from './entities/theme-publish-audit.entity';
 import { ThemesService } from './themes.service';
 import { ThemesController } from './themes.controller';
 import { SitesThemeController } from './sites-theme.controller';
@@ -21,7 +22,7 @@ import { StorageModule } from '../../shared/storage/storage.module';
 import { ThemeBuildService } from './theme-build.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Theme, ThemeVersion, ThemeFile, ThemeInstall]), StorageModule],
+  imports: [TypeOrmModule.forFeature([Theme, ThemeVersion, ThemeFile, ThemeInstall, ThemePublishAudit]), StorageModule],
   controllers: [ThemesController, SitesThemeController],
   providers: [ThemesService, ThemeBuildService],
   exports: [ThemesService],

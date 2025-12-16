@@ -16,6 +16,7 @@ import { Theme } from './entities/theme.entity';
 import { ThemeVersion } from './entities/theme-version.entity';
 import { ThemeFile } from './entities/theme-file.entity';
 import { ThemeInstall } from './entities/theme-install.entity';
+import { ThemePublishAudit } from './entities/theme-publish-audit.entity';
 import { UploadThemeDto } from './dto/upload-theme.dto';
 import { STORAGE_PROVIDER } from '../../shared/storage/storage.constants';
 import type { StorageProvider } from '../../shared/storage/storage.types';
@@ -43,6 +44,7 @@ export class ThemesService {
     @InjectRepository(ThemeVersion) private readonly versionRepo: Repository<ThemeVersion>,
     @InjectRepository(ThemeFile) private readonly fileRepo: Repository<ThemeFile>,
     @InjectRepository(ThemeInstall) private readonly installRepo: Repository<ThemeInstall>,
+    @InjectRepository(ThemePublishAudit) private readonly auditRepo: Repository<ThemePublishAudit>,
     @Inject(STORAGE_PROVIDER) private readonly storage: StorageProvider,
   ) {}
 
@@ -181,6 +183,63 @@ export class ThemesService {
     const install = await this.installRepo.findOne({ where: { siteId } });
     if (!install) throw new NotFoundException(`No theme installed for siteId=${siteId}`);
     return install;
+  }
+
+  /**
+   * Publish a theme version for a site.
+   * - If themeVersionId is omitted, publishes the current draftThemeVersionId
+   */
+  async publishThemeForSite(siteId: string, themeVersionId?: string, actor = 'system') {
+    const install = await this.getInstallForSite(siteId);
+    const toId = themeVersionId || install.draftThemeVersionId;
+    if (!toId) throw new BadRequestException('No draft theme version to publish');
+
+    // Ensure version exists
+    await this.getThemeVersion(toId);
+
+    const fromId = install.publishedThemeVersionId || null;
+    install.publishedThemeVersionId = toId;
+    await this.installRepo.save(install);
+
+    await this.auditRepo.save(
+      this.auditRepo.create({
+        siteId,
+        fromThemeVersionId: fromId,
+        toThemeVersionId: toId,
+        actor,
+        action: 'PUBLISH',
+      }),
+    );
+
+    this.logger.log(`publishThemeForSite siteId=${siteId} from=${fromId} to=${toId}`);
+    return install;
+  }
+
+  async rollbackPublishedTheme(siteId: string, toThemeVersionId: string, actor = 'system') {
+    const install = await this.getInstallForSite(siteId);
+    const fromId = install.publishedThemeVersionId || null;
+    if (!toThemeVersionId) throw new BadRequestException('toThemeVersionId is required');
+    await this.getThemeVersion(toThemeVersionId);
+
+    install.publishedThemeVersionId = toThemeVersionId;
+    await this.installRepo.save(install);
+
+    await this.auditRepo.save(
+      this.auditRepo.create({
+        siteId,
+        fromThemeVersionId: fromId,
+        toThemeVersionId,
+        actor,
+        action: 'ROLLBACK',
+      }),
+    );
+
+    this.logger.log(`rollbackPublishedTheme siteId=${siteId} from=${fromId} to=${toThemeVersionId}`);
+    return install;
+  }
+
+  async listPublishAudits(siteId: string) {
+    return await this.auditRepo.find({ where: { siteId }, order: { createdAt: 'DESC' } });
   }
 
   /**
