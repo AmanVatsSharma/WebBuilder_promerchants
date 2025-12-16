@@ -1,0 +1,41 @@
+{
+  "name": "docs-site",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "docs-site",
+  "tags": ["docs"],
+  "targets": {
+    "sync": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node tools/docs-sync.mjs"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["sync"],
+      "options": {
+        "cwd": "docs-site",
+        "command": "npm run build"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["sync"],
+      "options": {
+        "cwd": "docs-site",
+        "command": "npm run serve"
+      }
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["sync"],
+      "options": {
+        "cwd": "docs-site",
+        "command": "npm run start"
+      }
+    }
+  }
+}
+
+
