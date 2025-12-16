@@ -66,7 +66,9 @@ export default function ThemeVersionEditorClient({ themeVersionId }: { themeVers
   };
 
   const build = async () => {
-    const res = await apiPost(`/api/themes/versions/${themeVersionId}/build`);
+    const res = await apiPost<{ themeVersionId: string; status: string; output?: string; error?: string }>(
+      `/api/themes/versions/${themeVersionId}/build`,
+    );
     console.debug('[builder-themes] build result', res);
     await reload();
     alert(`Build: ${res.status}`);
