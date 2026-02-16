@@ -21,15 +21,21 @@ Maps **custom domains (hosts)** to a **Site** for SSR multi-tenant storefront ro
    - Verify issued challenge: `POST /api/domains/challenges/:challengeId/verify`
    - Provider webhook ingestion: `POST /api/domains/challenges/:challengeId/webhook`
    - Poll due retries (ops/manual): `POST /api/domains/challenges/poll?limit=25`
+5. **Ops observability endpoints**:
+   - JSON metrics: `GET /api/domains/challenges/metrics`
+   - Prometheus metrics: `GET /api/domains/challenges/metrics/prometheus`
+   - Alert history: `GET /api/domains/challenges/alerts?limit=50&delivered=true|false`
 
 ## Notes
 - Verification states remain `PENDING|VERIFIED|FAILED`, with strategy-based verification providers enabling DNS/HTTP challenge expansion.
 - Challenge states are persisted as `ISSUED|VERIFIED|FAILED` with proof payload metadata for auditability.
 - Retry orchestration supports attempt tracking (`attemptCount/maxAttempts`) with `nextAttemptAt` scheduling and optional background scheduler.
 - Provider-driven propagation state is tracked (`PENDING|PROPAGATING|READY|FAILED`) with optional alert webhooks for exhausted/failure states.
+- Alert delivery is persisted in `domain_challenge_alerts` for SLO dashboards and retry audits.
 - `host` is normalized (lowercased, port stripped) to keep lookups deterministic.
 
 ## Changelog
+- 2026-02-16: Added domain challenge SLO metrics endpoints (JSON + Prometheus) and persisted alert history querying for operations dashboards.
 - 2026-02-16: Added provider webhook ingestion (`/domains/challenges/:id/webhook`), propagation-state tracking, and optional alert-hook emission for failed domain challenges.
 - 2026-02-16: Added challenge retry orchestration fields (`attemptCount`, `maxAttempts`, `nextAttemptAt`) plus scheduler polling service and manual poll endpoint.
 - 2026-02-16: Added persisted domain verification challenge lifecycle (`issue/list/verify`) with proof storage and async-friendly orchestration endpoints.

@@ -8,7 +8,7 @@
  * - Storefront middleware will call resolve endpoint to map Host->siteId
  */
 
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Header } from '@nestjs/common';
 import { DomainsService } from './domains.service';
 import { CreateDomainMappingDto } from './dto/create-domain-mapping.dto';
 import { VerifyDomainMappingDto } from './dto/verify-domain-mapping.dto';
@@ -32,6 +32,24 @@ export class DomainsController {
   @Get('resolve')
   resolve(@Query('host') host: string) {
     return this.domainsService.resolveHost(host);
+  }
+
+  @Get('challenges/metrics')
+  metrics() {
+    return this.domainsService.getChallengeSloMetrics();
+  }
+
+  @Get('challenges/alerts')
+  alerts(@Query('limit') limit?: string, @Query('delivered') delivered?: string) {
+    const parsedLimit = Number(limit || 50);
+    const deliveredFilter = typeof delivered === 'string' ? delivered.toLowerCase() === 'true' : undefined;
+    return this.domainsService.listChallengeAlerts(parsedLimit, deliveredFilter);
+  }
+
+  @Get('challenges/metrics/prometheus')
+  @Header('content-type', 'text/plain; version=0.0.4; charset=utf-8')
+  metricsPrometheus() {
+    return this.domainsService.getChallengeSloMetricsPrometheus();
   }
 
   @Post(':id/challenges')

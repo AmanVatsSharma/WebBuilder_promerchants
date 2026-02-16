@@ -85,6 +85,10 @@ npm run mvp:validate
   - verify `DOMAIN_CHALLENGE_SCHEDULER_ENABLED=true` and check API logs for scheduler poll cycles.
 - Domain provider propagation stuck:
   - verify provider is calling `/api/domains/challenges/:challengeId/webhook` and inspect challenge propagation state/audit logs.
+- Domain challenge SLO dashboard seed checks:
+  - `GET /api/domains/challenges/metrics`
+  - `GET /api/domains/challenges/metrics/prometheus`
+  - `GET /api/domains/challenges/alerts?limit=20`
 - 403 errors on site-scoped APIs:
   - verify `x-api-key` / `x-site-id` propagation and env (`API_AUTH_KEY`, `ENFORCE_SITE_SCOPE`).
 - Storefront webpack warnings:

@@ -17,6 +17,7 @@ import { CreateDomainMappingDto } from './dto/create-domain-mapping.dto';
 import { VerifyDomainMappingDto } from './dto/verify-domain-mapping.dto';
 import { DomainVerificationService } from './verification/domain-verification.service';
 import { DomainVerificationChallenge } from './entities/domain-verification-challenge.entity';
+import { DomainChallengeAlert } from './entities/domain-challenge-alert.entity';
 import { CreateDomainChallengeDto } from './dto/create-domain-challenge.dto';
 import { randomUUID } from 'crypto';
 import { DomainChallengeWebhookDto } from './dto/domain-challenge-webhook.dto';
@@ -68,6 +69,8 @@ export class DomainsService {
     private readonly repo: Repository<DomainMapping>,
     @InjectRepository(DomainVerificationChallenge)
     private readonly challengeRepo: Repository<DomainVerificationChallenge>,
+    @InjectRepository(DomainChallengeAlert)
+    private readonly alertRepo: Repository<DomainChallengeAlert>,
     private readonly verificationService: DomainVerificationService,
   ) {}
 
@@ -340,8 +343,120 @@ export class DomainsService {
     };
   }
 
+  async listChallengeAlerts(limit = 50, delivered?: boolean) {
+    const effectiveLimit = Math.max(1, Math.min(200, Math.floor(limit)));
+    return await this.alertRepo.find({
+      where: typeof delivered === 'boolean' ? { delivered } : {},
+      order: { createdAt: 'DESC' },
+      take: effectiveLimit,
+    });
+  }
+
+  async getChallengeSloMetrics() {
+    const [challenges, alerts] = await Promise.all([
+      this.challengeRepo.find(),
+      this.alertRepo.find(),
+    ]);
+
+    const totalChallenges = challenges.length;
+    const verifiedCount = challenges.filter((item) => item.status === 'VERIFIED').length;
+    const failedCount = challenges.filter((item) => item.status === 'FAILED').length;
+    const issuedCount = challenges.filter((item) => item.status === 'ISSUED').length;
+    const readyPropagationCount = challenges.filter((item) => item.propagationState === 'READY').length;
+    const pendingPropagationCount = challenges.filter((item) => item.propagationState === 'PENDING').length;
+    const propagatingCount = challenges.filter((item) => item.propagationState === 'PROPAGATING').length;
+    const failedPropagationCount = challenges.filter((item) => item.propagationState === 'FAILED').length;
+    const dueRetryCount = challenges.filter((item) => item.nextAttemptAt && new Date(item.nextAttemptAt).getTime() <= Date.now()).length;
+    const exhaustedCount = challenges.filter(
+      (item) => item.status !== 'VERIFIED' && Number(item.attemptCount || 0) >= Number(item.maxAttempts || 0),
+    ).length;
+    const averageAttempts =
+      totalChallenges > 0
+        ? Number(
+            (
+              challenges.reduce((sum, item) => sum + Number(item.attemptCount || 0), 0) /
+              Math.max(1, totalChallenges)
+            ).toFixed(2),
+          )
+        : 0;
+    const completed = verifiedCount + failedCount;
+    const verificationSuccessRate = completed > 0 ? Number((verifiedCount / completed).toFixed(4)) : 0;
+    const undeliveredAlerts = alerts.filter((item) => !item.delivered).length;
+    const alertCount = alerts.length;
+    const alertsLast24h = alerts.filter(
+      (item) => new Date(item.createdAt).getTime() >= Date.now() - 24 * 60 * 60 * 1000,
+    ).length;
+
+    return {
+      generatedAt: new Date().toISOString(),
+      totalChallenges,
+      issuedCount,
+      verifiedCount,
+      failedCount,
+      pendingPropagationCount,
+      propagatingCount,
+      readyPropagationCount,
+      failedPropagationCount,
+      dueRetryCount,
+      exhaustedCount,
+      averageAttempts,
+      verificationSuccessRate,
+      alertCount,
+      alertsLast24h,
+      undeliveredAlerts,
+    };
+  }
+
+  async getChallengeSloMetricsPrometheus() {
+    const metrics = await this.getChallengeSloMetrics();
+    return [
+      '# HELP domain_challenges_total Total persisted domain verification challenges',
+      '# TYPE domain_challenges_total gauge',
+      `domain_challenges_total ${metrics.totalChallenges}`,
+      '# HELP domain_challenges_verified_total Total verified domain challenges',
+      '# TYPE domain_challenges_verified_total gauge',
+      `domain_challenges_verified_total ${metrics.verifiedCount}`,
+      '# HELP domain_challenges_failed_total Total failed domain challenges',
+      '# TYPE domain_challenges_failed_total gauge',
+      `domain_challenges_failed_total ${metrics.failedCount}`,
+      '# HELP domain_challenges_retry_due_total Total due retries',
+      '# TYPE domain_challenges_retry_due_total gauge',
+      `domain_challenges_retry_due_total ${metrics.dueRetryCount}`,
+      '# HELP domain_challenges_exhausted_total Total exhausted challenges',
+      '# TYPE domain_challenges_exhausted_total gauge',
+      `domain_challenges_exhausted_total ${metrics.exhaustedCount}`,
+      '# HELP domain_challenges_success_rate Verification success rate among completed challenges',
+      '# TYPE domain_challenges_success_rate gauge',
+      `domain_challenges_success_rate ${metrics.verificationSuccessRate}`,
+      '# HELP domain_challenge_alerts_total Total persisted domain challenge alerts',
+      '# TYPE domain_challenge_alerts_total gauge',
+      `domain_challenge_alerts_total ${metrics.alertCount}`,
+      '# HELP domain_challenge_alerts_undelivered_total Undelivered domain challenge alerts',
+      '# TYPE domain_challenge_alerts_undelivered_total gauge',
+      `domain_challenge_alerts_undelivered_total ${metrics.undeliveredAlerts}`,
+      '',
+    ].join('\n');
+  }
+
   private async emitChallengeAlert(payload: { challengeId: string; mappingId: string; reason: string }) {
     const url = String(process.env.DOMAIN_CHALLENGE_ALERT_WEBHOOK_URL || '').trim();
+    const alert = await this.alertRepo.save(
+      this.alertRepo.create({
+        challengeId: payload.challengeId,
+        mappingId: payload.mappingId,
+        severity: 'ERROR',
+        eventType: 'domain.challenge.failed',
+        message: payload.reason,
+        payload: {
+          challengeId: payload.challengeId,
+          mappingId: payload.mappingId,
+          reason: payload.reason,
+        },
+        delivered: false,
+        deliveryStatusCode: null,
+        deliveryError: null,
+      }),
+    );
     if (!url) return;
 
     try {
@@ -357,9 +472,21 @@ export class DomainsService {
         }),
       });
       if (!response.ok) {
+        alert.delivered = false;
+        alert.deliveryStatusCode = response.status;
+        alert.deliveryError = `Non-2xx status ${response.status}`;
+        await this.alertRepo.save(alert);
         this.logger.warn(`emitChallengeAlert non-2xx status=${response.status}`);
+      } else {
+        alert.delivered = true;
+        alert.deliveryStatusCode = response.status;
+        alert.deliveryError = null;
+        await this.alertRepo.save(alert);
       }
     } catch (error: any) {
+      alert.delivered = false;
+      alert.deliveryError = error?.message || String(error);
+      await this.alertRepo.save(alert);
       this.logger.warn(`emitChallengeAlert failed reason=${error?.message || error}`);
     }
   }

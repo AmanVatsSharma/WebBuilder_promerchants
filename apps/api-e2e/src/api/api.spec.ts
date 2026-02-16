@@ -74,6 +74,19 @@ describe('Theme lifecycle (seed -> build -> install -> publish) + commerce + set
     });
     expect(webhookRes.status).toBe(201);
 
+    const metricsRes = await client.get(`/api/domains/challenges/metrics`);
+    expect(metricsRes.status).toBe(200);
+    expect(typeof metricsRes.data.totalChallenges).toBe('number');
+
+    const promMetricsRes = await client.get(`/api/domains/challenges/metrics/prometheus`);
+    expect(promMetricsRes.status).toBe(200);
+    expect(typeof promMetricsRes.data).toBe('string');
+    expect(promMetricsRes.data).toContain('domain_challenges_total');
+
+    const alertsRes = await client.get(`/api/domains/challenges/alerts?limit=10`);
+    expect(alertsRes.status).toBe(200);
+    expect(Array.isArray(alertsRes.data)).toBe(true);
+
     const pollRes = await client.post(`/api/domains/challenges/poll?limit=5`);
     expect(pollRes.status).toBe(201);
     expect(Array.isArray(pollRes.data?.processed)).toBe(true);

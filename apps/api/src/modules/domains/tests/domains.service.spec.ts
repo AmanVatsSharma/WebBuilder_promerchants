@@ -24,11 +24,16 @@ describe('DomainsService', () => {
       findOne: jest.fn(),
       createQueryBuilder: jest.fn(),
     };
+    const alertRepo = {
+      create: jest.fn(),
+      save: jest.fn(),
+      find: jest.fn(),
+    };
     const verificationService = {
       verify: jest.fn(),
     };
-    const service = new DomainsService(repo as any, challengeRepo as any, verificationService as any);
-    return { service, repo, challengeRepo, verificationService };
+    const service = new DomainsService(repo as any, challengeRepo as any, alertRepo as any, verificationService as any);
+    return { service, repo, challengeRepo, alertRepo, verificationService };
   }
 
   it('should persist VERIFIED status after successful verification', async () => {
@@ -195,6 +200,33 @@ describe('DomainsService', () => {
 
     expect(service.verifyChallenge).toHaveBeenCalledWith('c20', 'scheduler');
     expect(result.challenge.status).toBe('VERIFIED');
+  });
+
+  it('should compute challenge slo metrics', async () => {
+    const { service, challengeRepo, alertRepo } = buildService();
+    challengeRepo.find.mockResolvedValue([
+      { status: 'VERIFIED', propagationState: 'READY', attemptCount: 1, maxAttempts: 5 },
+      {
+        status: 'FAILED',
+        propagationState: 'FAILED',
+        attemptCount: 5,
+        maxAttempts: 5,
+        nextAttemptAt: null,
+      },
+    ]);
+    alertRepo.find.mockResolvedValue([
+      { delivered: true, createdAt: new Date().toISOString() },
+      { delivered: false, createdAt: new Date().toISOString() },
+    ]);
+
+    const metrics = await service.getChallengeSloMetrics();
+
+    expect(metrics.totalChallenges).toBe(2);
+    expect(metrics.verifiedCount).toBe(1);
+    expect(metrics.failedCount).toBe(1);
+    expect(metrics.exhaustedCount).toBe(1);
+    expect(metrics.alertCount).toBe(2);
+    expect(metrics.undeliveredAlerts).toBe(1);
   });
 });
 

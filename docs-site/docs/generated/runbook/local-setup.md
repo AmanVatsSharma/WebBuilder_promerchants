@@ -98,3 +98,11 @@ curl -X POST http://localhost:3000/api/auth/introspect \
   -d '{"token":"<access-token>"}'
 ```
 
+## Domain challenge SLO metrics
+
+```bash
+curl http://localhost:3000/api/domains/challenges/metrics
+curl http://localhost:3000/api/domains/challenges/metrics/prometheus
+curl "http://localhost:3000/api/domains/challenges/alerts?limit=20"
+```
+
