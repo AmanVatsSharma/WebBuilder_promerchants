@@ -22,10 +22,19 @@ function getOrCreateRequestId(): string {
   }
 }
 
-function requestHeaders(extra?: HeadersInit): HeadersInit {
+function deriveSiteScope(path: string): string | null {
+  const match = path.match(/^\/api\/sites\/([^/]+)/i);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
+function requestHeaders(path: string, extra?: HeadersInit): HeadersInit {
   const requestId = typeof window !== 'undefined' ? getOrCreateRequestId() : undefined;
+  const siteScope = deriveSiteScope(path);
+  const apiAuthKey = process.env.NEXT_PUBLIC_API_AUTH_KEY;
   return {
     ...(requestId ? { 'x-request-id': requestId } : {}),
+    ...(siteScope ? { 'x-site-id': siteScope } : {}),
+    ...(apiAuthKey ? { 'x-api-key': apiAuthKey } : {}),
     ...(extra || {}),
   };
 }
@@ -40,7 +49,7 @@ async function readErrorText(res: Response) {
 
 export async function apiGet<T>(path: string): Promise<T> {
   console.debug('[builder-api] GET', path);
-  const res = await fetch(path, { cache: 'no-store', headers: requestHeaders() });
+  const res = await fetch(path, { cache: 'no-store', headers: requestHeaders(path) });
   if (!res.ok) {
     const text = await readErrorText(res);
     console.error('[builder-api] GET failed', { path, status: res.status, text });
@@ -53,7 +62,7 @@ export async function apiPost<T>(path: string, body?: any): Promise<T> {
   console.debug('[builder-api] POST', path, body);
   const res = await fetch(path, {
     method: 'POST',
-    headers: requestHeaders({ 'Content-Type': 'application/json' }),
+    headers: requestHeaders(path, { 'Content-Type': 'application/json' }),
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
@@ -68,7 +77,7 @@ export async function apiPut<T>(path: string, body: any): Promise<T> {
   console.debug('[builder-api] PUT', path, body);
   const res = await fetch(path, {
     method: 'PUT',
-    headers: requestHeaders({ 'Content-Type': 'application/json' }),
+    headers: requestHeaders(path, { 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -81,7 +90,7 @@ export async function apiPut<T>(path: string, body: any): Promise<T> {
 
 export async function apiUpload<T>(path: string, form: FormData): Promise<T> {
   console.debug('[builder-api] UPLOAD', path);
-  const res = await fetch(path, { method: 'POST', body: form, headers: requestHeaders() });
+  const res = await fetch(path, { method: 'POST', body: form, headers: requestHeaders(path) });
   if (!res.ok) {
     const text = await readErrorText(res);
     console.error('[builder-api] UPLOAD failed', { path, status: res.status, text });
