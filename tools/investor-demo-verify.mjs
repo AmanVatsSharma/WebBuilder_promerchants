@@ -7,7 +7,7 @@
  */
 
 import { spawn } from 'node:child_process';
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   artifactNamePattern,
@@ -34,6 +34,7 @@ const artifactDirPath = artifactDirArg
 const artifactStrict = argv.includes('--artifact-strict');
 const artifactStrictExtra = argv.includes('--artifact-strict-extra');
 const artifactStrictPlaceholders = argv.includes('--artifact-strict-placeholders');
+const artifactStrictContent = argv.includes('--artifact-strict-content');
 const artifactReportMdArg = argv.find((arg) =>
   arg.startsWith('--artifact-report-md='),
 );
@@ -92,19 +93,68 @@ async function validateArtifactDirectory(targetDir) {
     (fileName) => !artifactNamePattern().test(fileName),
   );
   const placeholderFiles = [];
+  const contentChecks = [];
   for (const row of coverage) {
-    if (row.ext !== 'json' && row.ext !== 'log') continue;
     for (const fileName of row.matchedFiles) {
-      try {
-        const content = await readFile(path.join(targetDir, fileName), 'utf8');
-        if (content.includes(INVESTOR_PLACEHOLDER_MARKER)) {
-          placeholderFiles.push(fileName);
+      const filePath = path.join(targetDir, fileName);
+      const slot = `${row.chapter}/${row.surface}/${row.label}.${row.ext}`;
+      const issues = [];
+      if (row.ext === 'png' || row.ext === 'mp4') {
+        try {
+          const stats = await stat(filePath);
+          if (!stats.size) {
+            issues.push('binary-artifact-empty');
+          }
+        } catch {
+          issues.push('binary-artifact-unreadable');
         }
-      } catch {
-        // Ignore content-read errors; missing/read issues are captured by coverage.
       }
+      if (row.ext === 'json' || row.ext === 'log') {
+        try {
+          const content = await readFile(filePath, 'utf8');
+          if (content.includes(INVESTOR_PLACEHOLDER_MARKER)) {
+            placeholderFiles.push(fileName);
+          }
+          if (row.ext === 'log' && row.label === 'demo-verify-log') {
+            if (!content.includes('investor-demo-verify')) {
+              issues.push('log-missing-investor-demo-verify-marker');
+            }
+          }
+          if (row.ext === 'json' && row.label === 'curation-export-json') {
+            try {
+              const parsed = JSON.parse(content);
+              const requiredKeys = [
+                'activePreset',
+                'searchValue',
+                'pricingFilter',
+                'listingFilter',
+                'buildFilter',
+                'sortMode',
+              ];
+              const missingKeys = requiredKeys.filter(
+                (key) => !(key in (parsed || {})),
+              );
+              if (missingKeys.length) {
+                issues.push(`curation-json-missing-keys:${missingKeys.join(',')}`);
+              }
+            } catch {
+              issues.push('curation-json-parse-failed');
+            }
+          }
+        } catch {
+          // Ignore content-read errors; missing/read issues are captured by coverage.
+          issues.push('text-artifact-unreadable');
+        }
+      }
+      contentChecks.push({
+        slot,
+        fileName,
+        passed: issues.length === 0,
+        issues,
+      });
     }
   }
+  const failedContentChecks = contentChecks.filter((item) => !item.passed);
   return {
     directory: targetDir,
     required: coverage.length,
@@ -113,8 +163,86 @@ async function validateArtifactDirectory(targetDir) {
     unexpectedFiles,
     nonConformingFiles,
     placeholderFiles,
+    contentChecks,
+    failedContentChecks,
     coverage,
   };
+}
+
+function contentIssueCount(artifactValidation) {
+  return Array.isArray(artifactValidation.failedContentChecks)
+    ? artifactValidation.failedContentChecks.length
+    : 0;
+}
+
+async function validateArtifactsAndApplyGates(summary) {
+  const artifactValidation = await validateArtifactDirectory(artifactDirPath);
+  summary.artifactValidation = artifactValidation;
+  console.log('[investor-demo-verify] artifact coverage', {
+    covered: artifactValidation.covered,
+    required: artifactValidation.required,
+    missing: artifactValidation.missing,
+    unexpectedFiles: artifactValidation.unexpectedFiles.length,
+    nonConformingFiles: artifactValidation.nonConformingFiles.length,
+    placeholderFiles: artifactValidation.placeholderFiles.length,
+    contentIssues: contentIssueCount(artifactValidation),
+  });
+  if (artifactStrict && artifactValidation.missing > 0) {
+    summary.success = false;
+  }
+  if (
+    artifactStrictExtra &&
+    (artifactValidation.unexpectedFiles.length > 0 ||
+      artifactValidation.nonConformingFiles.length > 0)
+  ) {
+    summary.success = false;
+  }
+  if (artifactStrictPlaceholders && artifactValidation.placeholderFiles.length > 0) {
+    summary.success = false;
+  }
+  if (artifactStrictContent && contentIssueCount(artifactValidation) > 0) {
+    summary.success = false;
+  }
+  if (artifactReportMdPath) {
+    const markdown = buildArtifactCoverageMarkdown(artifactValidation);
+    await writeFile(artifactReportMdPath, markdown, 'utf8');
+    console.log(
+      `[investor-demo-verify] wrote artifact coverage report to ${artifactReportMdPath}`,
+    );
+  }
+  if (artifactManifestPath) {
+    const manifest = buildArtifactManifest(summary);
+    await writeFile(
+      artifactManifestPath,
+      `${JSON.stringify(manifest, null, 2)}\n`,
+      'utf8',
+    );
+    console.log(
+      `[investor-demo-verify] wrote artifact manifest to ${artifactManifestPath}`,
+    );
+  }
+}
+
+async function handleArtifactValidationFailure(summary, error) {
+  summary.success = false;
+  summary.artifactValidation = {
+    directory: artifactDirPath,
+    error: error instanceof Error ? error.message : String(error),
+  };
+  console.error('[investor-demo-verify] artifact validation failed', {
+    reason: error instanceof Error ? error.message : String(error),
+  });
+  if (artifactManifestPath) {
+    const manifest = buildArtifactManifest(summary);
+    await writeFile(
+      artifactManifestPath,
+      `${JSON.stringify(manifest, null, 2)}\n`,
+      'utf8',
+    );
+    console.log(
+      `[investor-demo-verify] wrote artifact manifest to ${artifactManifestPath}`,
+    );
+  }
 }
 
 
@@ -210,67 +338,9 @@ async function main() {
 
   if (artifactDirPath) {
     try {
-      const artifactValidation = await validateArtifactDirectory(artifactDirPath);
-      summary.artifactValidation = artifactValidation;
-      console.log('[investor-demo-verify] artifact coverage', {
-        covered: artifactValidation.covered,
-        required: artifactValidation.required,
-        missing: artifactValidation.missing,
-        unexpectedFiles: artifactValidation.unexpectedFiles.length,
-        nonConformingFiles: artifactValidation.nonConformingFiles.length,
-        placeholderFiles: artifactValidation.placeholderFiles.length,
-      });
-      if (artifactStrict && artifactValidation.missing > 0) {
-        summary.success = false;
-      }
-      if (
-        artifactStrictExtra &&
-        (artifactValidation.unexpectedFiles.length > 0 ||
-          artifactValidation.nonConformingFiles.length > 0)
-      ) {
-        summary.success = false;
-      }
-      if (artifactStrictPlaceholders && artifactValidation.placeholderFiles.length > 0) {
-        summary.success = false;
-      }
-      if (artifactReportMdPath) {
-        const markdown = buildArtifactCoverageMarkdown(artifactValidation);
-        await writeFile(artifactReportMdPath, markdown, 'utf8');
-        console.log(
-          `[investor-demo-verify] wrote artifact coverage report to ${artifactReportMdPath}`,
-        );
-      }
-      if (artifactManifestPath) {
-        const manifest = buildArtifactManifest(summary);
-        await writeFile(
-          artifactManifestPath,
-          `${JSON.stringify(manifest, null, 2)}\n`,
-          'utf8',
-        );
-        console.log(
-          `[investor-demo-verify] wrote artifact manifest to ${artifactManifestPath}`,
-        );
-      }
-    } catch (e) {
-      summary.success = false;
-      summary.artifactValidation = {
-        directory: artifactDirPath,
-        error: e instanceof Error ? e.message : String(e),
-      };
-      console.error('[investor-demo-verify] artifact validation failed', {
-        reason: e instanceof Error ? e.message : String(e),
-      });
-      if (artifactManifestPath) {
-        const manifest = buildArtifactManifest(summary);
-        await writeFile(
-          artifactManifestPath,
-          `${JSON.stringify(manifest, null, 2)}\n`,
-          'utf8',
-        );
-        console.log(
-          `[investor-demo-verify] wrote artifact manifest to ${artifactManifestPath}`,
-        );
-      }
+      await validateArtifactsAndApplyGates(summary);
+    } catch (error) {
+      await handleArtifactValidationFailure(summary, error);
     }
   }
 

@@ -91,6 +91,7 @@ export function buildArtifactCoverageMarkdown(artifactValidation) {
     `Unexpected named files: ${artifactValidation.unexpectedFiles?.length || 0}`,
     `Non-conforming files: ${artifactValidation.nonConformingFiles?.length || 0}`,
     `Placeholder files: ${artifactValidation.placeholderFiles?.length || 0}`,
+    `Content issues: ${artifactValidation.failedContentChecks?.length || 0}`,
     '',
     '| Slot | Status | Matched files |',
     '| --- | --- | --- |',
@@ -117,6 +118,14 @@ export function buildArtifactCoverageMarkdown(artifactValidation) {
     lines.push('', '## Placeholder files');
     for (const fileName of artifactValidation.placeholderFiles) {
       lines.push(`- ${fileName}`);
+    }
+  }
+  if (artifactValidation.failedContentChecks?.length) {
+    lines.push('', '## Content issues');
+    for (const check of artifactValidation.failedContentChecks) {
+      lines.push(
+        `- ${check.fileName} (${check.slot}): ${check.issues.join(', ')}`,
+      );
     }
   }
   return `${lines.join('\n')}\n`;
