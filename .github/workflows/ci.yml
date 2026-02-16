@@ -56,5 +56,8 @@ jobs:
       - name: Test storefront
         run: npx nx test storefront
 
+      - name: Guard storefront snapshot drift
+        run: git diff --exit-code -- apps/storefront/specs/__snapshots__
+
       - name: Build storefront
         run: npx nx build storefront
