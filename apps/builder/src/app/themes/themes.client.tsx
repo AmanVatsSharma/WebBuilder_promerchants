@@ -434,7 +434,12 @@ export default function ThemesClient() {
       return;
     }
     setActiveCurationPreset('CUSTOM');
+    // Reset dimensions before applying a single-focus lens so pivots stay deterministic.
     setSearchValue('');
+    setPricingFilter('ALL');
+    setListingFilter('ALL');
+    setBuildFilter('ALL');
+    setSortMode('UPDATED_DESC');
     if (focus === 'READY') {
       setBuildFilter('READY');
       setSortMode('BUILD_READY_FIRST');

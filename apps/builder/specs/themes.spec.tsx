@@ -91,6 +91,14 @@ describe('ThemesClient', () => {
       expect(queryByText(/Aurora Commerce/i)).toBeNull();
     });
 
+    fireEvent.click(getByRole('button', { name: /Listed themes/i }));
+
+    await waitFor(() => {
+      expect(getByText(/Aurora Commerce/i)).toBeTruthy();
+      expect(getByText(/Nebula Fashion/i)).toBeTruthy();
+      expect(queryByText(/Horizon Capsule/i)).toBeNull();
+    });
+
     fireEvent.click(getByRole('button', { name: /Reset view/i }));
 
     await waitFor(() => {
