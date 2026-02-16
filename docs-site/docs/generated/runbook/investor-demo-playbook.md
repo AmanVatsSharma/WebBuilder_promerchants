@@ -34,6 +34,7 @@ Run a polished 10-15 minute demo showing:
 
 - Show premium hero metrics (sites/pages/domains/verified).
 - Show project search/filter.
+- Show per-site release context chips (`Published theme`, `Last release`) for operator confidence.
 - Create a site and page from inline forms.
 - Add domain mapping and trigger verify.
 - Highlight Domain Ops Pulse cards and recent alert feed.
@@ -52,6 +53,7 @@ Run a polished 10-15 minute demo showing:
 ### Chapter 3 — “Safe releases” (Publish Center)
 
 - Show readiness snapshot (build/templates/pages).
+- Use quick actions (`Open Latest Editor`, `Open Live Storefront`) for fast validation loops.
 - Publish settings/layout/pages.
 - Show non-blocking inline notices during each action.
 - Show rollback selector + history feed.
