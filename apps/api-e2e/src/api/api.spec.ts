@@ -96,7 +96,9 @@ describe('Theme lifecycle (seed -> build -> install -> publish) + commerce + set
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const mod = require(bundlePath);
     expect(mod?.templates?.['pages/home']).toBeTruthy();
-    const Home = mod.templates['pages/home'];
+    const homeExport = mod.templates['pages/home'];
+    const Home = typeof homeExport === 'function' ? homeExport : homeExport?.default;
+    expect(typeof Home).toBe('function');
     const html = renderToString(React.createElement(Home, { layout: draftLayoutRes.data?.draft?.layout || null }));
     expect(html).toContain('E2E Hero Title');
 

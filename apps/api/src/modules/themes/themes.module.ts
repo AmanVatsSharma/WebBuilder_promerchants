@@ -26,14 +26,18 @@ import { ThemeBuildQueueService } from './theme-build-queue.service';
 import { QueueModule } from '../../shared/queue/queue.module';
 import { THEME_BUILD_QUEUE_NAME } from '../../shared/queue/queue.constants';
 import { LoggerModule } from '../../shared/logger/logger.module';
+import { isInlineThemeBuildMode } from './theme-build-mode';
+
+const themeBuildInfraImports = isInlineThemeBuildMode()
+  ? []
+  : [QueueModule, BullModule.registerQueue({ name: THEME_BUILD_QUEUE_NAME })];
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Theme, ThemeVersion, ThemeFile, ThemeInstall, ThemePublishAudit, ThemeBuildJob]),
     StorageModule,
     LoggerModule,
-    QueueModule,
-    BullModule.registerQueue({ name: THEME_BUILD_QUEUE_NAME }),
+    ...themeBuildInfraImports,
   ],
   controllers: [ThemesController, SitesThemeController],
   providers: [ThemesService, ThemeBuildService, ThemeBuildQueueService],

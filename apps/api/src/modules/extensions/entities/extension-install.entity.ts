@@ -8,6 +8,14 @@
 
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
+function dateType() {
+  return (process.env.DB_TYPE === 'sqljs' ? 'datetime' : 'timestamptz') as any;
+}
+
+function booleanType() {
+  return (process.env.DB_TYPE === 'sqljs' ? 'boolean' : 'bool') as any;
+}
+
 @Entity('extension_installs')
 @Index(['siteId', 'extensionId'], { unique: true })
 export class ExtensionInstall {
@@ -23,13 +31,13 @@ export class ExtensionInstall {
   @Column({ name: 'extension_version_id' })
   extensionVersionId: string;
 
-  @Column({ type: 'bool', default: true })
+  @Column({ type: booleanType(), default: true })
   enabled: boolean;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ type: dateType() })
   installedAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ type: dateType() })
   updatedAt: Date;
 }
 

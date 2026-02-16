@@ -20,6 +20,7 @@ module.exports = async function() {
       HOST: host,
       PORT: String(port),
       DB_TYPE: process.env.DB_TYPE || 'sqljs',
+      THEME_BUILD_MODE: process.env.THEME_BUILD_MODE || 'inline',
       NODE_ENV: process.env.NODE_ENV || 'development',
     },
   });

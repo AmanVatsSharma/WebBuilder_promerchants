@@ -60,8 +60,10 @@ This will be migrated into a richer `StorageProvider` abstraction (S3 compatible
   - `THEME_BUILD_CONCURRENCY` (default: 2)
   - `THEME_BUILD_MAX_ATTEMPTS` (default: 3)
 - Idempotency: only one active build job (`QUEUED`/`RUNNING`) is allowed per theme version.
+- Fallback: set `THEME_BUILD_MODE=inline` (or use `DB_TYPE=sqljs`) to execute builds in API process without Redis/worker (local/e2e friendly).
 
 ## Changelog
+- 2026-02-16: Added inline theme build mode fallback for local/e2e (`THEME_BUILD_MODE=inline`) while keeping durable BullMQ mode for production.
 - 2026-02-16: Hardened theme source path handling (blocks traversal/unsafe paths) and aligned file read/write/seed flows to normalized safe relative paths.
 - 2026-01-24: Replaced in-memory theme builds with durable BullMQ + Redis queue and worker-backed processing.
 - 2026-01-24: Theme build now exports `manifest` + `templates` to enable storefront manifest-driven routing.

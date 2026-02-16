@@ -8,6 +8,10 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Site } from './site.entity';
 
+function dateType() {
+  return (process.env.DB_TYPE === 'sqljs' ? 'datetime' : 'timestamptz') as any;
+}
+
 @Entity('pages')
 export class Page {
   @PrimaryGeneratedColumn('uuid')
@@ -36,7 +40,7 @@ export class Page {
   })
   publishedContent?: Record<string, any> | null;
 
-  @Column({ type: 'timestamptz', nullable: true })
+  @Column({ type: dateType(), nullable: true })
   publishedAt?: Date | null;
 
   @Column({ name: 'site_id' })
