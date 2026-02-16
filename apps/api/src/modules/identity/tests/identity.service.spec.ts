@@ -182,5 +182,25 @@ describe('IdentityService', () => {
     expect(authContext.actorId).toBe('user_1');
     expect(authContext.workspaceIds).toEqual(['ws_1']);
   });
+
+  it('returns jwks metadata and introspection details', () => {
+    const { service } = buildService();
+    process.env.AUTH_JWT_SECRET = '';
+    process.env.AUTH_JWT_ACTIVE_KID = 'k1';
+    process.env.AUTH_JWT_SECRETS_JSON = JSON.stringify({ k1: 'secret-k1' });
+
+    const jwks = service.getJwksMetadata();
+    expect(jwks.keys[0].kid).toBe('k1');
+    expect(jwks.keys[0].xSecretFingerprint).toBeTruthy();
+
+    const token = (service as any).signAuthToken({
+      sub: 'user_1',
+      workspaceIds: ['ws_1'],
+    });
+    const introspect = service.introspectToken(token);
+    expect(introspect.active).toBe(true);
+    expect(introspect.actorId).toBe('user_1');
+    expect(introspect.kid).toBe('k1');
+  });
 });
 

@@ -90,4 +90,11 @@ curl -X POST http://localhost:3000/api/auth/refresh \
   -H "content-type: application/json" \
   -d '{"refreshToken":"<refresh-token-from-login>"}'
 ```
+4. Token interoperability endpoints:
+```bash
+curl http://localhost:3000/api/auth/jwks
+curl -X POST http://localhost:3000/api/auth/introspect \
+  -H "content-type: application/json" \
+  -d '{"token":"<access-token>"}'
+```
 

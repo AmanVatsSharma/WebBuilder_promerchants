@@ -28,6 +28,7 @@ Deploy the editor-first MVP with:
   - `NEXT_PUBLIC_API_AUTH_TOKEN` (builder)
   - `API_AUTH_TOKEN` (storefront)
   - bootstrap owner identity via `/api/auth/register` and `/api/auth/login` before opening builder/storefront traffic
+  - optional verifier integration endpoints: `/api/auth/jwks`, `/api/auth/introspect`
 
 ## 1) Build and start stack
 

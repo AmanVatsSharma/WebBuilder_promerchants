@@ -19,6 +19,7 @@ import { RegisterOwnerDto } from './dto/register-owner.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
+import { parseAuthContextFromJwtWithKeyring } from '../../common/auth/auth-context';
 
 const scrypt = promisify(scryptCallback);
 
@@ -68,6 +69,25 @@ function parseSecretKeyring() {
   } catch {
     return { defaultSecret, secretsByKid: {} as Record<string, string> };
   }
+}
+
+function decodeJwtSegment<T>(value: string) {
+  const json = Buffer.from(value, 'base64url').toString('utf8');
+  return JSON.parse(json) as T;
+}
+
+function decodeJwt(token: string) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 3) throw new UnauthorizedException('Invalid token format');
+  const [headerSegment, payloadSegment] = parts;
+  return {
+    header: decodeJwtSegment<Record<string, unknown>>(headerSegment),
+    payload: decodeJwtSegment<Record<string, unknown>>(payloadSegment),
+  };
+}
+
+function secretFingerprint(secret: string) {
+  return createHash('sha256').update(secret).digest('hex').slice(0, 16);
 }
 
 async function hashPassword(password: string) {
@@ -246,6 +266,57 @@ export class IdentityService {
     session.revokedAt = new Date();
     await this.sessionRepo.save(session);
     return { status: 'LOGGED_OUT' };
+  }
+
+  getJwksMetadata() {
+    const keyring = parseSecretKeyring();
+    const keys = Object.entries(keyring.secretsByKid).map(([kid, secretValue]) => {
+      const secret = String(secretValue || '');
+      return {
+      kid,
+      kty: 'oct',
+      use: 'sig',
+      alg: 'HS256',
+      // Security: expose fingerprint only, never raw symmetric secret.
+      xSecretFingerprint: secretFingerprint(secret),
+      };
+    });
+    if (!keys.length && keyring.defaultSecret) {
+      keys.push({
+        kid: 'default',
+        kty: 'oct',
+        use: 'sig',
+        alg: 'HS256',
+        xSecretFingerprint: secretFingerprint(keyring.defaultSecret),
+      });
+    }
+    return {
+      keys,
+      activeKid: String(process.env.AUTH_JWT_ACTIVE_KID || '').trim() || null,
+    };
+  }
+
+  introspectToken(token: string) {
+    const keyring = parseSecretKeyring();
+    try {
+      const authContext = parseAuthContextFromJwtWithKeyring(token, keyring, {
+        issuer: String(process.env.AUTH_JWT_ISSUER || '').trim() || undefined,
+        audience: String(process.env.AUTH_JWT_AUDIENCE || '').trim() || undefined,
+      });
+      const decoded = decodeJwt(token);
+      return {
+        active: true,
+        actorId: authContext.actorId,
+        workspaceIds: authContext.workspaceIds,
+        exp: decoded.payload.exp || null,
+        iat: decoded.payload.iat || null,
+        kid: decoded.header.kid || null,
+      };
+    } catch {
+      return {
+        active: false,
+      };
+    }
   }
 
   private async createSession(userId: string, workspaceIds: string[]) {

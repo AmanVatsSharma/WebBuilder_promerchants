@@ -37,6 +37,14 @@ describe('Theme lifecycle (seed -> build -> install -> publish) + commerce + set
     expect(typeof refreshRes.data.token).toBe('string');
     expect(typeof refreshRes.data.refreshToken).toBe('string');
 
+    const jwksRes = await axios.get(`/api/auth/jwks`);
+    expect(jwksRes.status).toBe(200);
+    expect(Array.isArray(jwksRes.data.keys)).toBe(true);
+
+    const introspectRes = await axios.post(`/api/auth/introspect`, { token: refreshRes.data.token });
+    expect(introspectRes.status).toBe(201);
+    expect(introspectRes.data.active).toBe(true);
+
     const client = axios.create({
       headers: {
         Authorization: `Bearer ${refreshRes.data.token}`,

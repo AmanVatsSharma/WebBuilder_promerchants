@@ -6,12 +6,13 @@
  * @created 2026-02-16
  */
 
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { IdentityService } from './identity.service';
 import { RegisterOwnerDto } from './dto/register-owner.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
+import { IntrospectTokenDto } from './dto/introspect-token.dto';
 
 @Controller('auth')
 export class IdentityController {
@@ -35,6 +36,16 @@ export class IdentityController {
   @Post('logout')
   logout(@Body() dto: LogoutDto) {
     return this.identityService.logout(dto);
+  }
+
+  @Get('jwks')
+  jwks() {
+    return this.identityService.getJwksMetadata();
+  }
+
+  @Post('introspect')
+  introspect(@Body() dto: IntrospectTokenDto) {
+    return this.identityService.introspectToken(dto.token);
   }
 }
 

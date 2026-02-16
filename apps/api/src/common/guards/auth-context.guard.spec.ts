@@ -76,6 +76,13 @@ describe('AuthContextGuard', () => {
     expect(guard.canActivate(mockContext({ headers: {}, path: '/api/auth/refresh' }))).toBe(true);
   });
 
+  it('allows public auth/jwks route without access token when enabled', () => {
+    process.env.ENFORCE_AUTH_CONTEXT = 'true';
+    process.env.AUTH_JWT_SECRET = 'test-secret';
+    const guard = new AuthContextGuard();
+    expect(guard.canActivate(mockContext({ headers: {}, path: '/api/auth/jwks' }))).toBe(true);
+  });
+
   it('accepts valid bearer token and populates auth context', () => {
     process.env.ENFORCE_AUTH_CONTEXT = 'true';
     process.env.AUTH_JWT_SECRET = 'test-secret';
