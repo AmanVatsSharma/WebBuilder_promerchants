@@ -102,3 +102,7 @@ Optional machine-readable artifact manifest:
 ```bash
 npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-manifest=/tmp/investor-artifact-manifest.json
 ```
+
+Notes:
+
+- Verification summary and manifest now include both ISO and IST timestamps for operator logs.

@@ -52,6 +52,13 @@ function compactTimestamp() {
   return `${year}${month}${day}-${hours}${mins}`;
 }
 
+function formatIstTimestamp(value = new Date()) {
+  return value.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    hour12: false,
+  });
+}
+
 function captureChecklistRows() {
   return [
     ['ch1', 'dashboard', 'hero-metrics', 'png'],
@@ -152,6 +159,7 @@ function buildArtifactCoverageMarkdown(artifactValidation) {
 function buildArtifactManifest(summary) {
   return {
     generatedAt: new Date().toISOString(),
+    generatedAtIst: formatIstTimestamp(),
     verification: {
       success: summary.success,
       dryRun: summary.dryRun,
@@ -192,6 +200,7 @@ function runCommand(entry) {
 
 async function main() {
   const startedAt = new Date().toISOString();
+  const startedAtIst = formatIstTimestamp();
   const results = [];
 
   for (const entry of commands) {
@@ -221,7 +230,9 @@ async function main() {
 
   const summary = {
     startedAt,
+    startedAtIst,
     finishedAt: new Date().toISOString(),
+    finishedAtIst: formatIstTimestamp(),
     success: results.every((entry) => entry.success),
     dryRun: isDryRun,
     results,
