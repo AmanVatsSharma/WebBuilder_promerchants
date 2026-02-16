@@ -89,6 +89,7 @@ npm run mvp:validate
   - `GET /api/domains/challenges/metrics`
   - `GET /api/domains/challenges/metrics/prometheus`
   - `GET /api/domains/challenges/alerts?limit=20`
+  - see dedicated operations guide: `runbook/domain-challenge-ops`
 - 403 errors on site-scoped APIs:
   - verify `x-api-key` / `x-site-id` propagation and env (`API_AUTH_KEY`, `ENFORCE_SITE_SCOPE`).
 - Storefront webpack warnings:
