@@ -38,6 +38,7 @@ For repeatable evidence packaging, use the companion runbook:
    - follow [Investor Demo Artifact Capture](./investor-demo-artifact-capture)
 7. If artifacts already captured, validate pack completeness:
    - `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-strict`
+   - optional shareable report: `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-report-md=/tmp/investor-artifact-coverage.md`
 
 ## Demo story arc
 

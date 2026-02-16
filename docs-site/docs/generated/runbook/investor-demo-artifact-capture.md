@@ -89,3 +89,9 @@ Optional artifact-pack coverage validation (after captures are created):
 ```bash
 npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-strict --output=/tmp/investor-demo-verify-summary.json
 ```
+
+Optional markdown report for sharing with stakeholders:
+
+```bash
+npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-report-md=/tmp/investor-artifact-coverage.md
+```

@@ -23,6 +23,12 @@ const artifactDirPath = artifactDirArg
   ? path.resolve(artifactDirArg.split('=')[1] || '')
   : '';
 const artifactStrict = argv.includes('--artifact-strict');
+const artifactReportMdArg = argv.find((arg) =>
+  arg.startsWith('--artifact-report-md='),
+);
+const artifactReportMdPath = artifactReportMdArg
+  ? path.resolve(artifactReportMdArg.split('=')[1] || '')
+  : '';
 
 const commands = [
   { id: 'test-builder', command: 'npx', args: ['nx', 'test', 'builder'] },
@@ -117,6 +123,25 @@ function buildCapturePlanMarkdown(generatedAt) {
   return `${lines.join('\n')}\n`;
 }
 
+function buildArtifactCoverageMarkdown(artifactValidation) {
+  const lines = [
+    '# Investor Artifact Coverage Report',
+    '',
+    `Directory: ${artifactValidation.directory}`,
+    `Coverage: ${artifactValidation.covered}/${artifactValidation.required}`,
+    '',
+    '| Slot | Status | Matched files |',
+    '| --- | --- | --- |',
+  ];
+  for (const row of artifactValidation.coverage) {
+    const slot = `${row.chapter}/${row.surface}/${row.label}.${row.ext}`;
+    const status = row.complete ? '✅ complete' : '❌ missing';
+    const files = row.matchedFiles.length ? row.matchedFiles.join(', ') : '-';
+    lines.push(`| ${slot} | ${status} | ${files} |`);
+  }
+  return `${lines.join('\n')}\n`;
+}
+
 function runCommand(entry) {
   return new Promise((resolve) => {
     const startedAt = Date.now();
@@ -196,6 +221,13 @@ async function main() {
       });
       if (artifactStrict && artifactValidation.missing > 0) {
         summary.success = false;
+      }
+      if (artifactReportMdPath) {
+        const markdown = buildArtifactCoverageMarkdown(artifactValidation);
+        await writeFile(artifactReportMdPath, markdown, 'utf8');
+        console.log(
+          `[investor-demo-verify] wrote artifact coverage report to ${artifactReportMdPath}`,
+        );
       }
     } catch (e) {
       summary.success = false;
