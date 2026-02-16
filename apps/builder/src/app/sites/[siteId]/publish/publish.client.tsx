@@ -48,7 +48,30 @@ type Page = {
   isPublished?: boolean;
 };
 
+type SiteSummary = {
+  id: string;
+  name: string;
+  domain?: string | null;
+};
+
 type NoticeState = { tone: NoticeTone; message: string } | null;
+const storefrontBase = (process.env.NEXT_PUBLIC_STOREFRONT_URL as string) || 'http://localhost:4201';
+
+function inferProtocol(host: string) {
+  const normalized = String(host || '').trim().toLowerCase();
+  if (!normalized) return 'http';
+  if (normalized.includes('localhost') || normalized.startsWith('127.') || normalized.startsWith('0.0.0.0')) {
+    return 'http';
+  }
+  return 'https';
+}
+
+function storefrontUrl(domain: string | null | undefined, slug: string | null | undefined) {
+  const path = !slug || slug === 'home' ? '/' : `/${slug}`;
+  if (!domain) return `${storefrontBase}${path}`;
+  const protocol = inferProtocol(domain);
+  return `${protocol}://${domain}${path}`;
+}
 
 function statusBadgeClass(status: string) {
   switch (status) {
@@ -67,6 +90,7 @@ function statusBadgeClass(status: string) {
 }
 
 export default function PublishClient({ siteId }: { siteId: string }) {
+  const [site, setSite] = useState<SiteSummary | null>(null);
   const [install, setInstall] = useState<ThemeInstall | null>(null);
   const [themeVersion, setThemeVersion] = useState<ThemeVersion | null>(null);
   const [themeVersions, setThemeVersions] = useState<ThemeVersion[]>([]);
@@ -94,6 +118,16 @@ export default function PublishClient({ siteId }: { siteId: string }) {
     };
   }, [install, themeVersion, templateIds, pages.length]);
 
+  const latestPage = useMemo(() => pages[0] || null, [pages]);
+  const publishedPage = useMemo(
+    () => pages.find((page) => page.isPublished) || latestPage,
+    [latestPage, pages],
+  );
+  const liveStorefrontUrl = useMemo(
+    () => storefrontUrl(site?.domain || null, publishedPage?.slug || null),
+    [publishedPage?.slug, site?.domain],
+  );
+
   const reload = async () => {
     console.debug('[publish-center] reload:start', { siteId });
     setLoading(true);
@@ -110,12 +144,14 @@ export default function PublishClient({ siteId }: { siteId: string }) {
         setThemeVersion(null);
       }
 
-      const [sitePages, auditRows] = await Promise.all([
+      const [sitePages, auditRows, siteSummary] = await Promise.all([
         apiGet<Page[]>(`/api/sites/${encodeURIComponent(siteId)}/pages`),
         apiGet<ThemeAudit[]>(`/api/sites/${encodeURIComponent(siteId)}/theme/audits`),
+        apiGet<SiteSummary>(`/api/sites/${encodeURIComponent(siteId)}`),
       ]);
       setPages(sitePages);
       setAudits(auditRows);
+      setSite(siteSummary);
 
       if (inst?.themeId) {
         const theme = await apiGet<Theme>(`/api/themes/${encodeURIComponent(inst.themeId)}`);
@@ -287,6 +323,35 @@ export default function PublishClient({ siteId }: { siteId: string }) {
             {error}
           </div>
         ) : null}
+
+        <section className="rounded-xl border bg-white p-4 shadow-sm">
+          <div className="font-semibold text-slate-900">Quick Actions</div>
+          <div className="mt-1 text-xs text-slate-500">
+            Jump directly to the latest editor context or live storefront route.
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {latestPage ? (
+              <Link
+                className="rounded border bg-white px-3 py-2 text-xs hover:bg-slate-100"
+                href={`/editor/${encodeURIComponent(latestPage.id)}`}
+              >
+                Open Latest Editor
+              </Link>
+            ) : (
+              <span className="rounded border bg-slate-100 px-3 py-2 text-xs text-slate-500">
+                No page available yet
+              </span>
+            )}
+            <a
+              className="rounded border bg-white px-3 py-2 text-xs hover:bg-slate-100"
+              href={liveStorefrontUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open Live Storefront
+            </a>
+          </div>
+        </section>
 
         <section className="rounded-xl border bg-white p-4 shadow-sm">
           <div className="font-semibold text-slate-900">Readiness Snapshot</div>

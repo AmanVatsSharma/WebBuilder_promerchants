@@ -13,6 +13,9 @@ const FIXED_ISO = '2026-02-16T10:00:00.000Z';
 
 jest.mock('../src/lib/api', () => ({
   apiGet: jest.fn(async (path: string) => {
+    if (path === '/api/sites/site_1') {
+      return { id: 'site_1', name: 'Demo Site', domain: 'demo.localhost' };
+    }
     if (path.includes('/theme/audits')) {
       return [
         {
@@ -64,6 +67,7 @@ describe('PublishClient', () => {
       expect(getByText(/Readiness Snapshot/i)).toBeTruthy();
       expect(getByText(/Rollback Theme/i)).toBeTruthy();
       expect(getByText(/Theme Publish History/i)).toBeTruthy();
+      expect(getByText(/Quick Actions/i)).toBeTruthy();
     });
 
     expect(asFragment()).toMatchSnapshot();
