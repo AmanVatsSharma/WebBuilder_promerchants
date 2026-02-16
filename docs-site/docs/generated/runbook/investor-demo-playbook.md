@@ -35,6 +35,7 @@ Run a polished 10-15 minute demo showing:
 - Show premium hero metrics (sites/pages/domains/verified).
 - Show project search/filter.
 - Show per-site release context chips (`Published theme`, `Last release`) for operator confidence.
+- Show shortcut analytics signals (`Shortcut clicks` chip + `Shortcut totals`) and optional export button.
 - Create a site and page from inline forms.
 - Add domain mapping and trigger verify.
 - Highlight Domain Ops Pulse cards and recent alert feed.
