@@ -21,6 +21,16 @@ describe('Theme lifecycle (seed -> build -> install -> publish) + commerce + set
     const siteId = siteRes.data.id as string;
     expect(typeof siteId).toBe('string');
 
+    // 1b) Domain mapping + verification (localhost fast-path)
+    const domainRes = await axios.post(`/api/domains`, { host: `demo-${Date.now()}.localhost`, siteId });
+    expect(domainRes.status).toBe(201);
+    const domainId = domainRes.data.id as string;
+    expect(typeof domainId).toBe('string');
+
+    const verifyDomainRes = await axios.post(`/api/domains/${domainId}/verify`);
+    expect(verifyDomainRes.status).toBe(201);
+    expect(verifyDomainRes.data.status).toBe('VERIFIED');
+
     // 2) Seed default theme
     const seedRes = await axios.post(`/api/themes/seed/default`);
     expect(seedRes.status).toBe(201);
