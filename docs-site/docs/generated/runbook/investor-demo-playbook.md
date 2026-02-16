@@ -51,7 +51,8 @@ For repeatable evidence packaging, use the companion runbook:
 ### Chapter 2 — “Theme economy engine” (Theme Studio)
 
 - Show Theme Studio KPIs.
-- Filter by listing/pricing quickly.
+- Use curation presets (`Investor demo`, `Revenue-first`) to show instant inventory storytelling pivots.
+- Use inventory focus chips (`Ready builds`, `Failed builds`, `Listed themes`) to show one-click triage and merchandising views.
 - Upload theme bundle with marketplace metadata.
 - Open version editor from theme inventory card.
 
