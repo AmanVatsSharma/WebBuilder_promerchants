@@ -6,6 +6,8 @@
  * Last-updated: 2026-02-16
  */
 
+export const INVESTOR_PLACEHOLDER_MARKER = '[INVESTOR_PLACEHOLDER]';
+
 export function compactTimestamp(now = new Date()) {
   const year = `${now.getFullYear()}`;
   const month = `${now.getMonth() + 1}`.padStart(2, '0');
@@ -88,6 +90,7 @@ export function buildArtifactCoverageMarkdown(artifactValidation) {
     `Coverage: ${artifactValidation.covered}/${artifactValidation.required}`,
     `Unexpected named files: ${artifactValidation.unexpectedFiles?.length || 0}`,
     `Non-conforming files: ${artifactValidation.nonConformingFiles?.length || 0}`,
+    `Placeholder files: ${artifactValidation.placeholderFiles?.length || 0}`,
     '',
     '| Slot | Status | Matched files |',
     '| --- | --- | --- |',
@@ -107,6 +110,12 @@ export function buildArtifactCoverageMarkdown(artifactValidation) {
   if (artifactValidation.nonConformingFiles?.length) {
     lines.push('', '## Non-conforming files');
     for (const fileName of artifactValidation.nonConformingFiles) {
+      lines.push(`- ${fileName}`);
+    }
+  }
+  if (artifactValidation.placeholderFiles?.length) {
+    lines.push('', '## Placeholder files');
+    for (const fileName of artifactValidation.placeholderFiles) {
       lines.push(`- ${fileName}`);
     }
   }

@@ -14,6 +14,7 @@ import {
   compactTimestamp,
   createSuggestedArtifactName,
   formatIstTimestamp,
+  INVESTOR_PLACEHOLDER_MARKER,
 } from './investor-artifact-utils.mjs';
 
 const argv = process.argv.slice(2);
@@ -72,13 +73,16 @@ function pickUniqueName(existingNames, chapter, surface, label, ext) {
 function placeholderByExt(ext) {
   if (ext === 'json') {
     return JSON.stringify(
-      { note: 'replace with exported curation JSON payload' },
+      {
+        note: 'replace with exported curation JSON payload',
+        placeholder: INVESTOR_PLACEHOLDER_MARKER,
+      },
       null,
       2,
     ).concat('\n');
   }
   if (ext === 'log') {
-    return '# replace with demo verification terminal output\n';
+    return `${INVESTOR_PLACEHOLDER_MARKER} replace with demo verification terminal output\n`;
   }
   return '';
 }

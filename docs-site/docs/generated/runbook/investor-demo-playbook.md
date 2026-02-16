@@ -40,6 +40,7 @@ For repeatable evidence packaging, use the companion runbook:
 7. If artifacts already captured, validate pack completeness:
    - `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-strict`
    - include hygiene gate when needed: `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-strict --artifact-strict-extra`
+   - include placeholder gate when scaffolds are disallowed: `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-strict --artifact-strict-placeholders`
    - optional shareable report: `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-report-md=/tmp/investor-artifact-coverage.md`
    - optional JSON manifest for archive pipelines: `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-manifest=/tmp/investor-artifact-manifest.json`
 

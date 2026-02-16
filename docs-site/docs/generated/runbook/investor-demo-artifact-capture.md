@@ -98,6 +98,7 @@ npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts
 ```
 
 Add `--artifact-strict-extra` when you also want to fail on unexpected or non-conforming files.
+Add `--artifact-strict-placeholders` when scaffold placeholder files must be rejected.
 
 Optional markdown report for sharing with stakeholders:
 

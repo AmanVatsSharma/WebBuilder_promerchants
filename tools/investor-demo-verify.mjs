@@ -7,7 +7,7 @@
  */
 
 import { spawn } from 'node:child_process';
-import { readdir, writeFile } from 'node:fs/promises';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   artifactNamePattern,
@@ -16,6 +16,7 @@ import {
   captureChecklistRows,
   compactTimestamp,
   formatIstTimestamp,
+  INVESTOR_PLACEHOLDER_MARKER,
 } from './investor-artifact-utils.mjs';
 
 const argv = process.argv.slice(2);
@@ -32,6 +33,7 @@ const artifactDirPath = artifactDirArg
   : '';
 const artifactStrict = argv.includes('--artifact-strict');
 const artifactStrictExtra = argv.includes('--artifact-strict-extra');
+const artifactStrictPlaceholders = argv.includes('--artifact-strict-placeholders');
 const artifactReportMdArg = argv.find((arg) =>
   arg.startsWith('--artifact-report-md='),
 );
@@ -89,6 +91,20 @@ async function validateArtifactDirectory(targetDir) {
   const nonConformingFiles = fileNames.filter(
     (fileName) => !artifactNamePattern().test(fileName),
   );
+  const placeholderFiles = [];
+  for (const row of coverage) {
+    if (row.ext !== 'json' && row.ext !== 'log') continue;
+    for (const fileName of row.matchedFiles) {
+      try {
+        const content = await readFile(path.join(targetDir, fileName), 'utf8');
+        if (content.includes(INVESTOR_PLACEHOLDER_MARKER)) {
+          placeholderFiles.push(fileName);
+        }
+      } catch {
+        // Ignore content-read errors; missing/read issues are captured by coverage.
+      }
+    }
+  }
   return {
     directory: targetDir,
     required: coverage.length,
@@ -96,6 +112,7 @@ async function validateArtifactDirectory(targetDir) {
     missing: coverage.length - covered,
     unexpectedFiles,
     nonConformingFiles,
+    placeholderFiles,
     coverage,
   };
 }
@@ -201,6 +218,7 @@ async function main() {
         missing: artifactValidation.missing,
         unexpectedFiles: artifactValidation.unexpectedFiles.length,
         nonConformingFiles: artifactValidation.nonConformingFiles.length,
+        placeholderFiles: artifactValidation.placeholderFiles.length,
       });
       if (artifactStrict && artifactValidation.missing > 0) {
         summary.success = false;
@@ -210,6 +228,9 @@ async function main() {
         (artifactValidation.unexpectedFiles.length > 0 ||
           artifactValidation.nonConformingFiles.length > 0)
       ) {
+        summary.success = false;
+      }
+      if (artifactStrictPlaceholders && artifactValidation.placeholderFiles.length > 0) {
         summary.success = false;
       }
       if (artifactReportMdPath) {
