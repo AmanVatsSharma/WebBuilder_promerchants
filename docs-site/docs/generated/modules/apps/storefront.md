@@ -20,6 +20,7 @@ The **buyer-facing storefront** that serves many tenants (stores) from one deplo
 ## Notes
 - For dev fallback, tenant resolution may fall back to `Site.domain` or first site.
 - Storefront production builds are forced to webpack via `apps/storefront/project.json` for stable monorepo library resolution.
+- Runtime bundle loaders (`theme-runtime`, `extension-runtime`) intentionally use sandboxed dynamic `require` for user-authored bundles. Webpack emits critical-dependency warnings for these files; this is expected and tracked.
 
 ## Changelog
 - 2026-02-16: Storefront API callers now forward optional `x-actor-id` (`API_ACTOR_ID`) for site ownership guard compatibility in protected API modes.

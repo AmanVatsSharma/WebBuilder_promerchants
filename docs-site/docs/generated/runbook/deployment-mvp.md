@@ -68,3 +68,5 @@ npm run mvp:validate
   - worker not running or Redis misconfigured.
 - 403 errors on site-scoped APIs:
   - verify `x-api-key` / `x-site-id` propagation and env (`API_AUTH_KEY`, `ENFORCE_SITE_SCOPE`).
+- Storefront webpack warnings:
+  - warnings about `theme-runtime` / `extension-runtime` dynamic require are expected due sandboxed runtime loading of user bundles.
