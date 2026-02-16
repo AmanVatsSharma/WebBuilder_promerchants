@@ -83,3 +83,9 @@ Optional auto-generated capture checklist (markdown file with suggested artifact
 ```bash
 npm run demo:artifact:verify -- --dry-run --capture-plan=/tmp/investor-demo-capture-plan.md
 ```
+
+Optional artifact-pack coverage validation (after captures are created):
+
+```bash
+npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-strict --output=/tmp/investor-demo-verify-summary.json
+```

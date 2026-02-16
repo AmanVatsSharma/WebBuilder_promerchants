@@ -7,7 +7,7 @@
  */
 
 import { spawn } from 'node:child_process';
-import { writeFile } from 'node:fs/promises';
+import { readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const argv = process.argv.slice(2);
@@ -18,6 +18,11 @@ const capturePlanArg = argv.find((arg) => arg.startsWith('--capture-plan='));
 const capturePlanPath = capturePlanArg
   ? path.resolve(capturePlanArg.split('=')[1] || '')
   : '';
+const artifactDirArg = argv.find((arg) => arg.startsWith('--artifact-dir='));
+const artifactDirPath = artifactDirArg
+  ? path.resolve(artifactDirArg.split('=')[1] || '')
+  : '';
+const artifactStrict = argv.includes('--artifact-strict');
 
 const commands = [
   { id: 'test-builder', command: 'npx', args: ['nx', 'test', 'builder'] },
@@ -50,6 +55,47 @@ function captureChecklistRows() {
     ['ops', 'terminal', 'demo-verify-log', 'log'],
     ['ops', 'theme-studio', 'curation-export-json', 'json'],
   ];
+}
+
+function artifactNamePattern() {
+  return /^\d{8}-\d{4}-[a-z0-9-]+-v\d+\.(png|mp4|log|json)$/i;
+}
+
+function matchSlotFile(entries, chapter, surface, label, ext) {
+  const slotToken = `-${chapter}-${surface}-${label}-`;
+  return entries.filter((entry) => {
+    const lower = entry.name.toLowerCase();
+    return (
+      entry.isFile() &&
+      lower.includes(slotToken.toLowerCase()) &&
+      lower.endsWith(`.${ext}`) &&
+      artifactNamePattern().test(entry.name)
+    );
+  });
+}
+
+async function validateArtifactDirectory(targetDir) {
+  const checklist = captureChecklistRows();
+  const entries = await readdir(targetDir, { withFileTypes: true });
+  const coverage = checklist.map(([chapter, surface, label, ext]) => {
+    const matches = matchSlotFile(entries, chapter, surface, label, ext);
+    return {
+      chapter,
+      surface,
+      label,
+      ext,
+      matchedFiles: matches.map((item) => item.name),
+      complete: matches.length > 0,
+    };
+  });
+  const covered = coverage.filter((item) => item.complete).length;
+  return {
+    directory: targetDir,
+    required: coverage.length,
+    covered,
+    missing: coverage.length - covered,
+    coverage,
+  };
 }
 
 function buildCapturePlanMarkdown(generatedAt) {
@@ -129,18 +175,43 @@ async function main() {
     success: results.every((entry) => entry.success),
     dryRun: isDryRun,
     results,
+    artifactValidation: null,
   };
-
-  if (outputPath) {
-    await writeFile(outputPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
-    console.log(`[investor-demo-verify] wrote summary to ${outputPath}`);
-  }
 
   if (capturePlanPath) {
     const stamp = compactTimestamp();
     const markdown = buildCapturePlanMarkdown(stamp);
     await writeFile(capturePlanPath, markdown, 'utf8');
     console.log(`[investor-demo-verify] wrote capture plan to ${capturePlanPath}`);
+  }
+
+  if (artifactDirPath) {
+    try {
+      const artifactValidation = await validateArtifactDirectory(artifactDirPath);
+      summary.artifactValidation = artifactValidation;
+      console.log('[investor-demo-verify] artifact coverage', {
+        covered: artifactValidation.covered,
+        required: artifactValidation.required,
+        missing: artifactValidation.missing,
+      });
+      if (artifactStrict && artifactValidation.missing > 0) {
+        summary.success = false;
+      }
+    } catch (e) {
+      summary.success = false;
+      summary.artifactValidation = {
+        directory: artifactDirPath,
+        error: e instanceof Error ? e.message : String(e),
+      };
+      console.error('[investor-demo-verify] artifact validation failed', {
+        reason: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+
+  if (outputPath) {
+    await writeFile(outputPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+    console.log(`[investor-demo-verify] wrote summary to ${outputPath}`);
   }
 
   console.log('[investor-demo-verify] summary', {

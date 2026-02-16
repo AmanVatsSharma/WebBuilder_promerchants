@@ -36,6 +36,8 @@ For repeatable evidence packaging, use the companion runbook:
    - storefront URL
 6. Prepare artifact naming and chapter capture checklist:
    - follow [Investor Demo Artifact Capture](./investor-demo-artifact-capture)
+7. If artifacts already captured, validate pack completeness:
+   - `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-strict`
 
 ## Demo story arc
 
