@@ -17,6 +17,7 @@ The **seller-facing editor** for:
 - Builder production build is forced to webpack via `apps/builder/project.json`.
 
 ## Changelog
+- 2026-02-16: Added Theme Studio `Paste curation JSON` shortcut for clipboard-driven import of preset/filter artifacts without file picker friction.
 - 2026-02-16: Added Theme Studio `Import curation view` action to load preset/filter/sort JSON artifacts back into the workspace for reproducible demo states.
 - 2026-02-16: Added Theme Studio `Export curation view` action to copy active preset/filter/sort + visible theme IDs as JSON for investor artifacts and async collaboration.
 - 2026-02-16: Added Theme Studio preset-result counters (e.g., `Investor demo (N)`) so operators can preview curation impact before switching views.

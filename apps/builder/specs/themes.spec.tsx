@@ -11,6 +11,7 @@ import ThemesClient from '../src/app/themes/themes.client';
 
 const apiUploadMock = jest.fn(async () => ({}));
 const clipboardWriteTextMock = jest.fn(async () => undefined);
+const clipboardReadTextMock = jest.fn(async () => '');
 const FIXED_ISO = '2026-02-16T10:00:00.000Z';
 
 jest.mock('../src/lib/api', () => ({
@@ -58,10 +59,14 @@ describe('ThemesClient', () => {
   beforeEach(() => {
     apiUploadMock.mockClear();
     clipboardWriteTextMock.mockClear();
+    clipboardReadTextMock.mockClear();
     window.sessionStorage.clear();
     Object.defineProperty(window.navigator, 'clipboard', {
       configurable: true,
-      value: { writeText: clipboardWriteTextMock },
+      value: {
+        writeText: clipboardWriteTextMock,
+        readText: clipboardReadTextMock,
+      },
     });
   });
 
@@ -188,6 +193,32 @@ describe('ThemesClient', () => {
       expect(getByText(/Nebula Fashion/i)).toBeTruthy();
       expect(queryByText(/Aurora Commerce/i)).toBeNull();
       expect(getByText(/Active preset: Needs attention/i)).toBeTruthy();
+    });
+  });
+
+  it('imports curation view json from clipboard', async () => {
+    const payload = {
+      activePreset: 'NEEDS_ATTENTION',
+      searchValue: '',
+      pricingFilter: 'ALL',
+      listingFilter: 'ALL',
+      buildFilter: 'FAILED',
+      sortMode: 'BUILD_ISSUES_FIRST',
+    };
+    clipboardReadTextMock.mockResolvedValueOnce(JSON.stringify(payload));
+
+    const { getByRole, getByText, queryByText } = render(<ThemesClient />);
+
+    await waitFor(() => {
+      expect(getByText(/Aurora Commerce/i)).toBeTruthy();
+    });
+
+    fireEvent.click(getByRole('button', { name: /Paste curation JSON/i }));
+
+    await waitFor(() => {
+      expect(getByText(/Curation view imported from clipboard/i)).toBeTruthy();
+      expect(getByText(/Nebula Fashion/i)).toBeTruthy();
+      expect(queryByText(/Aurora Commerce/i)).toBeNull();
     });
   });
 });

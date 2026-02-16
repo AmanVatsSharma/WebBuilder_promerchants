@@ -243,6 +243,15 @@ async function readFileText(file: File) {
   });
 }
 
+type CurationViewPayload = {
+  activePreset?: unknown;
+  searchValue?: unknown;
+  pricingFilter?: unknown;
+  listingFilter?: unknown;
+  buildFilter?: unknown;
+  sortMode?: unknown;
+};
+
 export default function ThemesClient() {
   const importFileRef = useRef<HTMLInputElement | null>(null);
   const [themes, setThemes] = useState<Theme[]>([]);
@@ -614,22 +623,8 @@ export default function ThemesClient() {
     if (!file) return;
     try {
       const content = await readFileText(file);
-      const parsed = JSON.parse(content) as {
-        activePreset?: unknown;
-        searchValue?: unknown;
-        pricingFilter?: unknown;
-        listingFilter?: unknown;
-        buildFilter?: unknown;
-        sortMode?: unknown;
-      };
-      if (parsed.activePreset === 'CUSTOM' || isPresetId(parsed.activePreset)) {
-        setActiveCurationPreset(parsed.activePreset);
-      }
-      if (typeof parsed.searchValue === 'string') setSearchValue(parsed.searchValue);
-      if (isPricingFilter(parsed.pricingFilter)) setPricingFilter(parsed.pricingFilter);
-      if (isListingFilter(parsed.listingFilter)) setListingFilter(parsed.listingFilter);
-      if (isBuildFilter(parsed.buildFilter)) setBuildFilter(parsed.buildFilter);
-      if (isSortMode(parsed.sortMode)) setSortMode(parsed.sortMode);
+      const parsed = JSON.parse(content) as CurationViewPayload;
+      applyImportedCurationPayload(parsed);
       console.debug('[themes] curationImport:success', {
         activePreset: parsed.activePreset || 'CUSTOM',
       });
@@ -639,6 +634,36 @@ export default function ThemesClient() {
       setNotice({ tone: 'error', message: 'Invalid curation view JSON.' });
     } finally {
       event.target.value = '';
+    }
+  };
+
+  function applyImportedCurationPayload(payload: CurationViewPayload) {
+    if (payload.activePreset === 'CUSTOM' || isPresetId(payload.activePreset)) {
+      setActiveCurationPreset(payload.activePreset);
+    }
+    if (typeof payload.searchValue === 'string') setSearchValue(payload.searchValue);
+    if (isPricingFilter(payload.pricingFilter)) setPricingFilter(payload.pricingFilter);
+    if (isListingFilter(payload.listingFilter)) setListingFilter(payload.listingFilter);
+    if (isBuildFilter(payload.buildFilter)) setBuildFilter(payload.buildFilter);
+    if (isSortMode(payload.sortMode)) setSortMode(payload.sortMode);
+  }
+
+  const importCurationViewFromClipboard = async () => {
+    try {
+      if (!navigator.clipboard?.readText) {
+        setNotice({ tone: 'error', message: 'Clipboard read is unavailable in this browser.' });
+        return;
+      }
+      const content = await navigator.clipboard.readText();
+      const parsed = JSON.parse(content) as CurationViewPayload;
+      applyImportedCurationPayload(parsed);
+      console.debug('[themes] curationImport:clipboard:success', {
+        activePreset: parsed.activePreset || 'CUSTOM',
+      });
+      setNotice({ tone: 'success', message: 'Curation view imported from clipboard.' });
+    } catch (e: any) {
+      console.error('[themes] curationImport:clipboard:failed', { reason: e?.message || e });
+      setNotice({ tone: 'error', message: 'Invalid clipboard JSON for curation view.' });
     }
   };
 
@@ -837,6 +862,13 @@ export default function ThemesClient() {
                   className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
                 >
                   Import curation view
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void importCurationViewFromClipboard()}
+                  className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+                >
+                  Paste curation JSON
                 </button>
                 <input
                   ref={importFileRef}
