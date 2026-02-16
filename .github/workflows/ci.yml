@@ -1,0 +1,42 @@
+name: webbuilder-ci
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - 'cursor/**'
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Sync docs and ensure clean generated output
+        run: |
+          npm run docs:sync
+          git diff --exit-code
+
+      - name: Test contracts
+        run: npx nx test contracts
+
+      - name: Build API
+        run: npx nx build api
+
+      - name: Test builder
+        run: npx nx test builder
+
+      - name: Build builder
+        run: npx nx build builder
