@@ -40,6 +40,7 @@ Provides foundational identity and tenant membership primitives:
   - `AUTH_OIDC_DISCOVERY_URL`
   - `AUTH_OIDC_JWKS_URL`
   - `AUTH_OIDC_CACHE_TTL_MS`
+  - `AUTH_OIDC_CACHE_BACKEND` (`memory` or `redis`)
 - Optional claim constraints:
   - `AUTH_JWT_ISSUER`
   - `AUTH_JWT_AUDIENCE`
@@ -48,6 +49,7 @@ Provides foundational identity and tenant membership primitives:
   - `AUTH_REFRESH_TTL_SECONDS` (default 1209600 / 14 days)
 
 ## Changelog
+- 2026-02-16: Added optional Redis-backed OIDC metadata cache (`AUTH_OIDC_CACHE_BACKEND=redis`) for multi-instance API deployments; memory cache remains default fallback.
 - 2026-02-16: Added optional OIDC discovery/JWKS proxy endpoints with cache to ease external identity provider interoperability rollouts.
 - 2026-02-16: Added JWKS-style metadata endpoint (`/auth/jwks`) and token introspection endpoint (`/auth/introspect`) for external verifier interoperability.
 - 2026-02-16: Added optional JWT key-rotation support via `kid` headers and env-driven secret keyring (`AUTH_JWT_ACTIVE_KID`, `AUTH_JWT_SECRETS_JSON`).

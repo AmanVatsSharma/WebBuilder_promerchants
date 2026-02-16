@@ -14,11 +14,12 @@ import { User } from './entities/user.entity';
 import { Workspace } from './entities/workspace.entity';
 import { WorkspaceMembership } from './entities/workspace-membership.entity';
 import { AuthSession } from './entities/auth-session.entity';
+import { OidcCacheService } from './oidc-cache.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User, Workspace, WorkspaceMembership, AuthSession])],
   controllers: [IdentityController],
-  providers: [IdentityService],
+  providers: [IdentityService, OidcCacheService],
   exports: [IdentityService],
 })
 export class IdentityModule {}

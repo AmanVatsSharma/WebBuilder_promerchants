@@ -54,9 +54,19 @@ describe('IdentityService', () => {
       save: jest.fn(),
       findOne: jest.fn(),
     };
+    const oidcCache = {
+      get: jest.fn(),
+      set: jest.fn(),
+    };
 
-    const service = new IdentityService(userRepo as any, workspaceRepo as any, membershipRepo as any, sessionRepo as any);
-    return { service, userRepo, workspaceRepo, membershipRepo, sessionRepo };
+    const service = new IdentityService(
+      userRepo as any,
+      workspaceRepo as any,
+      membershipRepo as any,
+      sessionRepo as any,
+      oidcCache as any,
+    );
+    return { service, userRepo, workspaceRepo, membershipRepo, sessionRepo, oidcCache };
   }
 
   it('registers owner with workspace and owner membership', async () => {
@@ -212,9 +222,10 @@ describe('IdentityService', () => {
   });
 
   it('fetches oidc discovery and jwks with cache', async () => {
-    const { service } = buildService();
+    const { service, oidcCache } = buildService();
     process.env.AUTH_OIDC_DISCOVERY_URL = 'https://issuer/.well-known/openid-configuration';
     process.env.AUTH_OIDC_CACHE_TTL_MS = '60000';
+    oidcCache.get.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
     global.fetch = jest
       .fn()
       .mockResolvedValueOnce(
@@ -236,8 +247,10 @@ describe('IdentityService', () => {
     expect((discovery as any).issuer).toBe('https://issuer');
     expect(Array.isArray((jwks as any).keys)).toBe(true);
     expect((global.fetch as any).mock.calls.length).toBe(2);
+    expect(oidcCache.set).toHaveBeenCalledTimes(2);
 
-    // Cached path should avoid extra network call.
+    // Cached path should avoid extra network calls.
+    oidcCache.get.mockResolvedValueOnce(discovery).mockResolvedValueOnce(jwks);
     await service.getOidcDiscovery();
     await service.getOidcJwks();
     expect((global.fetch as any).mock.calls.length).toBe(2);

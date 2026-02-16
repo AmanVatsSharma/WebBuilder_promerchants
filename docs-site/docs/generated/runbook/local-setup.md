@@ -55,6 +55,7 @@ This starts Postgres, Redis, API, worker, builder, and storefront.
     - `AUTH_OIDC_DISCOVERY_URL`
     - `AUTH_OIDC_JWKS_URL`
     - `AUTH_OIDC_CACHE_TTL_MS`
+    - `AUTH_OIDC_CACHE_BACKEND` (`memory` default, `redis` for shared multi-instance cache)
   - Optional `AUTH_JWT_ISSUER` / `AUTH_JWT_AUDIENCE` for extra JWT claim checks
   - Optional `AUTH_JWT_TTL_SECONDS` (token lifetime, default 3600)
   - `ENFORCE_SITE_SCOPE=true` (require `x-site-id` to match route `:siteId` for site-scoped endpoints)
