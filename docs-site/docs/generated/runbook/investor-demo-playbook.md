@@ -12,6 +12,10 @@ Run a polished 10-15 minute demo showing:
 2. theme developer ecosystem workflow,
 3. domain operations reliability posture.
 
+For repeatable evidence packaging, use the companion runbook:
+
+- [Investor Demo Artifact Capture](./investor-demo-artifact-capture)
+
 ## Pre-demo checklist (15 minutes before call)
 
 1. Start stack and verify:
@@ -27,6 +31,8 @@ Run a polished 10-15 minute demo showing:
    - `/themes` (Theme Studio)
    - `/sites/<siteId>/publish` (Publish Center)
    - storefront URL
+5. Prepare artifact naming and chapter capture checklist:
+   - follow [Investor Demo Artifact Capture](./investor-demo-artifact-capture)
 
 ## Demo story arc
 
