@@ -45,6 +45,7 @@ For repeatable evidence packaging, use the companion runbook:
    - include content gate for payload quality: `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-strict --artifact-strict-content`
    - optional shareable report: `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-report-md=/tmp/investor-artifact-coverage.md`
    - optional JSON manifest for archive pipelines: `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-manifest=/tmp/investor-artifact-manifest.json`
+   - target readiness score guideline: `90+` before sharing externally.
 
 ## Demo story arc
 

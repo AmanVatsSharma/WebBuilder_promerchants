@@ -122,3 +122,4 @@ npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts
 Notes:
 
 - Verification summary and manifest now include both ISO and IST timestamps for operator logs.
+- Verification summary also includes an artifact readiness score (`0-100`) with deduction breakdown (missing/extra/placeholder/content issues).

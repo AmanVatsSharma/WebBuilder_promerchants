@@ -15,6 +15,7 @@ import {
   buildCapturePlanMarkdown,
   captureChecklistRows,
   compactTimestamp,
+  computeArtifactReadinessScore,
   formatIstTimestamp,
   INVESTOR_PLACEHOLDER_MARKER,
 } from './investor-artifact-utils.mjs';
@@ -178,6 +179,7 @@ function contentIssueCount(artifactValidation) {
 async function validateArtifactsAndApplyGates(summary) {
   const artifactValidation = await validateArtifactDirectory(artifactDirPath);
   summary.artifactValidation = artifactValidation;
+  summary.artifactReadiness = computeArtifactReadinessScore(artifactValidation);
   console.log('[investor-demo-verify] artifact coverage', {
     covered: artifactValidation.covered,
     required: artifactValidation.required,
@@ -186,6 +188,7 @@ async function validateArtifactsAndApplyGates(summary) {
     nonConformingFiles: artifactValidation.nonConformingFiles.length,
     placeholderFiles: artifactValidation.placeholderFiles.length,
     contentIssues: contentIssueCount(artifactValidation),
+    readinessScore: summary.artifactReadiness.score,
   });
   if (artifactStrict && artifactValidation.missing > 0) {
     summary.success = false;
@@ -247,6 +250,9 @@ async function handleArtifactValidationFailure(summary, error) {
 
 
 function buildArtifactManifest(summary) {
+  const readiness = summary.artifactValidation
+    ? computeArtifactReadinessScore(summary.artifactValidation)
+    : null;
   return {
     generatedAt: new Date().toISOString(),
     generatedAtIst: formatIstTimestamp(),
@@ -262,6 +268,7 @@ function buildArtifactManifest(summary) {
       })),
     },
     artifactValidation: summary.artifactValidation,
+    artifactReadiness: readiness,
   };
 }
 
@@ -327,6 +334,7 @@ async function main() {
     dryRun: isDryRun,
     results,
     artifactValidation: null,
+    artifactReadiness: null,
   };
 
   if (capturePlanPath) {

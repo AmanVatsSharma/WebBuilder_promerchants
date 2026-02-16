@@ -83,11 +83,13 @@ export function buildCapturePlanMarkdown(generatedAt) {
 }
 
 export function buildArtifactCoverageMarkdown(artifactValidation) {
+  const readiness = computeArtifactReadinessScore(artifactValidation);
   const lines = [
     '# Investor Artifact Coverage Report',
     '',
     `Directory: ${artifactValidation.directory}`,
     `Coverage: ${artifactValidation.covered}/${artifactValidation.required}`,
+    `Readiness score: ${readiness.score}/100`,
     `Unexpected named files: ${artifactValidation.unexpectedFiles?.length || 0}`,
     `Non-conforming files: ${artifactValidation.nonConformingFiles?.length || 0}`,
     `Placeholder files: ${artifactValidation.placeholderFiles?.length || 0}`,
@@ -129,4 +131,36 @@ export function buildArtifactCoverageMarkdown(artifactValidation) {
     }
   }
   return `${lines.join('\n')}\n`;
+}
+
+export function computeArtifactReadinessScore(artifactValidation) {
+  const missing = Number(artifactValidation?.missing || 0);
+  const unexpected = Number(artifactValidation?.unexpectedFiles?.length || 0);
+  const nonConforming = Number(artifactValidation?.nonConformingFiles?.length || 0);
+  const placeholders = Number(artifactValidation?.placeholderFiles?.length || 0);
+  const contentIssues = Number(artifactValidation?.failedContentChecks?.length || 0);
+  const score = Math.max(
+    0,
+    Math.min(
+      100,
+      Math.round(
+        100 -
+          missing * 8 -
+          unexpected * 3 -
+          nonConforming * 5 -
+          placeholders * 6 -
+          contentIssues * 4,
+      ),
+    ),
+  );
+  return {
+    score,
+    deductions: {
+      missing,
+      unexpected,
+      nonConforming,
+      placeholders,
+      contentIssues,
+    },
+  };
 }
