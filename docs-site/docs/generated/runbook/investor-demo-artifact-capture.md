@@ -64,9 +64,13 @@ Examples:
 ## Suggested terminal verification log sequence
 
 ```bash
-npx nx test builder
-npx nx build builder
-npm run docs:build
+npm run demo:artifact:verify
 ```
 
 Save the output as a timestamped `.log` artifact using the same naming convention.
+
+Optional structured summary output:
+
+```bash
+npm run demo:artifact:verify -- --output=/tmp/investor-demo-verify-summary.json
+```
