@@ -88,6 +88,7 @@ const CURATION_PRESETS: CurationPreset[] = [
     sortMode: 'PRICE_DESC',
   },
 ];
+const CURATION_VIEW_STORAGE_KEY = 'builder.themeStudio.curationView.v1';
 
 function formatPrice(theme: Theme) {
   if (theme.pricingModel !== 'PAID') return 'Free';
@@ -177,6 +178,36 @@ function presetById(id: CurationPresetId) {
   return CURATION_PRESETS.find((preset) => preset.id === id) || CURATION_PRESETS[0];
 }
 
+function isPresetId(value: unknown): value is CurationPresetId {
+  return CURATION_PRESETS.some((preset) => preset.id === value);
+}
+
+function isSortMode(value: unknown): value is SortMode {
+  return [
+    'UPDATED_DESC',
+    'PRICE_ASC',
+    'PRICE_DESC',
+    'LISTED_FIRST',
+    'BUILD_READY_FIRST',
+    'BUILD_ISSUES_FIRST',
+    'NAME_ASC',
+  ].includes(String(value));
+}
+
+function isPricingFilter(value: unknown): value is 'ALL' | 'FREE' | 'PAID' {
+  return ['ALL', 'FREE', 'PAID'].includes(String(value));
+}
+
+function isListingFilter(value: unknown): value is 'ALL' | 'LISTED' | 'UNLISTED' {
+  return ['ALL', 'LISTED', 'UNLISTED'].includes(String(value));
+}
+
+function isBuildFilter(value: unknown): value is 'ALL' | ThemeBuildReadiness {
+  return ['ALL', 'READY', 'BUILDING', 'FAILED', 'NO_VERSION', 'UNKNOWN'].includes(
+    String(value),
+  );
+}
+
 export default function ThemesClient() {
   const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
@@ -203,6 +234,57 @@ export default function ThemesClient() {
   const [sortMode, setSortMode] = useState<SortMode>('UPDATED_DESC');
   const [activeCurationPreset, setActiveCurationPreset] =
     useState<ActiveCurationPreset>('ALL_THEMES');
+
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(CURATION_VIEW_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        activePreset?: unknown;
+        searchValue?: unknown;
+        pricingFilter?: unknown;
+        listingFilter?: unknown;
+        buildFilter?: unknown;
+        sortMode?: unknown;
+      };
+      if (typeof parsed.searchValue === 'string') setSearchValue(parsed.searchValue);
+      if (isPricingFilter(parsed.pricingFilter)) setPricingFilter(parsed.pricingFilter);
+      if (isListingFilter(parsed.listingFilter)) setListingFilter(parsed.listingFilter);
+      if (isBuildFilter(parsed.buildFilter)) setBuildFilter(parsed.buildFilter);
+      if (isSortMode(parsed.sortMode)) setSortMode(parsed.sortMode);
+      if (parsed.activePreset === 'CUSTOM' || isPresetId(parsed.activePreset)) {
+        setActiveCurationPreset(parsed.activePreset);
+      }
+      console.debug('[themes] curationPreset:restore', {
+        activePreset: parsed.activePreset || 'ALL_THEMES',
+      });
+    } catch (e: any) {
+      console.error('[themes] curationPreset:restore:failed', { reason: e?.message || e });
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const payload = JSON.stringify({
+        activePreset: activeCurationPreset,
+        searchValue,
+        pricingFilter,
+        listingFilter,
+        buildFilter,
+        sortMode,
+      });
+      window.sessionStorage.setItem(CURATION_VIEW_STORAGE_KEY, payload);
+    } catch (e: any) {
+      console.error('[themes] curationPreset:persist:failed', { reason: e?.message || e });
+    }
+  }, [
+    activeCurationPreset,
+    searchValue,
+    pricingFilter,
+    listingFilter,
+    buildFilter,
+    sortMode,
+  ]);
 
   const reload = async () => {
     console.debug('[themes] reload:start');

@@ -56,6 +56,7 @@ jest.mock('../src/lib/api', () => ({
 describe('ThemesClient', () => {
   beforeEach(() => {
     apiUploadMock.mockClear();
+    window.sessionStorage.clear();
   });
 
   it('renders curation controls, supports filtering, and keeps upload flow', async () => {
@@ -89,6 +90,9 @@ describe('ThemesClient', () => {
       expect(queryByText(/Aurora Commerce/i)).toBeNull();
       expect(getByText(/Active preset: Needs attention/i)).toBeTruthy();
     });
+    expect(window.sessionStorage.getItem('builder.themeStudio.curationView.v1')).toContain(
+      'NEEDS_ATTENTION',
+    );
 
     expect(asFragment()).toMatchSnapshot();
   });

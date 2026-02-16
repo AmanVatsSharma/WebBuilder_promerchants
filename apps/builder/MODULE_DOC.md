@@ -17,6 +17,7 @@ The **seller-facing editor** for:
 - Builder production build is forced to webpack via `apps/builder/project.json`.
 
 ## Changelog
+- 2026-02-16: Persisted Theme Studio curation view state in session storage (`builder.themeStudio.curationView.v1`) so preset/filter context survives refreshes during demos.
 - 2026-02-16: Added Theme Studio saved curation presets (`All themes`, `Investor demo`, `Needs attention`, `Revenue-first`) with active preset indicator for faster marketplace storytelling and triage.
 - 2026-02-16: Added Theme Studio marketplace curation controls (build-state filter + sorting by price/listing/build readiness/name) with readiness chips and result counts for faster investor storytelling.
 - 2026-02-16: Added dashboard shortcut analytics controls (`Reset shortcut stats`, `Export shortcut stats`) plus aggregate totals chip for fast operator-behavior review during demos.
