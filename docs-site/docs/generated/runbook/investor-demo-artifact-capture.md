@@ -37,6 +37,9 @@ Examples:
 - Curation presets row with an active preset.
 - Inventory focus chips interaction (failed/ready/listed pivots).
 - Theme card with build-readiness and latest-version chips.
+- Curation export/import loop proof:
+  - export curation JSON from Theme Studio
+  - re-import same JSON and confirm view restores
 
 ### Chapter 3 — Safe releases
 
