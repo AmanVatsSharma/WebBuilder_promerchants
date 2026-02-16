@@ -54,6 +54,7 @@ function captureChecklistRows() {
     ['ch2', 'theme-studio', 'curation-presets', 'png'],
     ['ch2', 'theme-studio', 'inventory-focus', 'png'],
     ['ch2', 'theme-studio', 'theme-card-readiness', 'png'],
+    ['ch2', 'theme-studio', 'curation-import-confirmation', 'png'],
     ['ch3', 'publish-center', 'release-snapshot', 'png'],
     ['ch3', 'publish-center', 'quick-actions', 'png'],
     ['ch3', 'publish-center', 'rollback-history', 'png'],

@@ -59,6 +59,7 @@ For repeatable evidence packaging, use the companion runbook:
 - Show Theme Studio KPIs.
 - Use curation presets (`Investor demo`, `Revenue-first`) to show instant inventory storytelling pivots.
 - Use inventory focus chips (`Ready builds`, `Failed builds`, `Listed themes`) to show one-click triage and merchandising views.
+- Demonstrate curation export/import loop and confirm restored view via inline success notice.
 - Upload theme bundle with marketplace metadata.
 - Open version editor from theme inventory card.
 
