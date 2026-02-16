@@ -18,6 +18,12 @@ npx nx serve builder
 npx nx serve storefront
 ```
 
+## Quick health checks
+
+- API readiness: `GET http://localhost:3000/api/health`
+- Builder: `http://localhost:4200`
+- Storefront: `http://localhost:4201`
+
 ## Containerized start (optional)
 
 ```bash
