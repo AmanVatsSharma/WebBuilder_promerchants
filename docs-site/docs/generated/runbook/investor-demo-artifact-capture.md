@@ -119,6 +119,12 @@ Optional machine-readable artifact manifest:
 npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-manifest=/tmp/investor-artifact-manifest.json
 ```
 
+Optional readiness trend report (compare previous and current summaries):
+
+```bash
+npm run demo:artifact:trend -- --base=/tmp/investor-demo-verify-summary-prev.json --candidate=/tmp/investor-demo-verify-summary-current.json --output-md=/tmp/investor-artifact-trend.md
+```
+
 Notes:
 
 - Verification summary and manifest now include both ISO and IST timestamps for operator logs.
