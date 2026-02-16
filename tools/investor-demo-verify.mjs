@@ -29,6 +29,12 @@ const artifactReportMdArg = argv.find((arg) =>
 const artifactReportMdPath = artifactReportMdArg
   ? path.resolve(artifactReportMdArg.split('=')[1] || '')
   : '';
+const artifactManifestArg = argv.find((arg) =>
+  arg.startsWith('--artifact-manifest='),
+);
+const artifactManifestPath = artifactManifestArg
+  ? path.resolve(artifactManifestArg.split('=')[1] || '')
+  : '';
 
 const commands = [
   { id: 'test-builder', command: 'npx', args: ['nx', 'test', 'builder'] },
@@ -143,6 +149,24 @@ function buildArtifactCoverageMarkdown(artifactValidation) {
   return `${lines.join('\n')}\n`;
 }
 
+function buildArtifactManifest(summary) {
+  return {
+    generatedAt: new Date().toISOString(),
+    verification: {
+      success: summary.success,
+      dryRun: summary.dryRun,
+      checks: summary.results.map((item) => ({
+        id: item.id,
+        command: item.command,
+        success: item.success,
+        durationMs: item.durationMs,
+        exitCode: item.exitCode,
+      })),
+    },
+    artifactValidation: summary.artifactValidation,
+  };
+}
+
 function runCommand(entry) {
   return new Promise((resolve) => {
     const startedAt = Date.now();
@@ -230,6 +254,17 @@ async function main() {
           `[investor-demo-verify] wrote artifact coverage report to ${artifactReportMdPath}`,
         );
       }
+      if (artifactManifestPath) {
+        const manifest = buildArtifactManifest(summary);
+        await writeFile(
+          artifactManifestPath,
+          `${JSON.stringify(manifest, null, 2)}\n`,
+          'utf8',
+        );
+        console.log(
+          `[investor-demo-verify] wrote artifact manifest to ${artifactManifestPath}`,
+        );
+      }
     } catch (e) {
       summary.success = false;
       summary.artifactValidation = {
@@ -239,6 +274,17 @@ async function main() {
       console.error('[investor-demo-verify] artifact validation failed', {
         reason: e instanceof Error ? e.message : String(e),
       });
+      if (artifactManifestPath) {
+        const manifest = buildArtifactManifest(summary);
+        await writeFile(
+          artifactManifestPath,
+          `${JSON.stringify(manifest, null, 2)}\n`,
+          'utf8',
+        );
+        console.log(
+          `[investor-demo-verify] wrote artifact manifest to ${artifactManifestPath}`,
+        );
+      }
     }
   }
 
