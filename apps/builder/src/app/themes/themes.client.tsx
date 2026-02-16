@@ -37,6 +37,57 @@ type SortMode =
   | 'BUILD_READY_FIRST'
   | 'BUILD_ISSUES_FIRST'
   | 'NAME_ASC';
+type CurationPresetId = 'ALL_THEMES' | 'INVESTOR_DEMO' | 'NEEDS_ATTENTION' | 'REVENUE_FIRST';
+type ActiveCurationPreset = CurationPresetId | 'CUSTOM';
+
+type CurationPreset = {
+  id: CurationPresetId;
+  label: string;
+  hint: string;
+  pricingFilter: 'ALL' | 'FREE' | 'PAID';
+  listingFilter: 'ALL' | 'LISTED' | 'UNLISTED';
+  buildFilter: 'ALL' | ThemeBuildReadiness;
+  sortMode: SortMode;
+};
+
+const CURATION_PRESETS: CurationPreset[] = [
+  {
+    id: 'ALL_THEMES',
+    label: 'All themes',
+    hint: 'Balanced default catalog view',
+    pricingFilter: 'ALL',
+    listingFilter: 'ALL',
+    buildFilter: 'ALL',
+    sortMode: 'UPDATED_DESC',
+  },
+  {
+    id: 'INVESTOR_DEMO',
+    label: 'Investor demo',
+    hint: 'Listed + build-ready for high-confidence walkthroughs',
+    pricingFilter: 'ALL',
+    listingFilter: 'LISTED',
+    buildFilter: 'READY',
+    sortMode: 'BUILD_READY_FIRST',
+  },
+  {
+    id: 'NEEDS_ATTENTION',
+    label: 'Needs attention',
+    hint: 'Failed builds surfaced first for fast triage',
+    pricingFilter: 'ALL',
+    listingFilter: 'ALL',
+    buildFilter: 'FAILED',
+    sortMode: 'BUILD_ISSUES_FIRST',
+  },
+  {
+    id: 'REVENUE_FIRST',
+    label: 'Revenue-first',
+    hint: 'Paid + listed themes sorted by highest price',
+    pricingFilter: 'PAID',
+    listingFilter: 'LISTED',
+    buildFilter: 'READY',
+    sortMode: 'PRICE_DESC',
+  },
+];
 
 function formatPrice(theme: Theme) {
   if (theme.pricingModel !== 'PAID') return 'Free';
@@ -122,6 +173,10 @@ function priceSortValue(theme: Theme) {
   return 0;
 }
 
+function presetById(id: CurationPresetId) {
+  return CURATION_PRESETS.find((preset) => preset.id === id) || CURATION_PRESETS[0];
+}
+
 export default function ThemesClient() {
   const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,6 +201,8 @@ export default function ThemesClient() {
   const [listingFilter, setListingFilter] = useState<'ALL' | 'LISTED' | 'UNLISTED'>('ALL');
   const [buildFilter, setBuildFilter] = useState<'ALL' | ThemeBuildReadiness>('ALL');
   const [sortMode, setSortMode] = useState<SortMode>('UPDATED_DESC');
+  const [activeCurationPreset, setActiveCurationPreset] =
+    useState<ActiveCurationPreset>('ALL_THEMES');
 
   const reload = async () => {
     console.debug('[themes] reload:start');
@@ -246,6 +303,42 @@ export default function ThemesClient() {
     }
   };
 
+  const applyCurationPreset = (presetId: CurationPresetId) => {
+    const preset = presetById(presetId);
+    console.debug('[themes] curationPreset:apply', { presetId: preset.id });
+    setSearchValue('');
+    setPricingFilter(preset.pricingFilter);
+    setListingFilter(preset.listingFilter);
+    setBuildFilter(preset.buildFilter);
+    setSortMode(preset.sortMode);
+    setActiveCurationPreset(preset.id);
+  };
+
+  const setCustomSearchValue = (value: string) => {
+    setActiveCurationPreset('CUSTOM');
+    setSearchValue(value);
+  };
+
+  const setCustomPricingFilter = (value: 'ALL' | 'FREE' | 'PAID') => {
+    setActiveCurationPreset('CUSTOM');
+    setPricingFilter(value);
+  };
+
+  const setCustomListingFilter = (value: 'ALL' | 'LISTED' | 'UNLISTED') => {
+    setActiveCurationPreset('CUSTOM');
+    setListingFilter(value);
+  };
+
+  const setCustomBuildFilter = (value: 'ALL' | ThemeBuildReadiness) => {
+    setActiveCurationPreset('CUSTOM');
+    setBuildFilter(value);
+  };
+
+  const setCustomSortMode = (value: SortMode) => {
+    setActiveCurationPreset('CUSTOM');
+    setSortMode(value);
+  };
+
   const filteredThemes = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
     const filtered = themes.filter((theme) => {
@@ -301,6 +394,8 @@ export default function ThemesClient() {
   const totalThemes = themes.length;
   const listedThemes = themes.filter((theme) => Boolean(theme.isListed)).length;
   const paidThemes = themes.filter((theme) => theme.pricingModel === 'PAID').length;
+  const activePresetMeta =
+    activeCurationPreset === 'CUSTOM' ? null : presetById(activeCurationPreset);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -453,6 +548,37 @@ export default function ThemesClient() {
         </section>
 
         <section className="mt-6 rounded-xl border bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+              Curation presets
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {CURATION_PRESETS.map((preset) => {
+                const isActive = activeCurationPreset === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyCurationPreset(preset.id)}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      isActive
+                        ? 'border-blue-500 bg-blue-600 text-white'
+                        : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+                    }`}
+                    aria-pressed={isActive}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 text-xs text-slate-500">
+              {activePresetMeta
+                ? `Active preset: ${activePresetMeta.label} — ${activePresetMeta.hint}`
+                : 'Active preset: Custom mix'}
+            </div>
+          </div>
+
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-base font-semibold text-slate-900">Theme inventory</h2>
@@ -465,12 +591,14 @@ export default function ThemesClient() {
                 className="rounded-lg border px-3 py-2 text-sm"
                 placeholder="Search name/author/description"
                 value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
+                onChange={(e) => setCustomSearchValue(e.target.value)}
               />
               <select
                 className="rounded-lg border px-3 py-2 text-sm"
                 value={pricingFilter}
-                onChange={(e) => setPricingFilter((e.target.value as 'ALL' | 'FREE' | 'PAID') || 'ALL')}
+                onChange={(e) =>
+                  setCustomPricingFilter((e.target.value as 'ALL' | 'FREE' | 'PAID') || 'ALL')
+                }
               >
                 <option value="ALL">All pricing</option>
                 <option value="FREE">Free</option>
@@ -479,7 +607,11 @@ export default function ThemesClient() {
               <select
                 className="rounded-lg border px-3 py-2 text-sm"
                 value={listingFilter}
-                onChange={(e) => setListingFilter((e.target.value as 'ALL' | 'LISTED' | 'UNLISTED') || 'ALL')}
+                onChange={(e) =>
+                  setCustomListingFilter(
+                    (e.target.value as 'ALL' | 'LISTED' | 'UNLISTED') || 'ALL',
+                  )
+                }
               >
                 <option value="ALL">All listing states</option>
                 <option value="LISTED">Listed</option>
@@ -489,7 +621,7 @@ export default function ThemesClient() {
                 className="rounded-lg border px-3 py-2 text-sm"
                 value={buildFilter}
                 onChange={(e) =>
-                  setBuildFilter(
+                  setCustomBuildFilter(
                     (e.target.value as 'ALL' | ThemeBuildReadiness) || 'ALL',
                   )
                 }
@@ -504,7 +636,9 @@ export default function ThemesClient() {
               <select
                 className="rounded-lg border px-3 py-2 text-sm"
                 value={sortMode}
-                onChange={(e) => setSortMode((e.target.value as SortMode) || 'UPDATED_DESC')}
+                onChange={(e) =>
+                  setCustomSortMode((e.target.value as SortMode) || 'UPDATED_DESC')
+                }
               >
                 <option value="UPDATED_DESC">Sort: Recently updated</option>
                 <option value="PRICE_ASC">Sort: Price low to high</option>

@@ -59,7 +59,7 @@ describe('ThemesClient', () => {
   });
 
   it('renders curation controls, supports filtering, and keeps upload flow', async () => {
-    const { asFragment, getByRole, getByText, getByDisplayValue, getByPlaceholderText, queryByText, container } = render(<ThemesClient />);
+    const { asFragment, getByRole, getByText, getByPlaceholderText, queryByText, container } = render(<ThemesClient />);
 
     await waitFor(() => {
       expect(getByText(/Aurora Commerce/i)).toBeTruthy();
@@ -78,15 +78,16 @@ describe('ThemesClient', () => {
       expect(fileInput.files?.[0]?.name).toBe('demo-theme.zip');
     }
 
-    expect(getByText(/All build states/i)).toBeTruthy();
-    expect(getByText(/Sort: Build ready first/i)).toBeTruthy();
+    expect(getByText(/Curation presets/i)).toBeTruthy();
+    expect(getByText(/Active preset: All themes/i)).toBeTruthy();
     expect(getByText(/Build: READY/i)).toBeTruthy();
 
-    fireEvent.change(getByDisplayValue('All build states'), { target: { value: 'FAILED' } });
+    fireEvent.click(getByRole('button', { name: /Needs attention/i }));
 
     await waitFor(() => {
       expect(getByText(/Nebula Fashion/i)).toBeTruthy();
       expect(queryByText(/Aurora Commerce/i)).toBeNull();
+      expect(getByText(/Active preset: Needs attention/i)).toBeTruthy();
     });
 
     expect(asFragment()).toMatchSnapshot();
