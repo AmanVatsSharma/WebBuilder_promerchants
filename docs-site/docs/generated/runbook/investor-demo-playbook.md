@@ -46,6 +46,7 @@ For repeatable evidence packaging, use the companion runbook:
    - optional shareable report: `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-report-md=/tmp/investor-artifact-coverage.md`
    - optional JSON manifest for archive pipelines: `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-manifest=/tmp/investor-artifact-manifest.json`
    - optional trend report vs previous run: `npm run demo:artifact:trend -- --base=/tmp/investor-demo-verify-summary-prev.json --candidate=/tmp/investor-demo-verify-summary-current.json --output-md=/tmp/investor-artifact-trend.md`
+   - optional inline trend delta: `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --compare-to=/tmp/investor-demo-verify-summary-prev.json --output=/tmp/investor-demo-verify-summary-current.json`
    - target readiness score guideline: `90+` before sharing externally.
 
 ## Demo story arc

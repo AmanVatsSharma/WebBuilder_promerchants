@@ -125,6 +125,12 @@ Optional readiness trend report (compare previous and current summaries):
 npm run demo:artifact:trend -- --base=/tmp/investor-demo-verify-summary-prev.json --candidate=/tmp/investor-demo-verify-summary-current.json --output-md=/tmp/investor-artifact-trend.md
 ```
 
+Quick delta inline during verification:
+
+```bash
+npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --compare-to=/tmp/investor-demo-verify-summary-prev.json --output=/tmp/investor-demo-verify-summary-current.json
+```
+
 Notes:
 
 - Verification summary and manifest now include both ISO and IST timestamps for operator logs.

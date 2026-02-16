@@ -24,6 +24,10 @@ const argv = process.argv.slice(2);
 const isDryRun = argv.includes('--dry-run');
 const outputArg = argv.find((arg) => arg.startsWith('--output='));
 const outputPath = outputArg ? path.resolve(outputArg.split('=')[1] || '') : '';
+const compareToArg = argv.find((arg) => arg.startsWith('--compare-to='));
+const compareToPath = compareToArg
+  ? path.resolve(compareToArg.split('=')[1] || '')
+  : '';
 const capturePlanArg = argv.find((arg) => arg.startsWith('--capture-plan='));
 const capturePlanPath = capturePlanArg
   ? path.resolve(capturePlanArg.split('=')[1] || '')
@@ -174,6 +178,53 @@ function contentIssueCount(artifactValidation) {
   return Array.isArray(artifactValidation.failedContentChecks)
     ? artifactValidation.failedContentChecks.length
     : 0;
+}
+
+async function readJsonFile(filePath) {
+  const raw = await readFile(filePath, 'utf8');
+  return JSON.parse(raw);
+}
+
+function extractReadiness(summary) {
+  if (!summary?.artifactReadiness) return null;
+  return {
+    score: Number(summary.artifactReadiness.score || 0),
+    deductions: summary.artifactReadiness.deductions || {},
+  };
+}
+
+async function attachReadinessTrend(summary) {
+  if (!compareToPath) return;
+  try {
+    const baseline = await readJsonFile(compareToPath);
+    const baselineReadiness = extractReadiness(baseline);
+    const currentReadiness = extractReadiness(summary);
+    if (!baselineReadiness || !currentReadiness) {
+      summary.readinessTrend = {
+        comparedTo: compareToPath,
+        available: false,
+        reason: 'artifactReadiness missing in one of the summaries',
+      };
+      return;
+    }
+    summary.readinessTrend = {
+      comparedTo: compareToPath,
+      available: true,
+      baselineScore: baselineReadiness.score,
+      currentScore: currentReadiness.score,
+      deltaScore: currentReadiness.score - baselineReadiness.score,
+    };
+    console.log('[investor-demo-verify] readiness trend', summary.readinessTrend);
+  } catch (error) {
+    summary.readinessTrend = {
+      comparedTo: compareToPath,
+      available: false,
+      reason: error instanceof Error ? error.message : String(error),
+    };
+    console.error('[investor-demo-verify] readiness trend failed', {
+      reason: summary.readinessTrend.reason,
+    });
+  }
 }
 
 async function validateArtifactsAndApplyGates(summary) {
@@ -335,6 +386,7 @@ async function main() {
     results,
     artifactValidation: null,
     artifactReadiness: null,
+    readinessTrend: null,
   };
 
   if (capturePlanPath) {
@@ -351,6 +403,8 @@ async function main() {
       await handleArtifactValidationFailure(summary, error);
     }
   }
+
+  await attachReadinessTrend(summary);
 
   if (outputPath) {
     await writeFile(outputPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
