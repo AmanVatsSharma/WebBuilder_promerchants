@@ -17,6 +17,7 @@ import { resolveTemplateMatchForPath } from '../../lib/theme-routing';
 import { createApiCommerceAdapter } from '../../lib/commerce-adapter';
 import { randomUUID } from 'crypto';
 import { loadExtensionModule } from '../../lib/extension-runtime';
+import { StorefrontFallbackShell } from '../../components/storefront-fallback-shell';
 
 registerCoreComponents();
 
@@ -35,10 +36,20 @@ export default async function SlugPage({
   const site = await resolveSiteByHost(host, requestId);
   if (!site) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>Storefront</h1>
-        <p>Tenant not found for host: {host}</p>
-      </main>
+      <StorefrontFallbackShell
+        badge="Tenant missing"
+        title="Storefront tenant could not be resolved"
+        description="This host is not connected to an active storefront tenant."
+        details={[
+          { label: 'Host', value: host },
+          { label: 'Request ID', value: requestId },
+        ]}
+        actions={[{ label: 'Open storefront root', href: '/' }]}
+        hints={[
+          'Confirm domain mapping in Builder dashboard.',
+          'Ensure DNS points to storefront deployment.',
+        ]}
+      />
     );
   }
 
@@ -91,11 +102,21 @@ export default async function SlugPage({
   const content = await resolvePageContentBySlug(site.id, slug, requestId);
   if (!content) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>{site.name}</h1>
-        <p>Page not found: /{slug}</p>
-        <p style={{ opacity: 0.7 }}>host={host} siteId={site.id}</p>
-      </main>
+      <StorefrontFallbackShell
+        badge="Page missing"
+        title={`${site.name}: page not found`}
+        description={`The route "/${slug}" is not mapped to published page content or theme template.`}
+        details={[
+          { label: 'Host', value: host },
+          { label: 'Site ID', value: site.id },
+          { label: 'Request ID', value: requestId },
+        ]}
+        actions={[{ label: 'Back to storefront home', href: '/' }]}
+        hints={[
+          'Create the missing page in Builder and publish.',
+          'Or add a matching theme route template.',
+        ]}
+      />
     );
   }
 

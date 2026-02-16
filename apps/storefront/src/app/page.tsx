@@ -17,6 +17,7 @@ import { resolveTemplateMatchForPath } from '../lib/theme-routing';
 import { createApiCommerceAdapter } from '../lib/commerce-adapter';
 import { randomUUID } from 'crypto';
 import { loadExtensionModule } from '../lib/extension-runtime';
+import { StorefrontFallbackShell } from '../components/storefront-fallback-shell';
 
 registerCoreComponents();
 
@@ -28,10 +29,20 @@ export default async function Home({ searchParams }: { searchParams?: Promise<Re
   const site = await resolveSiteByHost(host, requestId);
   if (!site) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>Storefront</h1>
-        <p>Tenant not found for host: {host}</p>
-      </main>
+      <StorefrontFallbackShell
+        badge="Tenant missing"
+        title="Storefront tenant could not be resolved"
+        description="This host is not mapped to a published storefront yet. Connect and verify a domain from Builder to activate this route."
+        details={[
+          { label: 'Host', value: host },
+          { label: 'Request ID', value: requestId },
+        ]}
+        actions={[{ label: 'Open root storefront route', href: '/' }]}
+        hints={[
+          'Create or verify domain mapping from Builder dashboard.',
+          'Ensure the host is pointing to the storefront deployment.',
+        ]}
+      />
     );
   }
 
@@ -83,22 +94,42 @@ export default async function Home({ searchParams }: { searchParams?: Promise<Re
 
   if (installed?.published && !themeVersionId) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>{site.name}</h1>
-        <p>Theme is published but could not be loaded.</p>
-        <p style={{ opacity: 0.7 }}>publishedThemeVersionId={installed.published}</p>
-      </main>
+      <StorefrontFallbackShell
+        badge="Theme load issue"
+        title={`${site.name}: published theme could not be loaded`}
+        description="A theme version is marked as published, but runtime loading failed. Rebuild or republish the theme from Builder."
+        details={[
+          { label: 'Published theme version', value: installed.published },
+          { label: 'Site ID', value: site.id },
+          { label: 'Request ID', value: requestId },
+        ]}
+        actions={[{ label: 'Open homepage route', href: '/' }]}
+        hints={[
+          'Open Theme Studio and run a fresh build.',
+          'Republish the theme version from Publish Center.',
+        ]}
+      />
     );
   }
 
   const content = await resolvePageContentBySlug(site.id, 'home', requestId);
   if (!content) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>{site.name}</h1>
-        <p>No pages found yet. Create a page for this site in the Builder.</p>
-        <p style={{ opacity: 0.7 }}>host={host} siteId={site.id}</p>
-      </main>
+      <StorefrontFallbackShell
+        badge="No homepage content"
+        title={`${site.name}: no homepage configured yet`}
+        description="This storefront is connected, but no page content is published for the home route."
+        details={[
+          { label: 'Host', value: host },
+          { label: 'Site ID', value: site.id },
+          { label: 'Request ID', value: requestId },
+        ]}
+        actions={[{ label: 'Reload storefront', href: '/' }]}
+        hints={[
+          'Create a home page in Builder and publish it.',
+          'Or publish a theme template for the root route.',
+        ]}
+      />
     );
   }
 
