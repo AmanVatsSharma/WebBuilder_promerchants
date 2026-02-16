@@ -208,6 +208,10 @@ function isBuildFilter(value: unknown): value is 'ALL' | ThemeBuildReadiness {
   );
 }
 
+function focusButtonClass() {
+  return 'rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400';
+}
+
 export default function ThemesClient() {
   const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
@@ -421,6 +425,40 @@ export default function ThemesClient() {
     setSortMode(value);
   };
 
+  const applyInventoryFocus = (
+    focus: 'READY' | 'BUILDING' | 'FAILED' | 'LISTED' | 'PAID' | 'RESET',
+  ) => {
+    console.debug('[themes] inventoryFocus:apply', { focus });
+    if (focus === 'RESET') {
+      applyCurationPreset('ALL_THEMES');
+      return;
+    }
+    setActiveCurationPreset('CUSTOM');
+    setSearchValue('');
+    if (focus === 'READY') {
+      setBuildFilter('READY');
+      setSortMode('BUILD_READY_FIRST');
+      return;
+    }
+    if (focus === 'BUILDING') {
+      setBuildFilter('BUILDING');
+      setSortMode('BUILD_ISSUES_FIRST');
+      return;
+    }
+    if (focus === 'FAILED') {
+      setBuildFilter('FAILED');
+      setSortMode('BUILD_ISSUES_FIRST');
+      return;
+    }
+    if (focus === 'LISTED') {
+      setListingFilter('LISTED');
+      setSortMode('LISTED_FIRST');
+      return;
+    }
+    setPricingFilter('PAID');
+    setSortMode('PRICE_DESC');
+  };
+
   const filteredThemes = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
     const filtered = themes.filter((theme) => {
@@ -476,6 +514,9 @@ export default function ThemesClient() {
   const totalThemes = themes.length;
   const listedThemes = themes.filter((theme) => Boolean(theme.isListed)).length;
   const paidThemes = themes.filter((theme) => theme.pricingModel === 'PAID').length;
+  const readyThemes = themes.filter((theme) => themeBuildReadiness(theme) === 'READY').length;
+  const buildingThemes = themes.filter((theme) => themeBuildReadiness(theme) === 'BUILDING').length;
+  const failedThemes = themes.filter((theme) => themeBuildReadiness(theme) === 'FAILED').length;
   const activePresetMeta =
     activeCurationPreset === 'CUSTOM' ? null : presetById(activeCurationPreset);
 
@@ -658,6 +699,55 @@ export default function ThemesClient() {
               {activePresetMeta
                 ? `Active preset: ${activePresetMeta.label} — ${activePresetMeta.hint}`
                 : 'Active preset: Custom mix'}
+            </div>
+          </div>
+          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+              Inventory focus
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={focusButtonClass()}
+                onClick={() => applyInventoryFocus('READY')}
+              >
+                Ready builds ({readyThemes})
+              </button>
+              <button
+                type="button"
+                className={focusButtonClass()}
+                onClick={() => applyInventoryFocus('BUILDING')}
+              >
+                Building ({buildingThemes})
+              </button>
+              <button
+                type="button"
+                className={focusButtonClass()}
+                onClick={() => applyInventoryFocus('FAILED')}
+              >
+                Failed builds ({failedThemes})
+              </button>
+              <button
+                type="button"
+                className={focusButtonClass()}
+                onClick={() => applyInventoryFocus('LISTED')}
+              >
+                Listed themes ({listedThemes})
+              </button>
+              <button
+                type="button"
+                className={focusButtonClass()}
+                onClick={() => applyInventoryFocus('PAID')}
+              >
+                Paid themes ({paidThemes})
+              </button>
+              <button
+                type="button"
+                className={focusButtonClass()}
+                onClick={() => applyInventoryFocus('RESET')}
+              >
+                Reset view
+              </button>
             </div>
           </div>
 

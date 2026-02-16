@@ -81,7 +81,22 @@ describe('ThemesClient', () => {
 
     expect(getByText(/Curation presets/i)).toBeTruthy();
     expect(getByText(/Active preset: All themes/i)).toBeTruthy();
+    expect(getByText(/Inventory focus/i)).toBeTruthy();
     expect(getByText(/Build: READY/i)).toBeTruthy();
+
+    fireEvent.click(getByRole('button', { name: /Failed builds/i }));
+
+    await waitFor(() => {
+      expect(getByText(/Nebula Fashion/i)).toBeTruthy();
+      expect(queryByText(/Aurora Commerce/i)).toBeNull();
+    });
+
+    fireEvent.click(getByRole('button', { name: /Reset view/i }));
+
+    await waitFor(() => {
+      expect(getByText(/Aurora Commerce/i)).toBeTruthy();
+      expect(getByText(/Active preset: All themes/i)).toBeTruthy();
+    });
 
     fireEvent.click(getByRole('button', { name: /Needs attention/i }));
 
