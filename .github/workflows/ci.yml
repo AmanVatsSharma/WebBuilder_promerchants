@@ -47,6 +47,9 @@ jobs:
       - name: Test builder
         run: npx nx test builder
 
+      - name: Guard builder snapshot drift
+        run: git diff --exit-code -- apps/builder/specs/__snapshots__
+
       - name: Build builder
         run: npx nx build builder
 
