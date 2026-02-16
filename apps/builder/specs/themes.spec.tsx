@@ -155,4 +155,39 @@ describe('ThemesClient', () => {
       expect(queryByText(/Aurora Commerce/i)).toBeNull();
     });
   });
+
+  it('imports curation view json and applies filters', async () => {
+    const { container, getByRole, getByText, queryByText } = render(<ThemesClient />);
+
+    await waitFor(() => {
+      expect(getByText(/Aurora Commerce/i)).toBeTruthy();
+    });
+
+    fireEvent.click(getByRole('button', { name: /Import curation view/i }));
+    const fileInputs = container.querySelectorAll('input[type="file"]');
+    const importInput = fileInputs[1] as HTMLInputElement | undefined;
+    expect(importInput).toBeTruthy();
+    if (!importInput) return;
+
+    const payload = {
+      activePreset: 'NEEDS_ATTENTION',
+      searchValue: '',
+      pricingFilter: 'ALL',
+      listingFilter: 'ALL',
+      buildFilter: 'FAILED',
+      sortMode: 'BUILD_ISSUES_FIRST',
+    };
+    const jsonFile = new File([JSON.stringify(payload)], 'curation-view.json', {
+      type: 'application/json',
+    });
+
+    fireEvent.change(importInput, { target: { files: [jsonFile] } });
+
+    await waitFor(() => {
+      expect(getByText(/Curation view imported from JSON/i)).toBeTruthy();
+      expect(getByText(/Nebula Fashion/i)).toBeTruthy();
+      expect(queryByText(/Aurora Commerce/i)).toBeNull();
+      expect(getByText(/Active preset: Needs attention/i)).toBeTruthy();
+    });
+  });
 });

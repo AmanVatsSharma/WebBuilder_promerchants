@@ -9,7 +9,7 @@
 'use client';
 
 import Link from 'next/link';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { apiGet, apiPost, apiUpload } from '../../lib/api';
 import { InlineNotice, type NoticeTone } from '../../components/inline-notice';
 
@@ -231,7 +231,20 @@ function matchesPreset(theme: Theme, preset: CurationPreset) {
   return matchesPricing && matchesListing && matchesBuild;
 }
 
+async function readFileText(file: File) {
+  if (typeof file.text === 'function') {
+    return file.text();
+  }
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Failed to read file text.'));
+    reader.readAsText(file);
+  });
+}
+
 export default function ThemesClient() {
+  const importFileRef = useRef<HTMLInputElement | null>(null);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -590,6 +603,45 @@ export default function ThemesClient() {
     }
   };
 
+  const openImportDialog = () => {
+    importFileRef.current?.click();
+  };
+
+  const importCurationViewFromFile = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const content = await readFileText(file);
+      const parsed = JSON.parse(content) as {
+        activePreset?: unknown;
+        searchValue?: unknown;
+        pricingFilter?: unknown;
+        listingFilter?: unknown;
+        buildFilter?: unknown;
+        sortMode?: unknown;
+      };
+      if (parsed.activePreset === 'CUSTOM' || isPresetId(parsed.activePreset)) {
+        setActiveCurationPreset(parsed.activePreset);
+      }
+      if (typeof parsed.searchValue === 'string') setSearchValue(parsed.searchValue);
+      if (isPricingFilter(parsed.pricingFilter)) setPricingFilter(parsed.pricingFilter);
+      if (isListingFilter(parsed.listingFilter)) setListingFilter(parsed.listingFilter);
+      if (isBuildFilter(parsed.buildFilter)) setBuildFilter(parsed.buildFilter);
+      if (isSortMode(parsed.sortMode)) setSortMode(parsed.sortMode);
+      console.debug('[themes] curationImport:success', {
+        activePreset: parsed.activePreset || 'CUSTOM',
+      });
+      setNotice({ tone: 'success', message: 'Curation view imported from JSON.' });
+    } catch (e: any) {
+      console.error('[themes] curationImport:failed', { reason: e?.message || e });
+      setNotice({ tone: 'error', message: 'Invalid curation view JSON.' });
+    } finally {
+      event.target.value = '';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <section className="border-b bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white">
@@ -771,13 +823,29 @@ export default function ThemesClient() {
                 : 'Active preset: Custom mix'}
             </div>
             <div className="mt-2">
-              <button
-                type="button"
-                onClick={() => void exportCurationView()}
-                className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
-              >
-                Export curation view
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void exportCurationView()}
+                  className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+                >
+                  Export curation view
+                </button>
+                <button
+                  type="button"
+                  onClick={openImportDialog}
+                  className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+                >
+                  Import curation view
+                </button>
+                <input
+                  ref={importFileRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="hidden"
+                  onChange={(event) => void importCurationViewFromFile(event)}
+                />
+              </div>
             </div>
           </div>
           <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
