@@ -555,6 +555,41 @@ export default function ThemesClient() {
   const activePresetMeta =
     activeCurationPreset === 'CUSTOM' ? null : presetById(activeCurationPreset);
 
+  const exportCurationView = async () => {
+    const payload = {
+      activePreset: activeCurationPreset,
+      searchValue,
+      pricingFilter,
+      listingFilter,
+      buildFilter,
+      sortMode,
+      visibleThemeCount: filteredThemes.length,
+      visibleThemeIds: filteredThemes.map((theme) => theme.id),
+      generatedAt: new Date().toISOString(),
+    };
+    const body = JSON.stringify(payload, null, 2);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(body);
+        setNotice({ tone: 'success', message: 'Curation view copied to clipboard.' });
+        return;
+      }
+      const blob = new Blob([body], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'theme-studio-curation-view.json';
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setNotice({ tone: 'success', message: 'Curation view exported as JSON.' });
+    } catch (e: any) {
+      console.error('[themes] curationExport:failed', { reason: e?.message || e });
+      setNotice({ tone: 'error', message: 'Failed to export curation view.' });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <section className="border-b bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white">
@@ -734,6 +769,15 @@ export default function ThemesClient() {
               {activePresetMeta
                 ? `Active preset: ${activePresetMeta.label} — ${activePresetMeta.hint}`
                 : 'Active preset: Custom mix'}
+            </div>
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => void exportCurationView()}
+                className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+              >
+                Export curation view
+              </button>
             </div>
           </div>
           <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">

@@ -10,6 +10,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react';
 import ThemesClient from '../src/app/themes/themes.client';
 
 const apiUploadMock = jest.fn(async () => ({}));
+const clipboardWriteTextMock = jest.fn(async () => undefined);
 const FIXED_ISO = '2026-02-16T10:00:00.000Z';
 
 jest.mock('../src/lib/api', () => ({
@@ -56,7 +57,12 @@ jest.mock('../src/lib/api', () => ({
 describe('ThemesClient', () => {
   beforeEach(() => {
     apiUploadMock.mockClear();
+    clipboardWriteTextMock.mockClear();
     window.sessionStorage.clear();
+    Object.defineProperty(window.navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: clipboardWriteTextMock },
+    });
   });
 
   it('renders curation controls, supports filtering, and keeps upload flow', async () => {
@@ -118,6 +124,12 @@ describe('ThemesClient', () => {
     expect(window.sessionStorage.getItem('builder.themeStudio.curationView.v1')).toContain(
       'NEEDS_ATTENTION',
     );
+
+    fireEvent.click(getByRole('button', { name: /Export curation view/i }));
+    await waitFor(() => {
+      expect(clipboardWriteTextMock).toHaveBeenCalled();
+      expect(getByText(/copied to clipboard/i)).toBeTruthy();
+    });
 
     expect(asFragment()).toMatchSnapshot();
   });
