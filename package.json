@@ -9,6 +9,7 @@
     "mvp:seed": "node tools/editor-mvp-seed.mjs",
     "mvp:validate": "node tools/editor-mvp-validate.mjs",
     "demo:artifact:verify": "node tools/investor-demo-verify.mjs",
+    "demo:artifact:plan": "node tools/investor-demo-verify.mjs --dry-run",
     "db:migrate": "typeorm-ts-node-commonjs migration:run -d apps/api/src/typeorm-migration.datasource.ts",
     "db:migrate:revert": "typeorm-ts-node-commonjs migration:revert -d apps/api/src/typeorm-migration.datasource.ts",
     "db:migrate:show": "typeorm-ts-node-commonjs migration:show -d apps/api/src/typeorm-migration.datasource.ts"
