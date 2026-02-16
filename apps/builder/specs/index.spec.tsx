@@ -20,6 +20,40 @@ jest.mock('../src/lib/api', () => ({
     if (path === '/api/domains') {
       return [{ id: 'domain_1', siteId: 'site_1', host: 'shop.demo.localhost', status: 'PENDING' }];
     }
+    if (path === '/api/domains/challenges/metrics') {
+      return {
+        generatedAt: new Date().toISOString(),
+        totalChallenges: 12,
+        issuedCount: 1,
+        verifiedCount: 9,
+        failedCount: 2,
+        pendingPropagationCount: 0,
+        propagatingCount: 1,
+        readyPropagationCount: 9,
+        failedPropagationCount: 2,
+        dueRetryCount: 1,
+        exhaustedCount: 1,
+        averageAttempts: 1.8,
+        verificationSuccessRate: 0.8182,
+        alertCount: 2,
+        alertsLast24h: 1,
+        undeliveredAlerts: 1,
+      };
+    }
+    if (path.startsWith('/api/domains/challenges/alerts')) {
+      return [
+        {
+          id: 'alert_1',
+          challengeId: 'challenge_1',
+          mappingId: 'mapping_1',
+          severity: 'ERROR',
+          eventType: 'domain.challenge.failed',
+          message: 'TXT record mismatch',
+          delivered: false,
+          createdAt: new Date().toISOString(),
+        },
+      ];
+    }
     return [];
   }),
   apiPost: jest.fn(async () => ({})),
@@ -38,5 +72,8 @@ describe('Page', () => {
     expect(getByText(/Domains/i)).toBeTruthy();
     expect(getByText(/shop.demo.localhost/i)).toBeTruthy();
     expect(getByText(/Verify/i)).toBeTruthy();
+    expect(getByText(/Domain Ops Pulse/i)).toBeTruthy();
+    expect(getByText(/Success rate/i)).toBeTruthy();
+    expect(getByText(/TXT record mismatch/i)).toBeTruthy();
   });
 });

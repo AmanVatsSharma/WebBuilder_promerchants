@@ -35,6 +35,38 @@ type DomainMappingDto = {
   lastError?: string | null;
 };
 
+type DomainChallengeMetricsDto = {
+  generatedAt: string;
+  totalChallenges: number;
+  issuedCount: number;
+  verifiedCount: number;
+  failedCount: number;
+  pendingPropagationCount: number;
+  propagatingCount: number;
+  readyPropagationCount: number;
+  failedPropagationCount: number;
+  dueRetryCount: number;
+  exhaustedCount: number;
+  averageAttempts: number;
+  verificationSuccessRate: number;
+  alertCount: number;
+  alertsLast24h: number;
+  undeliveredAlerts: number;
+};
+
+type DomainChallengeAlertDto = {
+  id: string;
+  challengeId: string;
+  mappingId: string;
+  severity: 'INFO' | 'WARN' | 'ERROR';
+  eventType: string;
+  message: string;
+  delivered: boolean;
+  deliveryStatusCode?: number | null;
+  deliveryError?: string | null;
+  createdAt: string;
+};
+
 type PageDraft = {
   title: string;
   slug: string;
@@ -49,9 +81,13 @@ export default function BuilderDashboardPage() {
   const [sites, setSites] = useState<SiteDto[]>([]);
   const [pagesBySite, setPagesBySite] = useState<Record<string, PageDto[]>>({});
   const [domainsBySite, setDomainsBySite] = useState<Record<string, DomainMappingDto[]>>({});
+  const [challengeMetrics, setChallengeMetrics] = useState<DomainChallengeMetricsDto | null>(null);
+  const [challengeAlerts, setChallengeAlerts] = useState<DomainChallengeAlertDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [opsLoading, setOpsLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [opsError, setOpsError] = useState<string | null>(null);
 
   const [siteName, setSiteName] = useState('');
   const [siteDomain, setSiteDomain] = useState('');
@@ -62,6 +98,28 @@ export default function BuilderDashboardPage() {
     () => Object.values(pagesBySite).reduce((sum, rows) => sum + rows.length, 0),
     [pagesBySite],
   );
+
+  const loadOpsSnapshot = async () => {
+    setOpsLoading(true);
+    setOpsError(null);
+    try {
+      const [metrics, alerts] = await Promise.all([
+        apiGet<DomainChallengeMetricsDto>('/api/domains/challenges/metrics'),
+        apiGet<DomainChallengeAlertDto[]>('/api/domains/challenges/alerts?limit=5'),
+      ]);
+      setChallengeMetrics(metrics);
+      setChallengeAlerts(Array.isArray(alerts) ? alerts : []);
+    } catch (e: any) {
+      console.error('[builder-dashboard] failed to load domain challenge ops snapshot', {
+        reason: e?.message || e,
+      });
+      setChallengeMetrics(null);
+      setChallengeAlerts([]);
+      setOpsError('Domain challenge operations snapshot unavailable.');
+    } finally {
+      setOpsLoading(false);
+    }
+  };
 
   const loadSitesAndPages = async () => {
     setLoading(true);
@@ -102,6 +160,7 @@ export default function BuilderDashboardPage() {
     } catch (e: any) {
       setError(e?.message || 'Failed to load dashboard');
     } finally {
+      await loadOpsSnapshot();
       setLoading(false);
     }
   };
@@ -233,31 +292,107 @@ export default function BuilderDashboardPage() {
 
       <section className="mx-auto max-w-7xl px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 bg-white border rounded-xl p-4">
-            <h2 className="font-semibold text-slate-900">Create Site</h2>
-            <p className="text-xs text-slate-600 mt-1">
-              Start a new project and add pages in seconds.
-            </p>
-            <div className="mt-4 space-y-3">
-              <input
-                className="w-full border rounded px-3 py-2 text-sm"
-                placeholder="Site name (required)"
-                value={siteName}
-                onChange={(e) => setSiteName(e.target.value)}
-              />
-              <input
-                className="w-full border rounded px-3 py-2 text-sm"
-                placeholder="Domain (optional)"
-                value={siteDomain}
-                onChange={(e) => setSiteDomain(e.target.value)}
-              />
-              <button
-                className="w-full px-3 py-2 rounded bg-blue-600 text-white text-sm disabled:opacity-50"
-                onClick={createSite}
-                disabled={busy}
-              >
-                Create Site
-              </button>
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white border rounded-xl p-4">
+              <h2 className="font-semibold text-slate-900">Create Site</h2>
+              <p className="text-xs text-slate-600 mt-1">
+                Start a new project and add pages in seconds.
+              </p>
+              <div className="mt-4 space-y-3">
+                <input
+                  className="w-full border rounded px-3 py-2 text-sm"
+                  placeholder="Site name (required)"
+                  value={siteName}
+                  onChange={(e) => setSiteName(e.target.value)}
+                />
+                <input
+                  className="w-full border rounded px-3 py-2 text-sm"
+                  placeholder="Domain (optional)"
+                  value={siteDomain}
+                  onChange={(e) => setSiteDomain(e.target.value)}
+                />
+                <button
+                  className="w-full px-3 py-2 rounded bg-blue-600 text-white text-sm disabled:opacity-50"
+                  onClick={createSite}
+                  disabled={busy}
+                >
+                  Create Site
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white border rounded-xl p-4">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="font-semibold text-slate-900">Domain Ops Pulse</h2>
+                <span className="text-[11px] text-slate-500">
+                  SLO snapshot
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-1">
+                Track domain challenge reliability before launch day.
+              </p>
+              {opsLoading ? (
+                <div className="mt-3 text-xs text-slate-500">Loading operations snapshot...</div>
+              ) : null}
+              {opsError ? (
+                <div className="mt-3 text-xs text-amber-700">{opsError}</div>
+              ) : null}
+              {challengeMetrics ? (
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded border bg-slate-50 px-2 py-2">
+                    <div className="text-slate-500">Success rate</div>
+                    <div className="font-semibold text-slate-900">
+                      {(challengeMetrics.verificationSuccessRate * 100).toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="rounded border bg-slate-50 px-2 py-2">
+                    <div className="text-slate-500">Challenges</div>
+                    <div className="font-semibold text-slate-900">
+                      {challengeMetrics.totalChallenges}
+                    </div>
+                  </div>
+                  <div className="rounded border bg-slate-50 px-2 py-2">
+                    <div className="text-slate-500">Due retries</div>
+                    <div className="font-semibold text-slate-900">
+                      {challengeMetrics.dueRetryCount}
+                    </div>
+                  </div>
+                  <div className="rounded border bg-slate-50 px-2 py-2">
+                    <div className="text-slate-500">Undelivered alerts</div>
+                    <div className="font-semibold text-slate-900">
+                      {challengeMetrics.undeliveredAlerts}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              <div className="mt-3">
+                <div className="text-xs font-semibold text-slate-700">Recent challenge alerts</div>
+                <div className="mt-2 space-y-2">
+                  {challengeAlerts.map((alert) => (
+                    <div key={alert.id} className="rounded border bg-slate-50 px-2 py-2 text-[11px]">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-slate-800">{alert.severity}</span>
+                        <span
+                          className={`rounded px-1.5 py-0.5 ${
+                            alert.delivered
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}
+                        >
+                          {alert.delivered ? 'Delivered' : 'Pending delivery'}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-slate-700">{alert.message}</div>
+                      <div className="mt-1 text-slate-500">{new Date(alert.createdAt).toLocaleString()}</div>
+                    </div>
+                  ))}
+                  {!opsLoading && !challengeAlerts.length ? (
+                    <div className="text-[11px] text-slate-500">
+                      No recent challenge alerts.
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             </div>
           </div>
 
