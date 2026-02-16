@@ -35,6 +35,26 @@ function defaultVersion() {
   return `0.0.1-${Date.now()}`;
 }
 
+function normalizePricingModel(raw?: string) {
+  return String(raw || '').toUpperCase() === 'PAID' ? 'PAID' : 'FREE';
+}
+
+function normalizePriceCents(raw: unknown, pricingModel: 'FREE' | 'PAID') {
+  if (pricingModel !== 'PAID') return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return Math.floor(parsed);
+}
+
+function normalizeCurrency(raw?: string) {
+  const value = String(raw || '').trim().toUpperCase();
+  return value.length === 3 ? value : 'USD';
+}
+
+function normalizeListed(raw?: string) {
+  return String(raw || '').trim().toLowerCase() === 'true';
+}
+
 function normalizeThemeSourcePath(rawPath: string): string | null {
   const normalized = (rawPath || '').replace(/\\/g, '/').replace(/^\.\/+/, '').trim();
   if (!normalized) return null;
@@ -238,11 +258,22 @@ export class ThemesService {
 
     this.logger.log(`uploadThemeBundle name=${dto.name} bytes=${file.size}`);
 
+    const pricingModel = normalizePricingModel(dto.pricingModel);
+    const priceCents = normalizePriceCents(dto.priceCents, pricingModel);
+    const currency = normalizeCurrency(dto.currency);
+    const licenseType = String(dto.licenseType || 'SINGLE_STORE').trim() || 'SINGLE_STORE';
+    const isListed = normalizeListed(dto.isListed);
+
     const theme = await this.themeRepo.save(
       this.themeRepo.create({
         name: dto.name,
         description: dto.description ?? null,
         author: dto.author ?? null,
+        pricingModel,
+        priceCents,
+        currency,
+        licenseType,
+        isListed,
       }),
     );
 
@@ -436,6 +467,11 @@ export class ThemesService {
         name: themeName,
         description: 'Starter ecommerce theme shipped with the platform.',
         author: 'WebBuilder',
+        pricingModel: 'FREE',
+        priceCents: null,
+        currency: 'USD',
+        licenseType: 'SINGLE_STORE',
+        isListed: true,
       }),
     );
 

@@ -6,7 +6,7 @@
  * Last-updated: 2025-12-16
  */
 
-import { IsOptional, IsString } from 'class-validator';
+import { IsIn, IsOptional, IsString } from 'class-validator';
 
 export class UploadThemeDto {
   @IsString()
@@ -23,6 +23,26 @@ export class UploadThemeDto {
   @IsOptional()
   @IsString()
   author?: string;
+
+  @IsOptional()
+  @IsIn(['FREE', 'PAID'])
+  pricingModel?: 'FREE' | 'PAID';
+
+  @IsOptional()
+  @IsString()
+  priceCents?: string;
+
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @IsOptional()
+  @IsString()
+  licenseType?: string;
+
+  @IsOptional()
+  @IsString()
+  isListed?: string;
 }
 
 

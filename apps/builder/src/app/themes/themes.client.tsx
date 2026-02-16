@@ -13,7 +13,18 @@ import Link from 'next/link';
 import { apiGet, apiPost, apiUpload } from '../../lib/api';
 
 type ThemeVersion = { id: string; version: string; status: string; createdAt: string };
-type Theme = { id: string; name: string; description?: string | null; author?: string | null; versions?: ThemeVersion[] };
+type Theme = {
+  id: string;
+  name: string;
+  description?: string | null;
+  author?: string | null;
+  pricingModel?: 'FREE' | 'PAID';
+  priceCents?: number | null;
+  currency?: string | null;
+  licenseType?: string | null;
+  isListed?: boolean;
+  versions?: ThemeVersion[];
+};
 
 export default function ThemesClient() {
   const [themes, setThemes] = useState<Theme[]>([]);
@@ -24,6 +35,11 @@ export default function ThemesClient() {
   const [uploadVersion, setUploadVersion] = useState('');
   const [uploadDescription, setUploadDescription] = useState('');
   const [uploadAuthor, setUploadAuthor] = useState('');
+  const [uploadPricingModel, setUploadPricingModel] = useState<'FREE' | 'PAID'>('FREE');
+  const [uploadPriceCents, setUploadPriceCents] = useState('');
+  const [uploadCurrency, setUploadCurrency] = useState('USD');
+  const [uploadLicenseType, setUploadLicenseType] = useState('SINGLE_STORE');
+  const [uploadIsListed, setUploadIsListed] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   const reload = async () => {
@@ -64,6 +80,13 @@ export default function ThemesClient() {
       if (uploadVersion.trim()) form.append('version', uploadVersion.trim());
       if (uploadDescription.trim()) form.append('description', uploadDescription.trim());
       if (uploadAuthor.trim()) form.append('author', uploadAuthor.trim());
+      form.append('pricingModel', uploadPricingModel);
+      if (uploadPricingModel === 'PAID' && uploadPriceCents.trim()) {
+        form.append('priceCents', uploadPriceCents.trim());
+      }
+      if (uploadCurrency.trim()) form.append('currency', uploadCurrency.trim().toUpperCase());
+      if (uploadLicenseType.trim()) form.append('licenseType', uploadLicenseType.trim());
+      form.append('isListed', uploadIsListed ? 'true' : 'false');
 
       await apiUpload('/api/themes/upload', form);
       setUploadFile(null);
@@ -71,6 +94,11 @@ export default function ThemesClient() {
       setUploadVersion('');
       setUploadDescription('');
       setUploadAuthor('');
+      setUploadPricingModel('FREE');
+      setUploadPriceCents('');
+      setUploadCurrency('USD');
+      setUploadLicenseType('SINGLE_STORE');
+      setUploadIsListed(false);
       await reload();
       alert('Theme uploaded');
     } catch (e: any) {
@@ -133,6 +161,33 @@ export default function ThemesClient() {
             value={uploadDescription}
             onChange={(e) => setUploadDescription(e.target.value)}
           />
+          <select
+            className="border rounded px-3 py-2 text-sm"
+            value={uploadPricingModel}
+            onChange={(e) => setUploadPricingModel((e.target.value as 'FREE' | 'PAID') || 'FREE')}
+          >
+            <option value="FREE">FREE</option>
+            <option value="PAID">PAID</option>
+          </select>
+          <input
+            className="border rounded px-3 py-2 text-sm"
+            placeholder="Price (cents, optional for PAID)"
+            value={uploadPriceCents}
+            onChange={(e) => setUploadPriceCents(e.target.value)}
+            disabled={uploadPricingModel !== 'PAID'}
+          />
+          <input
+            className="border rounded px-3 py-2 text-sm"
+            placeholder="Currency (USD)"
+            value={uploadCurrency}
+            onChange={(e) => setUploadCurrency(e.target.value)}
+          />
+          <input
+            className="border rounded px-3 py-2 text-sm"
+            placeholder="License (SINGLE_STORE)"
+            value={uploadLicenseType}
+            onChange={(e) => setUploadLicenseType(e.target.value)}
+          />
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <input
@@ -152,6 +207,14 @@ export default function ThemesClient() {
               Selected: <span className="font-mono">{uploadFile.name}</span>
             </div>
           ) : null}
+          <label className="text-xs text-gray-700 flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={uploadIsListed}
+              onChange={(e) => setUploadIsListed(e.target.checked)}
+            />
+            Listed in marketplace
+          </label>
         </div>
       </section>
 
@@ -165,6 +228,12 @@ export default function ThemesClient() {
               <div>
                 <div className="font-bold">{t.name}</div>
                 <div className="text-sm text-gray-600">{t.description || '—'}</div>
+                <div className="text-xs text-gray-600 mt-1">
+                  {t.pricingModel === 'PAID'
+                    ? `${t.currency || 'USD'} ${(Number(t.priceCents || 0) / 100).toFixed(2)} • ${t.licenseType || 'SINGLE_STORE'}`
+                    : 'FREE'}{' '}
+                  • {t.isListed ? 'LISTED' : 'UNLISTED'}
+                </div>
                 <div className="text-xs text-gray-500 mt-1">themeId={t.id}</div>
               </div>
             </div>

@@ -11,13 +11,13 @@ This module supports:
 - Building a theme version into a **runtime bundle** consumed by the Storefront
 
 ## Entities
-- **Theme**: Theme Store item (name/description/author)
+- **Theme**: Theme Store item (name/description/author + pricing/listing/license metadata)
 - **ThemeVersion**: Uploaded version snapshot (manifest/status/build logs)
 - **ThemeFile**: File metadata (path/size/hash) for a theme version
 - **ThemeInstall**: Site binding (draftThemeVersionId, publishedThemeVersionId)
 
 ## Endpoints (current)
-- `POST /api/themes/upload` (multipart, field `bundle`) + body `{ name, version?, description?, author? }`
+- `POST /api/themes/upload` (multipart, field `bundle`) + body `{ name, version?, description?, author?, pricingModel?, priceCents?, currency?, licenseType?, isListed? }`
 - `GET /api/themes`
 - `GET /api/themes/:themeId`
 - `GET /api/themes/versions/:themeVersionId`
@@ -63,6 +63,7 @@ This will be migrated into a richer `StorageProvider` abstraction (S3 compatible
 - Fallback: set `THEME_BUILD_MODE=inline` (or use `DB_TYPE=sqljs`) to execute builds in API process without Redis/worker (local/e2e friendly).
 
 ## Changelog
+- 2026-02-16: Added marketplace metadata primitives on themes (`pricingModel`, `priceCents`, `currency`, `licenseType`, `isListed`) with upload-time capture.
 - 2026-02-16: Added inline theme build mode fallback for local/e2e (`THEME_BUILD_MODE=inline`) while keeping durable BullMQ mode for production.
 - 2026-02-16: Hardened theme source path handling (blocks traversal/unsafe paths) and aligned file read/write/seed flows to normalized safe relative paths.
 - 2026-01-24: Replaced in-memory theme builds with durable BullMQ + Redis queue and worker-backed processing.
