@@ -13,7 +13,7 @@ import { StorefrontFallbackShell } from '../src/components/storefront-fallback-s
 
 describe('StorefrontFallbackShell', () => {
   it('renders diagnostics, hints, and action links', () => {
-    const { getByText } = render(
+    const { asFragment, getByText } = render(
       <StorefrontFallbackShell
         badge="Tenant missing"
         title="Storefront tenant could not be resolved"
@@ -32,6 +32,7 @@ describe('StorefrontFallbackShell', () => {
     expect(getByText(/shop.example.com/i)).toBeTruthy();
     expect(getByText(/Open storefront root/i)).toBeTruthy();
     expect(getByText(/Verify domain mapping/i)).toBeTruthy();
+    expect(asFragment()).toMatchSnapshot();
   });
 });
 

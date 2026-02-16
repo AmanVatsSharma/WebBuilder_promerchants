@@ -23,6 +23,7 @@ The **buyer-facing storefront** that serves many tenants (stores) from one deplo
 - Runtime bundle loaders (`theme-runtime`, `extension-runtime`) intentionally use sandboxed dynamic `require` for user-authored bundles. Webpack emits critical-dependency warnings for these files; this is expected and tracked.
 
 ## Changelog
+- 2026-02-16: Added snapshot-backed storefront shell tests (`StorefrontFallbackShell`, `StorefrontBasicShell`) to protect premium fallback/shell UX from unintended regressions.
 - 2026-02-16: Added branded `StorefrontBasicShell` wrapper for successful non-theme page-renderer paths so storefront fallback-to-builder-core flows retain premium navigation/footer UX.
 - 2026-02-16: Added shared premium fallback shell for tenant/theme/page/template-missing states with clearer diagnostics and guided recovery hints.
 - 2026-02-16: Storefront server API clients now support optional bearer auth propagation (`API_AUTH_TOKEN`) for JWT auth-context guard environments.

@@ -13,7 +13,7 @@ import { StorefrontBasicShell } from '../src/components/storefront-basic-shell';
 
 describe('StorefrontBasicShell', () => {
   it('renders branded header, host marker, and content', () => {
-    const { getByText } = render(
+    const { asFragment, getByText } = render(
       <StorefrontBasicShell siteName="Demo Store" host="shop.demo.localhost">
         <div>Demo body</div>
       </StorefrontBasicShell>,
@@ -23,6 +23,7 @@ describe('StorefrontBasicShell', () => {
     expect(getByText(/shop.demo.localhost/i)).toBeTruthy();
     expect(getByText(/Demo body/i)).toBeTruthy();
     expect(getByText(/Powered by WebBuilder storefront runtime/i)).toBeTruthy();
+    expect(asFragment()).toMatchSnapshot();
   });
 });
 
