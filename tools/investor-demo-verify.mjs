@@ -31,6 +31,7 @@ const artifactDirPath = artifactDirArg
   ? path.resolve(artifactDirArg.split('=')[1] || '')
   : '';
 const artifactStrict = argv.includes('--artifact-strict');
+const artifactStrictExtra = argv.includes('--artifact-strict-extra');
 const artifactReportMdArg = argv.find((arg) =>
   arg.startsWith('--artifact-report-md='),
 );
@@ -66,6 +67,7 @@ function matchSlotFile(entries, chapter, surface, label, ext) {
 async function validateArtifactDirectory(targetDir) {
   const checklist = captureChecklistRows();
   const entries = await readdir(targetDir, { withFileTypes: true });
+  const fileNames = entries.filter((item) => item.isFile()).map((item) => item.name);
   const coverage = checklist.map(([chapter, surface, label, ext]) => {
     const matches = matchSlotFile(entries, chapter, surface, label, ext);
     return {
@@ -78,11 +80,22 @@ async function validateArtifactDirectory(targetDir) {
     };
   });
   const covered = coverage.filter((item) => item.complete).length;
+  const matchedNames = new Set(
+    coverage.flatMap((item) => item.matchedFiles),
+  );
+  const unexpectedFiles = fileNames.filter(
+    (fileName) => artifactNamePattern().test(fileName) && !matchedNames.has(fileName),
+  );
+  const nonConformingFiles = fileNames.filter(
+    (fileName) => !artifactNamePattern().test(fileName),
+  );
   return {
     directory: targetDir,
     required: coverage.length,
     covered,
     missing: coverage.length - covered,
+    unexpectedFiles,
+    nonConformingFiles,
     coverage,
   };
 }
@@ -186,8 +199,17 @@ async function main() {
         covered: artifactValidation.covered,
         required: artifactValidation.required,
         missing: artifactValidation.missing,
+        unexpectedFiles: artifactValidation.unexpectedFiles.length,
+        nonConformingFiles: artifactValidation.nonConformingFiles.length,
       });
       if (artifactStrict && artifactValidation.missing > 0) {
+        summary.success = false;
+      }
+      if (
+        artifactStrictExtra &&
+        (artifactValidation.unexpectedFiles.length > 0 ||
+          artifactValidation.nonConformingFiles.length > 0)
+      ) {
         summary.success = false;
       }
       if (artifactReportMdPath) {
