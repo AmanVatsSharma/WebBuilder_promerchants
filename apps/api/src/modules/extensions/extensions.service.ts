@@ -32,6 +32,18 @@ function normalizeRelPath(p: string) {
   return clean.startsWith('/') ? clean.slice(1) : clean;
 }
 
+function normalizeExtensionSourcePath(rawPath: string): string | null {
+  const normalized = (rawPath || '').replace(/\\/g, '/').replace(/^\.\/+/, '').trim();
+  if (!normalized) return null;
+  if (normalized.startsWith('/')) return null;
+  if (normalized.includes('\0')) return null;
+  const segments = normalized.split('/');
+  if (segments.some((segment) => segment.length === 0 || segment === '.' || segment === '..')) {
+    return null;
+  }
+  return normalized;
+}
+
 function allowImport(spec: string) {
   if (spec.startsWith('./') || spec.startsWith('../')) return true;
   if (spec === 'react') return true;
@@ -65,9 +77,9 @@ function importAllowlistPlugin(): Plugin {
 }
 
 function isAllowedExtensionPath(filePath: string) {
-  const p = normalizeRelPath(filePath).toLowerCase();
-  if (!p) return false;
-  if (p.includes('..')) return false;
+  const normalized = normalizeExtensionSourcePath(filePath);
+  if (!normalized) return false;
+  const p = normalized.toLowerCase();
   return p.endsWith('.ts') || p.endsWith('.tsx') || p.endsWith('.json') || p.endsWith('.css');
 }
 
@@ -145,7 +157,7 @@ export class ExtensionsService {
 
     for (const entry of dir.files) {
       if (entry.type !== 'File') continue;
-      const entryPath = entry.path.replaceAll('\\', '/');
+      const entryPath = normalizeExtensionSourcePath(entry.path);
       if (!entryPath || entryPath.endsWith('/')) continue;
       if (!isAllowedExtensionPath(entryPath)) {
         this.logger.debug('Skipping disallowed extension file', { path: entryPath });

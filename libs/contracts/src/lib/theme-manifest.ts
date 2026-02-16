@@ -11,7 +11,7 @@
 
 import type { ThemeManifestV1 } from './contracts';
 
-export type ValidationResult<T> =
+export type ThemeManifestValidationResult<T> =
   | { ok: true; value: T }
   | { ok: false; errors: string[] };
 
@@ -23,11 +23,22 @@ function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.trim().length > 0;
 }
 
+function isSafeBundleRelativePath(v: unknown): v is string {
+  if (!isNonEmptyString(v)) return false;
+  const normalized = v.replace(/\\/g, '/').trim();
+  if (!normalized) return false;
+  if (normalized.startsWith('/')) return false;
+  if (normalized.includes('\0')) return false;
+  const segments = normalized.split('/');
+  if (segments.some((s) => s === '..' || s.length === 0)) return false;
+  return true;
+}
+
 function pushErr(errors: string[], path: string, msg: string) {
   errors.push(`${path}: ${msg}`);
 }
 
-export function parseThemeManifestV1(input: unknown): ValidationResult<ThemeManifestV1> {
+export function parseThemeManifestV1(input: unknown): ThemeManifestValidationResult<ThemeManifestV1> {
   const errors: string[] = [];
   if (!isRecord(input)) {
     return { ok: false, errors: ['manifest: must be an object'] };
@@ -38,7 +49,11 @@ export function parseThemeManifestV1(input: unknown): ValidationResult<ThemeMani
 
   if (!isNonEmptyString(input['name'])) pushErr(errors, 'name', 'must be a non-empty string');
   if (!isNonEmptyString(input['version'])) pushErr(errors, 'version', 'must be a non-empty string');
-  if (!isNonEmptyString(input['entry'])) pushErr(errors, 'entry', 'must be a non-empty string');
+  if (!isNonEmptyString(input['entry'])) {
+    pushErr(errors, 'entry', 'must be a non-empty string');
+  } else if (!isSafeBundleRelativePath(input['entry'])) {
+    pushErr(errors, 'entry', 'must be a safe bundle-relative path');
+  }
 
   const routes = input['routes'];
   if (routes !== undefined) {
@@ -55,7 +70,11 @@ export function parseThemeManifestV1(input: unknown): ValidationResult<ThemeMani
         if (isNonEmptyString(r['path']) && !r['path'].startsWith('/')) {
           pushErr(errors, `${p}.path`, 'must start with "/"');
         }
-        if (!isNonEmptyString(r['template'])) pushErr(errors, `${p}.template`, 'must be a non-empty string');
+        if (!isNonEmptyString(r['template'])) {
+          pushErr(errors, `${p}.template`, 'must be a non-empty string');
+        } else if (!isSafeBundleRelativePath(r['template'])) {
+          pushErr(errors, `${p}.template`, 'must be a safe bundle-relative path');
+        }
       });
     }
   }

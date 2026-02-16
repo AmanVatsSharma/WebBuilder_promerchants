@@ -12,6 +12,7 @@ Manages user sites and pages. The core of the Web Builder, as it stores the page
 2. **Add Page**: User adds a page to the site.
 3. **Save Page**: Editor sends updated JSON content to `PUT /sites/pages/:id`.
 4. **Load Page**: Editor/Preview fetches JSON content from `GET /sites/pages/:id`.
+5. **Publish Page**: Builder snapshots draft content into published content via `POST /sites/pages/:id/publish`. Storefront reads published by default.
 
 ## Data Structure (Page Content)
 The `content` field is a JSON object following the Component Registry schema:
@@ -29,3 +30,5 @@ The `content` field is a JSON object following the Component Registry schema:
 }
 ```
 
+## Changelog
+- 2026-01-24: Added page publishing (`publishedContent`, `publishedAt`) and `POST /sites/pages/:id/publish` to support draft vs published page serving.

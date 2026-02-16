@@ -27,5 +27,6 @@ This is intentionally **v1-minimal**: blocks only (no webhooks, no admin UI embe
 - `GET /api/sites/:siteId/extensions/blocks` → blocks merged for builder palette
 
 ## Changelog
+- 2026-02-16: Hardened extension bundle source path normalization to reject traversal, absolute, and unsafe paths before persistence/build.
 - 2026-01-24: Initial extensions v1 (upload/build/install + site blocks feed).
 
