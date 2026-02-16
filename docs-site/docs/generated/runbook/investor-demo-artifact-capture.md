@@ -97,6 +97,12 @@ Optional artifact-pack coverage validation (after captures are created):
 npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-strict --output=/tmp/investor-demo-verify-summary.json
 ```
 
+One-command strict audit profile:
+
+```bash
+npm run demo:artifact:audit -- --artifact-dir=/tmp/investor-artifacts --artifact-report-md=/tmp/investor-artifact-coverage.md --artifact-manifest=/tmp/investor-artifact-manifest.json
+```
+
 Add `--artifact-strict-extra` when you also want to fail on unexpected or non-conforming files.
 Add `--artifact-strict-placeholders` when scaffold placeholder files must be rejected.
 Add `--artifact-strict-content` when empty binaries/invalid log/json payloads must fail validation.

@@ -39,6 +39,7 @@ For repeatable evidence packaging, use the companion runbook:
    - follow [Investor Demo Artifact Capture](./investor-demo-artifact-capture)
 7. If artifacts already captured, validate pack completeness:
    - `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-strict`
+   - or use strict audit profile: `npm run demo:artifact:audit -- --artifact-dir=/tmp/investor-artifacts`
    - include hygiene gate when needed: `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-strict --artifact-strict-extra`
    - include placeholder gate when scaffolds are disallowed: `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-strict --artifact-strict-placeholders`
    - include content gate for payload quality: `npm run demo:artifact:verify -- --dry-run --artifact-dir=/tmp/investor-artifacts --artifact-strict --artifact-strict-content`
