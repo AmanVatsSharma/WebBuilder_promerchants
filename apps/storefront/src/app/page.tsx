@@ -18,6 +18,7 @@ import { createApiCommerceAdapter } from '../lib/commerce-adapter';
 import { randomUUID } from 'crypto';
 import { loadExtensionModule } from '../lib/extension-runtime';
 import { StorefrontFallbackShell } from '../components/storefront-fallback-shell';
+import { StorefrontBasicShell } from '../components/storefront-basic-shell';
 
 registerCoreComponents();
 
@@ -134,8 +135,8 @@ export default async function Home({ searchParams }: { searchParams?: Promise<Re
   }
 
   return (
-    <main>
+    <StorefrontBasicShell siteName={site.name} host={host}>
       <PageRenderer content={content} />
-    </main>
+    </StorefrontBasicShell>
   );
 }
