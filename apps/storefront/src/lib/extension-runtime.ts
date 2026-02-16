@@ -13,7 +13,6 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { createRequire } from 'module';
 import vm from 'node:vm';
-import * as ThemeSdk from '@web-builder/theme-sdk';
 
 type ExtensionModule = {
   manifest?: any;
@@ -22,6 +21,7 @@ type ExtensionModule = {
 };
 
 const cache = new Map<string, { mtimeMs: number; mod: ExtensionModule }>();
+const runtimeRequire = createRequire(import.meta.url);
 
 function storageRootDir() {
   return process.env.STORAGE_DIR || path.resolve(process.cwd(), 'storage');
@@ -49,13 +49,13 @@ export async function loadExtensionModule(extensionVersionId: string): Promise<E
     const moduleObj: { exports: any } = { exports: {} };
     const exportsObj = moduleObj.exports;
 
-    const realRequire = createRequire(process.cwd() + '/');
+    const realRequire = runtimeRequire;
     const sandboxRequire = (spec: string) => {
       if (!allowedRequire(spec)) {
         throw new Error(`Disallowed require in extension runtime: ${spec}`);
       }
       if (spec === '@web-builder/theme-sdk') {
-        return ThemeSdk;
+        return realRequire(spec);
       }
       return realRequire(spec);
     };

@@ -32,11 +32,26 @@ jobs:
       - name: Test contracts
         run: npx nx test contracts
 
+      - name: Test API
+        run: npx nx test api
+
       - name: Build API
         run: npx nx build api
+
+      - name: API e2e
+        env:
+          DB_TYPE: sqljs
+          THEME_BUILD_MODE: inline
+        run: npx nx e2e api-e2e
 
       - name: Test builder
         run: npx nx test builder
 
       - name: Build builder
         run: npx nx build builder
+
+      - name: Test storefront
+        run: npx nx test storefront
+
+      - name: Build storefront
+        run: npx nx build storefront
