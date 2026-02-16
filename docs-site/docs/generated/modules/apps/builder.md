@@ -17,6 +17,7 @@ The **seller-facing editor** for:
 - Builder production build is forced to webpack via `apps/builder/project.json`.
 
 ## Changelog
+- 2026-02-16: Added Theme Store bundle upload UI (metadata + zip upload) and domain mapping controls on dashboard projects for site-level domain setup visibility.
 - 2026-02-15: Replaced builder home with a real project dashboard (site/page creation, editor/preview/publish entry paths) and added local MVP seed/validation scripts (`npm run mvp:seed`, `npm run mvp:validate`).
 - 2026-02-15: Upgraded `/editor/[pageId]` with layer tree, multi-select, duplicate/copy/paste shortcuts, viewport-aware visual design controls, and side-by-side live preview.
 - 2026-02-15: Polished publish/theme workflows with readiness snapshots, theme audit visibility, rollback controls, and improved theme version editor telemetry/search/unsaved-state UX.

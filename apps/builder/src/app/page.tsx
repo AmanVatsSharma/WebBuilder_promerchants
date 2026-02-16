@@ -27,6 +27,14 @@ type PageDto = {
   isPublished?: boolean;
 };
 
+type DomainMappingDto = {
+  id: string;
+  host: string;
+  siteId: string;
+  status: 'PENDING' | 'VERIFIED' | 'FAILED';
+  lastError?: string | null;
+};
+
 type PageDraft = {
   title: string;
   slug: string;
@@ -40,6 +48,7 @@ const defaultDraft: PageDraft = {
 export default function BuilderDashboardPage() {
   const [sites, setSites] = useState<SiteDto[]>([]);
   const [pagesBySite, setPagesBySite] = useState<Record<string, PageDto[]>>({});
+  const [domainsBySite, setDomainsBySite] = useState<Record<string, DomainMappingDto[]>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +56,7 @@ export default function BuilderDashboardPage() {
   const [siteName, setSiteName] = useState('');
   const [siteDomain, setSiteDomain] = useState('');
   const [pageDraftBySite, setPageDraftBySite] = useState<Record<string, PageDraft>>({});
+  const [domainDraftBySite, setDomainDraftBySite] = useState<Record<string, string>>({});
 
   const totalPages = useMemo(
     () => Object.values(pagesBySite).reduce((sum, rows) => sum + rows.length, 0),
@@ -74,6 +84,21 @@ export default function BuilderDashboardPage() {
         }),
       );
       setPagesBySite(nextPagesBySite);
+
+      try {
+        const mappings = await apiGet<DomainMappingDto[]>('/api/domains');
+        const nextDomainsBySite = mappings.reduce<Record<string, DomainMappingDto[]>>(
+          (acc, row) => {
+            if (!acc[row.siteId]) acc[row.siteId] = [];
+            acc[row.siteId].push(row);
+            return acc;
+          },
+          {},
+        );
+        setDomainsBySite(nextDomainsBySite);
+      } catch {
+        setDomainsBySite({});
+      }
     } catch (e: any) {
       setError(e?.message || 'Failed to load dashboard');
     } finally {
@@ -128,6 +153,28 @@ export default function BuilderDashboardPage() {
       await loadSitesAndPages();
     } catch (e: any) {
       alert(e?.message || 'Failed to create page');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const createDomain = async (siteId: string) => {
+    const draftHost = (domainDraftBySite[siteId] || '').trim();
+    if (!draftHost) {
+      alert('Domain host is required');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await apiPost('/api/domains', {
+        host: draftHost,
+        siteId,
+      });
+      setDomainDraftBySite((prev) => ({ ...prev, [siteId]: '' }));
+      await loadSitesAndPages();
+    } catch (e: any) {
+      alert(e?.message || 'Failed to add domain mapping');
     } finally {
       setBusy(false);
     }
@@ -222,7 +269,9 @@ export default function BuilderDashboardPage() {
             <div className="mt-4 space-y-4">
               {sites.map((site) => {
                 const pages = pagesBySite[site.id] || [];
+                const domains = domainsBySite[site.id] || [];
                 const pageDraft = pageDraftBySite[site.id] || defaultDraft;
+                const domainDraft = domainDraftBySite[site.id] || '';
 
                 return (
                   <section key={site.id} className="border rounded-lg p-4 bg-slate-50">
@@ -242,6 +291,58 @@ export default function BuilderDashboardPage() {
                       >
                         Publish Center
                       </Link>
+                    </div>
+
+                    <div className="mt-4 p-3 rounded bg-white border">
+                      <div className="text-xs font-semibold text-slate-700">Domains</div>
+                      <div className="mt-2 grid grid-cols-1 md:grid-cols-5 gap-2">
+                        <input
+                          className="md:col-span-4 border rounded px-2 py-2 text-sm"
+                          placeholder="shop.example.com"
+                          value={domainDraft}
+                          onChange={(e) =>
+                            setDomainDraftBySite((prev) => ({
+                              ...prev,
+                              [site.id]: e.target.value,
+                            }))
+                          }
+                        />
+                        <button
+                          className="md:col-span-1 px-3 py-2 rounded bg-violet-600 text-white text-sm disabled:opacity-50"
+                          onClick={() => void createDomain(site.id)}
+                          disabled={busy}
+                        >
+                          Add Domain
+                        </button>
+                      </div>
+                      <div className="mt-2 space-y-2">
+                        {domains.map((domain) => (
+                          <div
+                            key={domain.id}
+                            className="flex items-center justify-between gap-3 border rounded px-2 py-2 text-xs bg-slate-50"
+                          >
+                            <div className="font-mono break-all">{domain.host}</div>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`px-2 py-1 rounded ${
+                                  domain.status === 'VERIFIED'
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : domain.status === 'FAILED'
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-amber-100 text-amber-700'
+                                }`}
+                              >
+                                {domain.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        {!domains.length ? (
+                          <div className="text-xs text-slate-500">
+                            No domains mapped yet for this site.
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
 
                     <div className="mt-4 p-3 rounded bg-white border">
