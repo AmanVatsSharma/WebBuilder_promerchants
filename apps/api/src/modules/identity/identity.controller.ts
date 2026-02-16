@@ -10,6 +10,8 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { IdentityService } from './identity.service';
 import { RegisterOwnerDto } from './dto/register-owner.dto';
 import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { LogoutDto } from './dto/logout.dto';
 
 @Controller('auth')
 export class IdentityController {
@@ -23,6 +25,16 @@ export class IdentityController {
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.identityService.login(dto);
+  }
+
+  @Post('refresh')
+  refresh(@Body() dto: RefreshTokenDto) {
+    return this.identityService.refresh(dto);
+  }
+
+  @Post('logout')
+  logout(@Body() dto: LogoutDto) {
+    return this.identityService.logout(dto);
   }
 }
 

@@ -30,9 +30,16 @@ describe('Theme lifecycle (seed -> build -> install -> publish) + commerce + set
     });
     expect(loginRes.status).toBe(201);
     expect(typeof loginRes.data.token).toBe('string');
+    expect(typeof loginRes.data.refreshToken).toBe('string');
+
+    const refreshRes = await axios.post(`/api/auth/refresh`, { refreshToken: loginRes.data.refreshToken });
+    expect(refreshRes.status).toBe(201);
+    expect(typeof refreshRes.data.token).toBe('string');
+    expect(typeof refreshRes.data.refreshToken).toBe('string');
+
     const client = axios.create({
       headers: {
-        Authorization: `Bearer ${loginRes.data.token}`,
+        Authorization: `Bearer ${refreshRes.data.token}`,
       },
     });
 
@@ -158,5 +165,9 @@ describe('Theme lifecycle (seed -> build -> install -> publish) + commerce + set
     const cartAddRes = await client.post(`/api/commerce/sites/${siteId}/cart/lines`, { productId, quantity: 1 });
     expect(cartAddRes.status).toBe(201);
     expect(Array.isArray(cartAddRes.data.lines)).toBe(true);
+
+    const logoutRes = await axios.post(`/api/auth/logout`, { refreshToken: refreshRes.data.refreshToken });
+    expect(logoutRes.status).toBe(201);
+    expect(logoutRes.data.status).toBe('LOGGED_OUT');
   }, 30000);
 });

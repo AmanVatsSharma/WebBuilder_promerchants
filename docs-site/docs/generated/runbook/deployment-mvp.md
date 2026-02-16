@@ -23,6 +23,7 @@ Deploy the editor-first MVP with:
   - `API_ACTOR_ID` (storefront server runtime)
 - If enabling JWT auth context (`ENFORCE_AUTH_CONTEXT=true`), set:
   - `AUTH_JWT_SECRET` (+ optional issuer/audience checks)
+  - `AUTH_REFRESH_TTL_SECONDS` (session lifetime)
   - `NEXT_PUBLIC_API_AUTH_TOKEN` (builder)
   - `API_AUTH_TOKEN` (storefront)
   - bootstrap owner identity via `/api/auth/register` and `/api/auth/login` before opening builder/storefront traffic

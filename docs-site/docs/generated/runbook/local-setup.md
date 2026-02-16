@@ -80,4 +80,10 @@ curl -X POST http://localhost:3000/api/auth/login \
   -H "content-type: application/json" \
   -d '{"email":"owner@example.com","password":"password123"}'
 ```
+3. Refresh token rotation:
+```bash
+curl -X POST http://localhost:3000/api/auth/refresh \
+  -H "content-type: application/json" \
+  -d '{"refreshToken":"<refresh-token-from-login>"}'
+```
 

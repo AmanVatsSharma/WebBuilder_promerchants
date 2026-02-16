@@ -13,9 +13,10 @@ import { IdentityService } from './identity.service';
 import { User } from './entities/user.entity';
 import { Workspace } from './entities/workspace.entity';
 import { WorkspaceMembership } from './entities/workspace-membership.entity';
+import { AuthSession } from './entities/auth-session.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Workspace, WorkspaceMembership])],
+  imports: [TypeOrmModule.forFeature([User, Workspace, WorkspaceMembership, AuthSession])],
   controllers: [IdentityController],
   providers: [IdentityService],
   exports: [IdentityService],

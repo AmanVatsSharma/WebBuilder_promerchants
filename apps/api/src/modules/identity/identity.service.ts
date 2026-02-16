@@ -8,14 +8,17 @@
 
 import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { createHmac, randomBytes, scrypt as scryptCallback } from 'crypto';
+import { createHash, createHmac, randomBytes, randomUUID, scrypt as scryptCallback } from 'crypto';
 import { promisify } from 'util';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Workspace } from './entities/workspace.entity';
 import { WorkspaceMembership } from './entities/workspace-membership.entity';
+import { AuthSession } from './entities/auth-session.entity';
 import { RegisterOwnerDto } from './dto/register-owner.dto';
 import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { LogoutDto } from './dto/logout.dto';
 
 const scrypt = promisify(scryptCallback);
 
@@ -34,6 +37,20 @@ function slugifyWorkspaceName(name: string) {
 
 function encodeBase64Url(input: string) {
   return Buffer.from(input, 'utf8').toString('base64url');
+}
+
+function hashRefreshToken(token: string) {
+  return createHash('sha256').update(token).digest('hex');
+}
+
+function accessTokenTtlSeconds() {
+  const value = Number(process.env.AUTH_JWT_TTL_SECONDS || 3600);
+  return Number.isFinite(value) ? Math.max(300, Math.floor(value)) : 3600;
+}
+
+function refreshTokenTtlSeconds() {
+  const value = Number(process.env.AUTH_REFRESH_TTL_SECONDS || 60 * 60 * 24 * 14);
+  return Number.isFinite(value) ? Math.max(3600, Math.floor(value)) : 60 * 60 * 24 * 14;
 }
 
 async function hashPassword(password: string) {
@@ -60,6 +77,8 @@ export class IdentityService {
     private readonly workspaceRepo: Repository<Workspace>,
     @InjectRepository(WorkspaceMembership)
     private readonly membershipRepo: Repository<WorkspaceMembership>,
+    @InjectRepository(AuthSession)
+    private readonly sessionRepo: Repository<AuthSession>,
   ) {}
 
   async registerOwner(dto: RegisterOwnerDto) {
@@ -137,16 +156,14 @@ export class IdentityService {
     }
 
     const tokenWorkspaceIds = workspaceIdFilter ? [workspaceIdFilter] : workspaceIds;
-    const token = this.signAuthToken({
-      sub: user.id,
-      workspaceIds: tokenWorkspaceIds,
-    });
-    const expiresInSeconds = Number(process.env.AUTH_JWT_TTL_SECONDS || 3600);
-    const expiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString();
+    const session = await this.createSession(user.id, tokenWorkspaceIds);
+    const token = this.signAuthToken({ sub: user.id, workspaceIds: tokenWorkspaceIds });
+    const expiresAt = new Date(Date.now() + accessTokenTtlSeconds() * 1000).toISOString();
 
     this.logger.log(`login success userId=${user.id} workspaceCount=${tokenWorkspaceIds.length}`);
     return {
       token,
+      refreshToken: session.refreshToken,
       tokenType: 'Bearer',
       expiresAt,
       user: {
@@ -158,13 +175,83 @@ export class IdentityService {
     };
   }
 
+  async refresh(dto: RefreshTokenDto) {
+    const incomingRefreshToken = String(dto.refreshToken || '').trim();
+    if (!incomingRefreshToken) throw new UnauthorizedException('Refresh token missing');
+
+    const refreshTokenHash = hashRefreshToken(incomingRefreshToken);
+    const session = await this.sessionRepo.findOne({ where: { refreshTokenHash } });
+    if (!session || session.revokedAt) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    if (new Date(session.expiresAt).getTime() <= Date.now()) {
+      throw new UnauthorizedException('Refresh token expired');
+    }
+
+    const user = await this.userRepo.findOne({ where: { id: session.userId } });
+    if (!user) throw new UnauthorizedException('Session user not found');
+
+    const nextRefreshToken = randomUUID().replace(/-/g, '') + randomBytes(16).toString('hex');
+    session.refreshTokenHash = hashRefreshToken(nextRefreshToken);
+    session.expiresAt = new Date(Date.now() + refreshTokenTtlSeconds() * 1000);
+    session.revokedAt = null;
+    await this.sessionRepo.save(session);
+
+    const workspaceIds = Array.isArray(session.workspaceIds) ? session.workspaceIds : [];
+    const token = this.signAuthToken({ sub: user.id, workspaceIds });
+    const expiresAt = new Date(Date.now() + accessTokenTtlSeconds() * 1000).toISOString();
+
+    this.logger.log(`refresh success userId=${user.id} workspaceCount=${workspaceIds.length}`);
+    return {
+      token,
+      refreshToken: nextRefreshToken,
+      tokenType: 'Bearer',
+      expiresAt,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name || null,
+      },
+      workspaceIds,
+    };
+  }
+
+  async logout(dto: LogoutDto) {
+    const incomingRefreshToken = String(dto.refreshToken || '').trim();
+    if (!incomingRefreshToken) throw new UnauthorizedException('Refresh token missing');
+
+    const refreshTokenHash = hashRefreshToken(incomingRefreshToken);
+    const session = await this.sessionRepo.findOne({ where: { refreshTokenHash } });
+    if (!session) {
+      return { status: 'LOGGED_OUT' };
+    }
+
+    session.revokedAt = new Date();
+    await this.sessionRepo.save(session);
+    return { status: 'LOGGED_OUT' };
+  }
+
+  private async createSession(userId: string, workspaceIds: string[]) {
+    const refreshToken = randomUUID().replace(/-/g, '') + randomBytes(16).toString('hex');
+    const session = await this.sessionRepo.save(
+      this.sessionRepo.create({
+        userId,
+        workspaceIds,
+        refreshTokenHash: hashRefreshToken(refreshToken),
+        expiresAt: new Date(Date.now() + refreshTokenTtlSeconds() * 1000),
+        revokedAt: null,
+      }),
+    );
+    return { ...session, refreshToken };
+  }
+
   private signAuthToken(payload: { sub: string; workspaceIds: string[] }) {
     const secret = String(process.env.AUTH_JWT_SECRET || '').trim();
     if (!secret) {
       throw new BadRequestException('AUTH_JWT_SECRET is required');
     }
     const now = Math.floor(Date.now() / 1000);
-    const ttl = Number(process.env.AUTH_JWT_TTL_SECONDS || 3600);
+    const ttl = accessTokenTtlSeconds();
     const issuer = String(process.env.AUTH_JWT_ISSUER || '').trim();
     const audience = String(process.env.AUTH_JWT_AUDIENCE || '').trim();
     const header = encodeBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -173,7 +260,7 @@ export class IdentityService {
         sub: payload.sub,
         workspaceIds: payload.workspaceIds,
         iat: now,
-        exp: now + Math.max(300, ttl),
+        exp: now + ttl,
         ...(issuer ? { iss: issuer } : {}),
         ...(audience ? { aud: audience } : {}),
       }),
