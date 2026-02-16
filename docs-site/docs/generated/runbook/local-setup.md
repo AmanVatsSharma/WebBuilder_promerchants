@@ -42,13 +42,17 @@ This starts Postgres, Redis, API, worker, builder, and storefront.
 - Optional auth hardening:
   - `API_AUTH_KEY` (require `x-api-key` on all API requests)
   - `ENFORCE_SITE_SCOPE=true` (require `x-site-id` to match route `:siteId` for site-scoped endpoints)
+  - `ENFORCE_SITE_OWNER=true` (enforce `x-actor-id` ownership checks for protected site/editor routes)
+  - `AUTO_CLAIM_SITE_OWNER=true` (first actor touching ownerless site becomes owner; default true)
 
 You can copy baseline values from `.env.example`.
 
 ### Builder
 - Uses `/api/*` rewrite -> `http://localhost:3000/api/*`
 - Optional: `NEXT_PUBLIC_STOREFRONT_URL` for preview links
+- Optional: `NEXT_PUBLIC_ACTOR_ID` (forward actor context for ownership guard)
 
 ### Storefront
 - Optional: `API_BASE_URL` (defaults to `http://localhost:3000/api`)
+- Optional: `API_ACTOR_ID` (forward actor context for guarded API modes)
 

@@ -18,6 +18,9 @@ Deploy the editor-first MVP with:
 
 - Docker + Docker Compose
 - `.env` populated from `.env.example`
+- If enabling ownership guard (`ENFORCE_SITE_OWNER=true`), set:
+  - `NEXT_PUBLIC_ACTOR_ID` (builder)
+  - `API_ACTOR_ID` (storefront server runtime)
 
 ## 1) Build and start stack
 

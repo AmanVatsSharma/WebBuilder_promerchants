@@ -31,5 +31,6 @@ The `content` field is a JSON object following the Component Registry schema:
 ```
 
 ## Changelog
+- 2026-02-16: Added optional `ownerId` on sites plus actor-aware create/list/get service paths to support ownership-based tenant authorization.
 - 2026-02-16: Switched `publishedAt` column to sqljs-compatible datetime type in local/e2e while retaining timestamptz in Postgres.
 - 2026-01-24: Added page publishing (`publishedContent`, `publishedAt`) and `POST /sites/pages/:id/publish` to support draft vs published page serving.

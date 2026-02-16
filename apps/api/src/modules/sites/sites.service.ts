@@ -23,17 +23,24 @@ export class SitesService {
     private readonly pageRepository: Repository<Page>,
   ) {}
 
-  async createSite(createSiteDto: CreateSiteDto) {
-    const site = this.siteRepository.create(createSiteDto);
+  async createSite(createSiteDto: CreateSiteDto, actorId?: string) {
+    const site = this.siteRepository.create({
+      ...createSiteDto,
+      ownerId: actorId || createSiteDto.ownerId || null,
+    });
     return await this.siteRepository.save(site);
   }
 
-  async findAllSites() {
+  async findAllSites(actorId?: string) {
+    if (actorId) {
+      return await this.siteRepository.find({ where: { ownerId: actorId } });
+    }
     return await this.siteRepository.find();
   }
 
-  async findOneSite(id: string) {
-    const site = await this.siteRepository.findOne({ where: { id }, relations: ['pages'] });
+  async findOneSite(id: string, actorId?: string) {
+    const where = actorId ? { id, ownerId: actorId } : { id };
+    const site = await this.siteRepository.findOne({ where, relations: ['pages'] });
     if (!site) throw new NotFoundException(`Site with ID ${id} not found`);
     return site;
   }

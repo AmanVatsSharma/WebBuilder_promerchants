@@ -48,10 +48,12 @@ function apiBase() {
 
 function requestHeaders(requestId?: string | null, siteId?: string | null) {
   const apiKey = process.env.API_AUTH_KEY;
+  const actorId = process.env.API_ACTOR_ID;
   return {
     ...(requestId ? { 'x-request-id': requestId } : {}),
     ...(siteId ? { 'x-site-id': siteId } : {}),
     ...(apiKey ? { 'x-api-key': apiKey } : {}),
+    ...(actorId ? { 'x-actor-id': actorId } : {}),
   };
 }
 

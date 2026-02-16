@@ -5,7 +5,7 @@
  * @author BharatERP
  * @created 2025-02-09
  */
-import { Controller, Get, Post, Body, Param, Put, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Query, Headers } from '@nestjs/common';
 import { SitesService } from './sites.service';
 import { CreateSiteDto } from './dto/create-site.dto';
 import { CreatePageDto } from './dto/create-page.dto';
@@ -16,18 +16,18 @@ export class SitesController {
   constructor(private readonly sitesService: SitesService) {}
 
   @Post()
-  createSite(@Body() createSiteDto: CreateSiteDto) {
-    return this.sitesService.createSite(createSiteDto);
+  createSite(@Body() createSiteDto: CreateSiteDto, @Headers('x-actor-id') actorId?: string) {
+    return this.sitesService.createSite(createSiteDto, actorId);
   }
 
   @Get()
-  findAllSites() {
-    return this.sitesService.findAllSites();
+  findAllSites(@Headers('x-actor-id') actorId?: string) {
+    return this.sitesService.findAllSites(actorId);
   }
 
   @Get(':id')
-  findOneSite(@Param('id') id: string) {
-    return this.sitesService.findOneSite(id);
+  findOneSite(@Param('id') id: string, @Headers('x-actor-id') actorId?: string) {
+    return this.sitesService.findOneSite(id, actorId);
   }
 
   @Post(':siteId/pages')

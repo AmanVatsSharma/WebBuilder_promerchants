@@ -17,6 +17,7 @@ The **seller-facing editor** for:
 - Builder production build is forced to webpack via `apps/builder/project.json`.
 
 ## Changelog
+- 2026-02-16: Builder API helper now forwards optional `x-actor-id` (`NEXT_PUBLIC_ACTOR_ID`) for site-ownership authorization guard compatibility.
 - 2026-02-16: Builder API helper now auto-attaches `x-site-id` for site-scoped routes and optional `x-api-key` (`NEXT_PUBLIC_API_AUTH_KEY`) to support API auth/scope guards.
 - 2026-02-16: Added container image template at `apps/builder/Dockerfile` for production-style builder deployment via docker compose.
 - 2026-02-16: Added per-domain Verify action in project dashboard so sellers can trigger domain status checks directly from builder UI.

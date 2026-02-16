@@ -14,5 +14,9 @@ export class CreateSiteDto {
   @IsString()
   @IsOptional()
   domain?: string;
+
+  @IsString()
+  @IsOptional()
+  ownerId?: string;
 }
 

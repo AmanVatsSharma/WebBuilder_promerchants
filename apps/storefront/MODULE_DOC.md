@@ -22,6 +22,7 @@ The **buyer-facing storefront** that serves many tenants (stores) from one deplo
 - Storefront production builds are forced to webpack via `apps/storefront/project.json` for stable monorepo library resolution.
 
 ## Changelog
+- 2026-02-16: Storefront API callers now forward optional `x-actor-id` (`API_ACTOR_ID`) for site ownership guard compatibility in protected API modes.
 - 2026-02-16: Migrated request interception from deprecated `middleware.ts` to `proxy.ts` to align with Next.js 16 conventions.
 - 2026-02-16: Storefront API callers now attach optional `x-api-key` and scoped `x-site-id` headers to remain compatible when backend API/site-scope guards are enabled.
 - 2026-02-16: Added container image template at `apps/storefront/Dockerfile` and validated webpack production build path for docker compose deployments.

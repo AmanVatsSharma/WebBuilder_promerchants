@@ -20,6 +20,7 @@ import { MediaModule } from '../modules/media/media.module';
 import { ExtensionsModule } from '../modules/extensions/extensions.module';
 import { ApiKeyGuard } from '../common/guards/api-key.guard';
 import { SiteScopeGuard } from '../common/guards/site-scope.guard';
+import { SiteOwnerGuard } from '../common/guards/site-owner.guard';
 
 @Module({
   imports: [
@@ -73,6 +74,10 @@ import { SiteScopeGuard } from '../common/guards/site-scope.guard';
     {
       provide: APP_GUARD,
       useClass: SiteScopeGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: SiteOwnerGuard,
     },
   ],
 })
