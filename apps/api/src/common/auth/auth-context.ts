@@ -16,6 +16,7 @@ export interface AuthContext {
 type JwtHeader = {
   alg?: string;
   typ?: string;
+  kid?: string;
 };
 
 type JwtPayload = {
@@ -41,12 +42,22 @@ function signHs256(input: string, secret: string) {
   return createHmac('sha256', secret).update(input).digest();
 }
 
-function verifyHs256Jwt(token: string, secret: string) {
+function parseJwtParts(token: string) {
   const parts = token.split('.');
   if (parts.length !== 3) {
     throw new Error('Malformed JWT');
   }
-  const [headerB64, payloadB64, signatureB64] = parts;
+  const [headerB64, payloadB64, signatureB64] = parts as [string, string, string];
+  return { headerB64, payloadB64, signatureB64 };
+}
+
+function readJwtHeader(token: string) {
+  const { headerB64 } = parseJwtParts(token);
+  return parseJson<JwtHeader>(toBase64UrlBuffer(headerB64).toString('utf8'));
+}
+
+function verifyHs256Jwt(token: string, secret: string) {
+  const { headerB64, payloadB64, signatureB64 } = parseJwtParts(token);
   const header = parseJson<JwtHeader>(toBase64UrlBuffer(headerB64).toString('utf8'));
   if ((header.alg || '').toUpperCase() !== 'HS256') {
     throw new Error('Unsupported JWT algorithm');
@@ -60,6 +71,19 @@ function verifyHs256Jwt(token: string, secret: string) {
 
   const payload = parseJson<JwtPayload>(toBase64UrlBuffer(payloadB64).toString('utf8'));
   return payload;
+}
+
+function verifyHs256JwtWithSecrets(
+  token: string,
+  keyring: { defaultSecret?: string; secretsByKid?: Record<string, string> },
+) {
+  const header = readJwtHeader(token);
+  const kid = String(header.kid || '').trim();
+  const kidSecret = kid ? String(keyring.secretsByKid?.[kid] || '').trim() : '';
+  const defaultSecret = String(keyring.defaultSecret || '').trim();
+  const secret = kidSecret || defaultSecret;
+  if (!secret) throw new Error('Auth secret is required');
+  return verifyHs256Jwt(token, secret);
 }
 
 function normalizeWorkspaceIds(value: unknown): string[] {
@@ -99,6 +123,27 @@ export function parseAuthorizationBearer(headerValue: string | undefined | null)
 export function parseAuthContextFromJwt(token: string, secret: string, options?: { issuer?: string; audience?: string }): AuthContext {
   if (!secret) throw new Error('Auth secret is required');
   const payload = verifyHs256Jwt(token, secret);
+  validateExpiration(payload);
+  validateIssuer(payload, options?.issuer);
+  validateAudience(payload, options?.audience);
+
+  const actorId = String(payload.sub || '').trim();
+  if (!actorId) {
+    throw new Error('JWT subject missing');
+  }
+
+  return {
+    actorId,
+    workspaceIds: normalizeWorkspaceIds(payload.workspaceIds),
+  };
+}
+
+export function parseAuthContextFromJwtWithKeyring(
+  token: string,
+  keyring: { defaultSecret?: string; secretsByKid?: Record<string, string> },
+  options?: { issuer?: string; audience?: string },
+): AuthContext {
+  const payload = verifyHs256JwtWithSecrets(token, keyring);
   validateExpiration(payload);
   validateIssuer(payload, options?.issuer);
   validateAudience(payload, options?.audience);

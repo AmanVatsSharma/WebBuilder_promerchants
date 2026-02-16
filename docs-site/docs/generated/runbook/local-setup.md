@@ -47,6 +47,9 @@ This starts Postgres, Redis, API, worker, builder, and storefront.
 - Optional auth hardening:
   - `API_AUTH_KEY` (require `x-api-key` on all API requests)
   - `ENFORCE_AUTH_CONTEXT=true` + `AUTH_JWT_SECRET` (require bearer JWT with `sub` + `workspaceIds`)
+  - Optional key rotation config:
+    - `AUTH_JWT_ACTIVE_KID`
+    - `AUTH_JWT_SECRETS_JSON` (JSON map of `{ "<kid>": "<secret>" }`)
   - Optional `AUTH_JWT_ISSUER` / `AUTH_JWT_AUDIENCE` for extra JWT claim checks
   - Optional `AUTH_JWT_TTL_SECONDS` (token lifetime, default 3600)
   - `ENFORCE_SITE_SCOPE=true` (require `x-site-id` to match route `:siteId` for site-scoped endpoints)

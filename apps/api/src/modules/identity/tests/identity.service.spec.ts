@@ -7,15 +7,19 @@
  */
 
 import { IdentityService } from '../identity.service';
-import { parseAuthContextFromJwt } from '../../../common/auth/auth-context';
+import { parseAuthContextFromJwt, parseAuthContextFromJwtWithKeyring } from '../../../common/auth/auth-context';
 
 describe('IdentityService', () => {
   const originalSecret = process.env.AUTH_JWT_SECRET;
+  const originalActiveKid = process.env.AUTH_JWT_ACTIVE_KID;
+  const originalSecretsJson = process.env.AUTH_JWT_SECRETS_JSON;
   const originalTtl = process.env.AUTH_JWT_TTL_SECONDS;
   const originalRefreshTtl = process.env.AUTH_REFRESH_TTL_SECONDS;
 
   afterEach(() => {
     process.env.AUTH_JWT_SECRET = originalSecret;
+    process.env.AUTH_JWT_ACTIVE_KID = originalActiveKid;
+    process.env.AUTH_JWT_SECRETS_JSON = originalSecretsJson;
     process.env.AUTH_JWT_TTL_SECONDS = originalTtl;
     process.env.AUTH_REFRESH_TTL_SECONDS = originalRefreshTtl;
     jest.restoreAllMocks();
@@ -158,6 +162,25 @@ describe('IdentityService', () => {
     const logoutRes = await service.logout({ refreshToken: refreshed.refreshToken });
     expect(logoutRes.status).toBe('LOGGED_OUT');
     await expect(service.refresh({ refreshToken: refreshed.refreshToken })).rejects.toThrow('Invalid refresh token');
+  });
+
+  it('signs token with kid-based keyring when configured', async () => {
+    const { service } = buildService();
+    process.env.AUTH_JWT_SECRET = '';
+    process.env.AUTH_JWT_ACTIVE_KID = 'k1';
+    process.env.AUTH_JWT_SECRETS_JSON = JSON.stringify({ k1: 'secret-k1' });
+
+    const token = (service as any).signAuthToken({
+      sub: 'user_1',
+      workspaceIds: ['ws_1'],
+    });
+
+    const authContext = parseAuthContextFromJwtWithKeyring(token, {
+      defaultSecret: '',
+      secretsByKid: { k1: 'secret-k1' },
+    });
+    expect(authContext.actorId).toBe('user_1');
+    expect(authContext.workspaceIds).toEqual(['ws_1']);
   });
 });
 

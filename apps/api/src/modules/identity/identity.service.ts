@@ -53,6 +53,23 @@ function refreshTokenTtlSeconds() {
   return Number.isFinite(value) ? Math.max(3600, Math.floor(value)) : 60 * 60 * 24 * 14;
 }
 
+function parseSecretKeyring() {
+  const defaultSecret = String(process.env.AUTH_JWT_SECRET || '').trim();
+  const raw = String(process.env.AUTH_JWT_SECRETS_JSON || '').trim();
+  if (!raw) return { defaultSecret, secretsByKid: {} as Record<string, string> };
+  try {
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    const normalized = Object.fromEntries(
+      Object.entries(parsed || {})
+        .map(([kid, secret]) => [String(kid).trim(), String(secret || '').trim()])
+        .filter(([kid, secret]) => kid && secret),
+    );
+    return { defaultSecret, secretsByKid: normalized };
+  } catch {
+    return { defaultSecret, secretsByKid: {} as Record<string, string> };
+  }
+}
+
 async function hashPassword(password: string) {
   const salt = randomBytes(16).toString('hex');
   const key = (await scrypt(password, salt, 64)) as Buffer;
@@ -246,7 +263,12 @@ export class IdentityService {
   }
 
   private signAuthToken(payload: { sub: string; workspaceIds: string[] }) {
-    const secret = String(process.env.AUTH_JWT_SECRET || '').trim();
+    const keyring = parseSecretKeyring();
+    const preferredKid = String(process.env.AUTH_JWT_ACTIVE_KID || '').trim();
+    const kidFromMap = preferredKid && keyring.secretsByKid[preferredKid] ? preferredKid : '';
+    const fallbackKid = Object.keys(keyring.secretsByKid)[0] || '';
+    const kid = kidFromMap || fallbackKid || '';
+    const secret = kid ? keyring.secretsByKid[kid] : keyring.defaultSecret;
     if (!secret) {
       throw new BadRequestException('AUTH_JWT_SECRET is required');
     }
@@ -254,7 +276,7 @@ export class IdentityService {
     const ttl = accessTokenTtlSeconds();
     const issuer = String(process.env.AUTH_JWT_ISSUER || '').trim();
     const audience = String(process.env.AUTH_JWT_AUDIENCE || '').trim();
-    const header = encodeBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const header = encodeBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT', ...(kid ? { kid } : {}) }));
     const body = encodeBase64Url(
       JSON.stringify({
         sub: payload.sub,

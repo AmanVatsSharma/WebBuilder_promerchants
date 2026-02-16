@@ -7,7 +7,7 @@
  */
 
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
-import { parseAuthContextFromJwt, parseAuthorizationBearer } from '../auth/auth-context';
+import { parseAuthContextFromJwtWithKeyring, parseAuthorizationBearer } from '../auth/auth-context';
 
 function authContextEnforced() {
   return String(process.env.ENFORCE_AUTH_CONTEXT || '').toLowerCase() === 'true';
@@ -30,6 +30,23 @@ function firstHeaderValue(value: unknown) {
   return String(value || '').trim();
 }
 
+function parseKeyringFromEnv() {
+  const defaultSecret = String(process.env.AUTH_JWT_SECRET || '').trim();
+  const raw = String(process.env.AUTH_JWT_SECRETS_JSON || '').trim();
+  if (!raw) return { defaultSecret, secretsByKid: {} as Record<string, string> };
+  try {
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    const normalized = Object.fromEntries(
+      Object.entries(parsed || {})
+        .map(([kid, secret]) => [String(kid).trim(), String(secret || '').trim()])
+        .filter(([kid, secret]) => kid && secret),
+    );
+    return { defaultSecret, secretsByKid: normalized };
+  } catch {
+    return { defaultSecret, secretsByKid: {} as Record<string, string> };
+  }
+}
+
 @Injectable()
 export class AuthContextGuard implements CanActivate {
   canActivate(context: ExecutionContext) {
@@ -45,11 +62,10 @@ export class AuthContextGuard implements CanActivate {
       throw new ForbiddenException('Missing bearer token');
     }
 
-    const secret = String(process.env.AUTH_JWT_SECRET || '').trim();
     const issuer = String(process.env.AUTH_JWT_ISSUER || '').trim() || undefined;
     const audience = String(process.env.AUTH_JWT_AUDIENCE || '').trim() || undefined;
     try {
-      const authContext = parseAuthContextFromJwt(token, secret, { issuer, audience });
+      const authContext = parseAuthContextFromJwtWithKeyring(token, parseKeyringFromEnv(), { issuer, audience });
       req.authContext = authContext;
       req.actorId = authContext.actorId;
       req.workspaceIds = authContext.workspaceIds;

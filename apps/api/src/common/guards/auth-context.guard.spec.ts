@@ -15,8 +15,8 @@ function toBase64Url(value: string) {
   return Buffer.from(value, 'utf8').toString('base64url');
 }
 
-function signToken(payload: Record<string, unknown>, secret: string) {
-  const header = toBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+function signToken(payload: Record<string, unknown>, secret: string, kid?: string) {
+  const header = toBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT', ...(kid ? { kid } : {}) }));
   const body = toBase64Url(JSON.stringify(payload));
   const signature = createHmac('sha256', secret).update(`${header}.${body}`).digest('base64url');
   return `${header}.${body}.${signature}`;
@@ -37,12 +37,14 @@ function mockContext(input: { headers?: Record<string, string>; path?: string })
 describe('AuthContextGuard', () => {
   const originalEnforce = process.env.ENFORCE_AUTH_CONTEXT;
   const originalSecret = process.env.AUTH_JWT_SECRET;
+  const originalSecretsJson = process.env.AUTH_JWT_SECRETS_JSON;
   const originalIssuer = process.env.AUTH_JWT_ISSUER;
   const originalAudience = process.env.AUTH_JWT_AUDIENCE;
 
   afterEach(() => {
     process.env.ENFORCE_AUTH_CONTEXT = originalEnforce;
     process.env.AUTH_JWT_SECRET = originalSecret;
+    process.env.AUTH_JWT_SECRETS_JSON = originalSecretsJson;
     process.env.AUTH_JWT_ISSUER = originalIssuer;
     process.env.AUTH_JWT_AUDIENCE = originalAudience;
   });
@@ -103,6 +105,38 @@ describe('AuthContextGuard', () => {
     expect((req as any).authContext).toEqual({
       actorId: 'actor_1',
       workspaceIds: ['ws_1', 'ws_2'],
+    });
+  });
+
+  it('accepts kid-signed tokens from keyring config', () => {
+    process.env.ENFORCE_AUTH_CONTEXT = 'true';
+    process.env.AUTH_JWT_SECRET = '';
+    process.env.AUTH_JWT_SECRETS_JSON = JSON.stringify({ v1: 'kid-secret' });
+    process.env.AUTH_JWT_ISSUER = '';
+    process.env.AUTH_JWT_AUDIENCE = '';
+
+    const token = signToken(
+      {
+        sub: 'actor_2',
+        workspaceIds: ['ws_2'],
+        exp: Math.floor(Date.now() / 1000) + 300,
+      },
+      'kid-secret',
+      'v1',
+    );
+
+    const req = { headers: { authorization: `Bearer ${token}` }, originalUrl: '/api/sites' };
+    const context = {
+      switchToHttp: () => ({
+        getRequest: () => req,
+      }),
+    } as unknown as ExecutionContext;
+
+    const guard = new AuthContextGuard();
+    expect(guard.canActivate(context)).toBe(true);
+    expect((req as any).authContext).toEqual({
+      actorId: 'actor_2',
+      workspaceIds: ['ws_2'],
     });
   });
 });
