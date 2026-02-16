@@ -32,8 +32,8 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { apiGet, apiPut } from '../../lib/api';
-import { MediaPickerModal } from '../../app/media/media-picker-modal.client';
+import { apiGet, apiPut } from '../../../lib/api';
+import { MediaPickerModal } from '../../media/media-picker-modal.client';
 
 registerCoreComponents();
 
