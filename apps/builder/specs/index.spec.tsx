@@ -107,6 +107,9 @@ describe('Page', () => {
     expect(getByText(/Draft status:/i)).toBeTruthy();
     expect(getByText(/Last release:/i)).toBeTruthy();
     expect(getByText(/Shortcut clicks:/i)).toBeTruthy();
+    expect(getByText(/Shortcut totals:/i)).toBeTruthy();
+    expect(getByText(/Reset shortcut stats/i)).toBeTruthy();
+    expect(getByText(/Export shortcut stats/i)).toBeTruthy();
     expect(getByText(/Open Latest Editor/i)).toBeTruthy();
     expect(getByText(/Open Live Storefront/i)).toBeTruthy();
     expect(asFragment()).toMatchSnapshot();

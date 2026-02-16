@@ -289,7 +289,7 @@ exports[`Page should render dashboard shell 1`] = `
               Projects
             </h2>
             <div
-              class="flex items-center gap-2"
+              class="flex flex-wrap items-center gap-2"
             >
               <input
                 class="rounded border px-3 py-2 text-xs"
@@ -301,6 +301,21 @@ exports[`Page should render dashboard shell 1`] = `
               >
                 1/1 site(s) · 1 page(s)
               </div>
+              <div
+                class="rounded bg-slate-100 px-2 py-1 text-[11px] text-slate-700"
+              >
+                Shortcut totals: E 0 · S 0 · P 0
+              </div>
+              <button
+                class="rounded border px-2 py-1 text-[11px] hover:bg-slate-100"
+              >
+                Reset shortcut stats
+              </button>
+              <button
+                class="rounded border px-2 py-1 text-[11px] hover:bg-slate-100"
+              >
+                Export shortcut stats
+              </button>
             </div>
           </div>
           <div

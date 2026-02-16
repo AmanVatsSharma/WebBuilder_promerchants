@@ -17,6 +17,7 @@ The **seller-facing editor** for:
 - Builder production build is forced to webpack via `apps/builder/project.json`.
 
 ## Changelog
+- 2026-02-16: Added dashboard shortcut analytics controls (`Reset shortcut stats`, `Export shortcut stats`) plus aggregate totals chip for fast operator-behavior review during demos.
 - 2026-02-16: Added per-site shortcut analytics chip on dashboard cards (`E/S/P` click counters for editor/storefront/publish actions) persisted in session storage for operator behavior awareness.
 - 2026-02-16: Added dashboard theme health chips (`Published status`, `Draft status`) alongside version context so merchants can see build readiness without opening Theme Studio.
 - 2026-02-16: Added per-site release context chips on dashboard cards (`Published theme`, `Last release`) for faster merchant confidence checks before opening publish flows.

@@ -190,6 +190,17 @@ export default function BuilderDashboardPage() {
     );
   }, [sites, siteFilter]);
 
+  const shortcutTotals = useMemo(() => {
+    return Object.values(shortcutStatsBySite).reduce(
+      (acc, current) => ({
+        editorClicks: acc.editorClicks + Number(current.editorClicks || 0),
+        storefrontClicks: acc.storefrontClicks + Number(current.storefrontClicks || 0),
+        publishClicks: acc.publishClicks + Number(current.publishClicks || 0),
+      }),
+      emptyShortcutStats(),
+    );
+  }, [shortcutStatsBySite]);
+
   const loadShortcutStats = () => {
     try {
       const raw = window.sessionStorage.getItem(shortcutsStorageKey);
@@ -222,6 +233,48 @@ export default function BuilderDashboardPage() {
       persistShortcutStats(next);
       return next;
     });
+  };
+
+  const resetShortcutStats = () => {
+    setShortcutStatsBySite(() => {
+      const next = Object.fromEntries(
+        sites.map((site) => [site.id, emptyShortcutStats()]),
+      ) as Record<string, ShortcutStats>;
+      persistShortcutStats(next);
+      return next;
+    });
+    setNotice({ tone: 'success', message: 'Shortcut analytics reset for this browser session.' });
+  };
+
+  const exportShortcutStats = async () => {
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      totals: shortcutTotals,
+      bySite: shortcutStatsBySite,
+    };
+    const text = JSON.stringify(payload, null, 2);
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        setNotice({ tone: 'success', message: 'Shortcut analytics copied to clipboard.' });
+        return;
+      }
+    } catch {
+      // fallback to file download below
+    }
+
+    try {
+      const blob = new Blob([text], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `builder-shortcut-analytics-${Date.now()}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setNotice({ tone: 'success', message: 'Shortcut analytics exported as JSON file.' });
+    } catch (error: any) {
+      setNotice({ tone: 'error', message: error?.message || 'Failed to export shortcut analytics.' });
+    }
   };
 
   const loadOpsSnapshot = async () => {
@@ -596,7 +649,7 @@ export default function BuilderDashboardPage() {
           <div className="rounded-xl border bg-white p-4 shadow-sm lg:col-span-2">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="font-semibold text-slate-900">Projects</h2>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <input
                   className="rounded border px-3 py-2 text-xs"
                   placeholder="Search site/name/domain"
@@ -606,6 +659,23 @@ export default function BuilderDashboardPage() {
                 <div className="text-xs text-slate-500">
                   {filteredSites.length}/{sites.length} site(s) · {totalPages} page(s)
                 </div>
+                <div className="rounded bg-slate-100 px-2 py-1 text-[11px] text-slate-700">
+                  Shortcut totals: E {shortcutTotals.editorClicks} · S {shortcutTotals.storefrontClicks} · P {shortcutTotals.publishClicks}
+                </div>
+                <button
+                  className="rounded border px-2 py-1 text-[11px] hover:bg-slate-100"
+                  onClick={resetShortcutStats}
+                  disabled={busy}
+                >
+                  Reset shortcut stats
+                </button>
+                <button
+                  className="rounded border px-2 py-1 text-[11px] hover:bg-slate-100"
+                  onClick={() => void exportShortcutStats()}
+                  disabled={busy}
+                >
+                  Export shortcut stats
+                </button>
               </div>
             </div>
 
