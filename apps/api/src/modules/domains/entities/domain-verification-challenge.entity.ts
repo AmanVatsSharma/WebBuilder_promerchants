@@ -42,6 +42,18 @@ export class DomainVerificationChallenge {
   @Column({ type: 'text', nullable: true })
   expectedValue?: string | null;
 
+  @Column({ type: 'int', default: 0 })
+  attemptCount: number;
+
+  @Column({ type: 'int', default: 5 })
+  maxAttempts: number;
+
+  @Column({ type: dateType(), nullable: true })
+  nextAttemptAt?: Date | null;
+
+  @Column({ type: dateType(), nullable: true })
+  lastAttemptAt?: Date | null;
+
   @Column({ type: 'simple-json', nullable: true })
   proof?: Record<string, unknown> | null;
 

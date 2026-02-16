@@ -15,11 +15,12 @@ import { DomainsService } from './domains.service';
 import { DomainMapping } from './entities/domain-mapping.entity';
 import { DomainVerificationChallenge } from './entities/domain-verification-challenge.entity';
 import { DomainVerificationService } from './verification/domain-verification.service';
+import { DomainChallengeSchedulerService } from './verification/domain-challenge-scheduler.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([DomainMapping, DomainVerificationChallenge])],
   controllers: [DomainsController],
-  providers: [DomainsService, DomainVerificationService],
+  providers: [DomainsService, DomainVerificationService, DomainChallengeSchedulerService],
   exports: [DomainsService],
 })
 export class DomainsModule {}

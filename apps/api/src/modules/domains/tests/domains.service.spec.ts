@@ -22,6 +22,7 @@ describe('DomainsService', () => {
       save: jest.fn(),
       find: jest.fn(),
       findOne: jest.fn(),
+      createQueryBuilder: jest.fn(),
     };
     const verificationService = {
       verify: jest.fn(),
@@ -113,6 +114,60 @@ describe('DomainsService', () => {
     expect(result.challenge.status).toBe('VERIFIED');
     expect(result.mapping.status).toBe('VERIFIED');
     expect(result.challenge.proof).toEqual({ recordName: challenge.txtRecordName });
+  });
+
+  it('should schedule retry window when challenge verification fails', async () => {
+    const { service, repo, challengeRepo, verificationService } = buildService();
+    const challenge = {
+      id: 'c3',
+      domainMappingId: 'd5',
+      method: 'HTTP',
+      status: 'ISSUED',
+      attemptCount: 0,
+      maxAttempts: 3,
+      httpPath: '/.well-known/web-builder-verification.txt',
+      expectedValue: 'token',
+    };
+    const mapping = { id: 'd5', host: 'shop.example.com', siteId: 's1', status: 'PENDING' } as DomainMapping;
+    challengeRepo.findOne.mockResolvedValue(challenge);
+    repo.findOne.mockResolvedValue(mapping);
+    verificationService.verify.mockResolvedValue({
+      host: mapping.host,
+      method: 'HTTP',
+      verified: false,
+      error: 'Timeout',
+    });
+    challengeRepo.save.mockImplementation(async (value) => value);
+    repo.save.mockImplementation(async (value) => value);
+
+    const result = await service.verifyChallenge(challenge.id);
+
+    expect(result.challenge.status).toBe('FAILED');
+    expect(result.challenge.attemptCount).toBe(1);
+    expect(result.challenge.nextAttemptAt).toBeTruthy();
+  });
+
+  it('should poll due challenges and process results', async () => {
+    const { service, challengeRepo } = buildService();
+    const dueChallenges = [{ id: 'c10' }, { id: 'c11' }];
+    const qb = {
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue(dueChallenges),
+    };
+    challengeRepo.createQueryBuilder.mockReturnValue(qb);
+    jest
+      .spyOn(service, 'verifyChallenge')
+      .mockResolvedValue({ challenge: { id: 'c10', status: 'VERIFIED', attemptCount: 1, maxAttempts: 5 } } as any)
+      .mockResolvedValueOnce({ challenge: { id: 'c10', status: 'VERIFIED', attemptCount: 1, maxAttempts: 5 } } as any)
+      .mockResolvedValueOnce({ challenge: { id: 'c11', status: 'FAILED', attemptCount: 2, maxAttempts: 5 } } as any);
+
+    const result = await service.pollDueChallenges(20);
+
+    expect(result.scanned).toBe(2);
+    expect(result.processed).toHaveLength(2);
   });
 });
 

@@ -48,6 +48,12 @@ export class DomainsController {
     return this.domainsService.verifyChallenge(challengeId);
   }
 
+  @Post('challenges/poll')
+  pollChallenges(@Query('limit') limit?: string) {
+    const parsedLimit = Number(limit || 10);
+    return this.domainsService.pollDueChallenges(parsedLimit);
+  }
+
   @Post(':id/verify')
   verify(@Param('id') id: string, @Body() dto?: VerifyDomainMappingDto) {
     return this.domainsService.verifyMapping(id, dto);

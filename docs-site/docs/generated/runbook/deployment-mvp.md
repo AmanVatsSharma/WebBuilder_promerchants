@@ -78,6 +78,8 @@ npm run mvp:validate
 
 - Theme build jobs stuck in `QUEUED`:
   - worker not running or Redis misconfigured.
+- Domain challenge retries not progressing:
+  - verify `DOMAIN_CHALLENGE_SCHEDULER_ENABLED=true` and check API logs for scheduler poll cycles.
 - 403 errors on site-scoped APIs:
   - verify `x-api-key` / `x-site-id` propagation and env (`API_AUTH_KEY`, `ENFORCE_SITE_SCOPE`).
 - Storefront webpack warnings:

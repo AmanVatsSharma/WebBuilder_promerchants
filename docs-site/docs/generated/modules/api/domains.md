@@ -19,13 +19,16 @@ Maps **custom domains (hosts)** to a **Site** for SSR multi-tenant storefront ro
    - Issue challenge: `POST /api/domains/:id/challenges`
    - List challenges: `GET /api/domains/:id/challenges`
    - Verify issued challenge: `POST /api/domains/challenges/:challengeId/verify`
+   - Poll due retries (ops/manual): `POST /api/domains/challenges/poll?limit=25`
 
 ## Notes
 - Verification states remain `PENDING|VERIFIED|FAILED`, with strategy-based verification providers enabling DNS/HTTP challenge expansion.
 - Challenge states are persisted as `ISSUED|VERIFIED|FAILED` with proof payload metadata for auditability.
+- Retry orchestration supports attempt tracking (`attemptCount/maxAttempts`) with `nextAttemptAt` scheduling and optional background scheduler.
 - `host` is normalized (lowercased, port stripped) to keep lookups deterministic.
 
 ## Changelog
+- 2026-02-16: Added challenge retry orchestration fields (`attemptCount`, `maxAttempts`, `nextAttemptAt`) plus scheduler polling service and manual poll endpoint.
 - 2026-02-16: Added persisted domain verification challenge lifecycle (`issue/list/verify`) with proof storage and async-friendly orchestration endpoints.
 - 2026-02-16: Added strategy-based domain verification service with `AUTO`, `DNS_A`, `DNS_TXT`, and `HTTP` challenge modes plus new unit tests.
 - 2026-02-16: Added `POST /api/domains/:id/verify` to perform on-demand DNS A-record checks and update mapping status/error state.

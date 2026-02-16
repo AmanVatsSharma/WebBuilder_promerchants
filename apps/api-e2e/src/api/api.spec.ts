@@ -52,6 +52,10 @@ describe('Theme lifecycle (seed -> build -> install -> publish) + commerce + set
     expect(challengeRes.status).toBe(201);
     expect(challengeRes.data?.instructions?.type).toBe('DNS_TXT');
 
+    const pollRes = await client.post(`/api/domains/challenges/poll?limit=5`);
+    expect(pollRes.status).toBe(201);
+    expect(Array.isArray(pollRes.data?.processed)).toBe(true);
+
     const challengeVerifyRes = await client.post(`/api/domains/challenges/${challengeRes.data.id}/verify`);
     expect(challengeVerifyRes.status).toBe(201);
     expect(challengeVerifyRes.data?.challenge?.status).toBe('VERIFIED');

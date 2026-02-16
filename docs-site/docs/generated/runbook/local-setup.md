@@ -39,6 +39,11 @@ This starts Postgres, Redis, API, worker, builder, and storefront.
 - `STORAGE_DIR` (defaults to `<repo>/storage`)
 - Redis: `REDIS_URL` or `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` / `REDIS_DB`
 - Queue tuning: `THEME_BUILD_CONCURRENCY`, `THEME_BUILD_MAX_ATTEMPTS`
+- Domain challenge orchestration:
+  - `DOMAIN_CHALLENGE_SCHEDULER_ENABLED=true` to enable background retry polling
+  - `DOMAIN_CHALLENGE_SCHEDULER_INTERVAL_MS` (default 30000)
+  - `DOMAIN_CHALLENGE_RETRY_DELAY_MS` (default 30000)
+  - `DOMAIN_CHALLENGE_MAX_ATTEMPTS` (default 5)
 - Optional auth hardening:
   - `API_AUTH_KEY` (require `x-api-key` on all API requests)
   - `ENFORCE_AUTH_CONTEXT=true` + `AUTH_JWT_SECRET` (require bearer JWT with `sub` + `workspaceIds`)

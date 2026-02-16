@@ -43,6 +43,16 @@ function normalizeChallengeMethod(rawMethod?: string) {
   return 'DNS_TXT';
 }
 
+function maxChallengeAttempts() {
+  const configured = Number(process.env.DOMAIN_CHALLENGE_MAX_ATTEMPTS || 5);
+  return Number.isFinite(configured) ? Math.max(1, Math.min(20, Math.floor(configured))) : 5;
+}
+
+function challengeRetryDelayMs() {
+  const configured = Number(process.env.DOMAIN_CHALLENGE_RETRY_DELAY_MS || 30000);
+  return Number.isFinite(configured) ? Math.max(1000, Math.min(300000, Math.floor(configured))) : 30000;
+}
+
 @Injectable()
 export class DomainsService {
   private readonly logger = new Logger(DomainsService.name);
@@ -128,6 +138,10 @@ export class DomainsService {
       status: 'ISSUED',
       token,
       expectedValue,
+      attemptCount: 0,
+      maxAttempts: maxChallengeAttempts(),
+      nextAttemptAt: new Date(),
+      lastAttemptAt: null,
       txtRecordName: method === 'DNS_TXT' ? (dto?.txtRecordName || `_web-builder-challenge.${mapping.host}`) : null,
       httpPath: method === 'HTTP' ? normalizeHttpPath(dto?.httpPath) : null,
       proof: null,
@@ -168,7 +182,7 @@ export class DomainsService {
     });
   }
 
-  async verifyChallenge(challengeId: string) {
+  async verifyChallenge(challengeId: string, trigger: 'manual' | 'scheduler' = 'manual') {
     const challenge = await this.challengeRepo.findOne({ where: { id: challengeId } });
     if (!challenge) throw new NotFoundException(`Domain challenge not found: ${challengeId}`);
 
@@ -188,24 +202,77 @@ export class DomainsService {
       challenge.status = 'VERIFIED';
       challenge.lastError = null;
       challenge.verifiedAt = new Date();
+      challenge.nextAttemptAt = null;
       mapping.status = 'VERIFIED';
       mapping.lastError = null;
     } else {
+      const nextAttempts = Number(challenge.attemptCount || 0) + 1;
       challenge.status = 'FAILED';
       challenge.lastError = verification.error || 'Challenge verification failed';
       challenge.verifiedAt = null;
+      challenge.nextAttemptAt = nextAttempts < Number(challenge.maxAttempts || 1)
+        ? new Date(Date.now() + challengeRetryDelayMs())
+        : null;
       mapping.status = 'FAILED';
       mapping.lastError = challenge.lastError;
     }
 
+    challenge.attemptCount = Number(challenge.attemptCount || 0) + 1;
+    challenge.lastAttemptAt = new Date();
     challenge.proof = verification.details || null;
     await this.repo.save(mapping);
     const savedChallenge = await this.challengeRepo.save(challenge);
+    this.logger.log(
+      `verifyChallenge id=${challengeId} trigger=${trigger} status=${savedChallenge.status} attempt=${savedChallenge.attemptCount}/${savedChallenge.maxAttempts}`,
+    );
 
     return {
       challenge: savedChallenge,
       mapping,
       verification,
+    };
+  }
+
+  async pollDueChallenges(limit = 10) {
+    const effectiveLimit = Math.max(1, Math.min(100, Math.floor(limit)));
+    const now = new Date();
+    const challenges = await this.challengeRepo
+      .createQueryBuilder('challenge')
+      .where('(challenge.status = :issued OR challenge.status = :failed)', {
+        issued: 'ISSUED',
+        failed: 'FAILED',
+      })
+      .andWhere('(challenge.nextAttemptAt IS NULL OR challenge.nextAttemptAt <= :now)', { now: now.toISOString() })
+      .andWhere('challenge.attemptCount < challenge.maxAttempts')
+      .orderBy('challenge.updatedAt', 'ASC')
+      .limit(effectiveLimit)
+      .getMany();
+
+    const processed: Array<{
+      challengeId: string;
+      status: string;
+      attemptCount: number;
+      maxAttempts: number;
+    }> = [];
+
+    for (const challenge of challenges) {
+      try {
+        const result = await this.verifyChallenge(challenge.id, 'scheduler');
+        processed.push({
+          challengeId: result.challenge.id,
+          status: result.challenge.status,
+          attemptCount: result.challenge.attemptCount,
+          maxAttempts: result.challenge.maxAttempts,
+        });
+      } catch (error: any) {
+        this.logger.warn(`pollDueChallenges failed challengeId=${challenge.id} reason=${error?.message || error}`);
+      }
+    }
+
+    return {
+      polledAt: now.toISOString(),
+      scanned: challenges.length,
+      processed,
     };
   }
 }
