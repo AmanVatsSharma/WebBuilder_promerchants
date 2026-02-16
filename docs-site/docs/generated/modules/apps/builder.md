@@ -17,6 +17,7 @@ The **seller-facing editor** for:
 - Builder production build is forced to webpack via `apps/builder/project.json`.
 
 ## Changelog
+- 2026-02-16: Added per-domain Verify action in project dashboard so sellers can trigger domain status checks directly from builder UI.
 - 2026-02-16: Removed stale `@ts-expect-error` in theme settings editor defaults to restore strict Next.js production TypeScript builds.
 - 2026-02-16: Fixed deep-route import paths in editor/template layout clients so Next production webpack builds resolve shared API/media modules correctly.
 - 2026-02-16: Added Theme Store bundle upload UI (metadata + zip upload) and domain mapping controls on dashboard projects for site-level domain setup visibility.

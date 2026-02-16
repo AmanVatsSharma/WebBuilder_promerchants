@@ -8,7 +8,7 @@
  * - Storefront middleware will call resolve endpoint to map Host->siteId
  */
 
-import { Controller, Get, Post, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { DomainsService } from './domains.service';
 import { CreateDomainMappingDto } from './dto/create-domain-mapping.dto';
 
@@ -29,6 +29,11 @@ export class DomainsController {
   @Get('resolve')
   resolve(@Query('host') host: string) {
     return this.domainsService.resolveHost(host);
+  }
+
+  @Post(':id/verify')
+  verify(@Param('id') id: string) {
+    return this.domainsService.verifyMapping(id);
   }
 }
 

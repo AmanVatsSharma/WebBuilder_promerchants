@@ -14,6 +14,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DomainMapping } from './entities/domain-mapping.entity';
 import { CreateDomainMappingDto } from './dto/create-domain-mapping.dto';
+import { resolve4 } from 'dns/promises';
 
 function normalizeHost(host: string) {
   const trimmed = (host || '').trim();
@@ -62,6 +63,34 @@ export class DomainsService {
       siteId: mapping.siteId,
       status: mapping.status,
     };
+  }
+
+  async verifyMapping(id: string) {
+    const mapping = await this.repo.findOne({ where: { id } });
+    if (!mapping) throw new NotFoundException(`Domain mapping not found: ${id}`);
+
+    // Local dev convenience: localhost hosts are treated as verified.
+    if (mapping.host === 'localhost' || mapping.host.endsWith('.localhost')) {
+      mapping.status = 'VERIFIED';
+      mapping.lastError = null;
+      return await this.repo.save(mapping);
+    }
+
+    try {
+      const records = await resolve4(mapping.host);
+      if (!records.length) {
+        throw new Error('No A records found');
+      }
+      mapping.status = 'VERIFIED';
+      mapping.lastError = null;
+      this.logger.log(`verifyMapping success host=${mapping.host} records=${records.join(',')}`);
+    } catch (e: any) {
+      mapping.status = 'FAILED';
+      mapping.lastError = e?.message || 'Verification failed';
+      this.logger.warn(`verifyMapping failed host=${mapping.host} reason=${mapping.lastError}`);
+    }
+
+    return await this.repo.save(mapping);
   }
 }
 

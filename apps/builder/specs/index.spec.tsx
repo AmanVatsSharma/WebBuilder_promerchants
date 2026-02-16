@@ -37,5 +37,6 @@ describe('Page', () => {
 
     expect(getByText(/Domains/i)).toBeTruthy();
     expect(getByText(/shop.demo.localhost/i)).toBeTruthy();
+    expect(getByText(/Verify/i)).toBeTruthy();
   });
 });

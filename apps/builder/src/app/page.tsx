@@ -180,6 +180,18 @@ export default function BuilderDashboardPage() {
     }
   };
 
+  const verifyDomain = async (domainId: string) => {
+    setBusy(true);
+    try {
+      await apiPost(`/api/domains/${encodeURIComponent(domainId)}/verify`);
+      await loadSitesAndPages();
+    } catch (e: any) {
+      alert(e?.message || 'Failed to verify domain');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const updatePageDraft = (
     siteId: string,
     key: keyof PageDraft,
@@ -334,6 +346,13 @@ export default function BuilderDashboardPage() {
                               >
                                 {domain.status}
                               </span>
+                              <button
+                                className="px-2 py-1 rounded border text-[11px] disabled:opacity-50"
+                                onClick={() => void verifyDomain(domain.id)}
+                                disabled={busy}
+                              >
+                                Verify
+                              </button>
                             </div>
                           </div>
                         ))}
