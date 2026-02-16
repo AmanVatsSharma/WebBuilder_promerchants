@@ -11,6 +11,7 @@
 import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { DomainsService } from './domains.service';
 import { CreateDomainMappingDto } from './dto/create-domain-mapping.dto';
+import { VerifyDomainMappingDto } from './dto/verify-domain-mapping.dto';
 
 @Controller('domains')
 export class DomainsController {
@@ -32,8 +33,8 @@ export class DomainsController {
   }
 
   @Post(':id/verify')
-  verify(@Param('id') id: string) {
-    return this.domainsService.verifyMapping(id);
+  verify(@Param('id') id: string, @Body() dto?: VerifyDomainMappingDto) {
+    return this.domainsService.verifyMapping(id, dto);
   }
 }
 

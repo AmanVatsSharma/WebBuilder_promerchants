@@ -14,7 +14,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DomainMapping } from './entities/domain-mapping.entity';
 import { CreateDomainMappingDto } from './dto/create-domain-mapping.dto';
-import { resolve4 } from 'dns/promises';
+import { VerifyDomainMappingDto } from './dto/verify-domain-mapping.dto';
+import { DomainVerificationService } from './verification/domain-verification.service';
 
 function normalizeHost(host: string) {
   const trimmed = (host || '').trim();
@@ -34,6 +35,7 @@ export class DomainsService {
   constructor(
     @InjectRepository(DomainMapping)
     private readonly repo: Repository<DomainMapping>,
+    private readonly verificationService: DomainVerificationService,
   ) {}
 
   async createMapping(dto: CreateDomainMappingDto) {
@@ -65,32 +67,35 @@ export class DomainsService {
     };
   }
 
-  async verifyMapping(id: string) {
+  async verifyMapping(id: string, options?: VerifyDomainMappingDto) {
     const mapping = await this.repo.findOne({ where: { id } });
     if (!mapping) throw new NotFoundException(`Domain mapping not found: ${id}`);
 
-    // Local dev convenience: localhost hosts are treated as verified.
-    if (mapping.host === 'localhost' || mapping.host.endsWith('.localhost')) {
-      mapping.status = 'VERIFIED';
-      mapping.lastError = null;
-      return await this.repo.save(mapping);
-    }
+    const verification = await this.verificationService.verify({
+      host: mapping.host,
+      method: options?.method || 'AUTO',
+      txtRecordName: options?.txtRecordName,
+      txtExpectedValue: options?.txtExpectedValue,
+      httpPath: options?.httpPath,
+      httpExpectedBodyIncludes: options?.httpExpectedBodyIncludes,
+      timeoutMs: options?.timeoutMs,
+    });
 
-    try {
-      const records = await resolve4(mapping.host);
-      if (!records.length) {
-        throw new Error('No A records found');
-      }
+    if (verification.verified) {
       mapping.status = 'VERIFIED';
       mapping.lastError = null;
-      this.logger.log(`verifyMapping success host=${mapping.host} records=${records.join(',')}`);
-    } catch (e: any) {
+      this.logger.log(`verifyMapping success host=${mapping.host} method=${verification.method}`);
+    } else {
       mapping.status = 'FAILED';
-      mapping.lastError = e?.message || 'Verification failed';
+      mapping.lastError = verification.error || 'Verification failed';
       this.logger.warn(`verifyMapping failed host=${mapping.host} reason=${mapping.lastError}`);
     }
 
-    return await this.repo.save(mapping);
+    const saved = await this.repo.save(mapping);
+    return {
+      ...saved,
+      verification,
+    };
   }
 }
 
