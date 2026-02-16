@@ -220,28 +220,28 @@ exports[`ThemesClient renders curation controls, supports filtering, and keeps u
               class="rounded-full border px-3 py-1 text-xs font-semibold transition border-slate-300 bg-white text-slate-700 hover:border-slate-400"
               type="button"
             >
-              All themes
+              All themes (3)
             </button>
             <button
               aria-pressed="false"
               class="rounded-full border px-3 py-1 text-xs font-semibold transition border-slate-300 bg-white text-slate-700 hover:border-slate-400"
               type="button"
             >
-              Investor demo
+              Investor demo (1)
             </button>
             <button
               aria-pressed="true"
               class="rounded-full border px-3 py-1 text-xs font-semibold transition border-blue-500 bg-blue-600 text-white"
               type="button"
             >
-              Needs attention
+              Needs attention (1)
             </button>
             <button
               aria-pressed="false"
               class="rounded-full border px-3 py-1 text-xs font-semibold transition border-slate-300 bg-white text-slate-700 hover:border-slate-400"
               type="button"
             >
-              Revenue-first
+              Revenue-first (0)
             </button>
           </div>
           <div

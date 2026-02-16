@@ -81,6 +81,8 @@ describe('ThemesClient', () => {
 
     expect(getByText(/Curation presets/i)).toBeTruthy();
     expect(getByText(/Active preset: All themes/i)).toBeTruthy();
+    expect(getByText(/All themes \(3\)/i)).toBeTruthy();
+    expect(getByText(/Needs attention \(1\)/i)).toBeTruthy();
     expect(getByText(/Inventory focus/i)).toBeTruthy();
     expect(getByText(/Build: READY/i)).toBeTruthy();
 

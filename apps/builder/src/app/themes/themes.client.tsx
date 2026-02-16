@@ -212,6 +212,25 @@ function focusButtonClass() {
   return 'rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400';
 }
 
+function matchesPreset(theme: Theme, preset: CurationPreset) {
+  const matchesPricing =
+    preset.pricingFilter === 'ALL'
+      ? true
+      : String(theme.pricingModel || 'FREE').toUpperCase() === preset.pricingFilter;
+  const listed = Boolean(theme.isListed);
+  const matchesListing =
+    preset.listingFilter === 'ALL'
+      ? true
+      : preset.listingFilter === 'LISTED'
+      ? listed
+      : !listed;
+  const matchesBuild =
+    preset.buildFilter === 'ALL'
+      ? true
+      : themeBuildReadiness(theme) === preset.buildFilter;
+  return matchesPricing && matchesListing && matchesBuild;
+}
+
 export default function ThemesClient() {
   const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
@@ -522,6 +541,17 @@ export default function ThemesClient() {
   const readyThemes = themes.filter((theme) => themeBuildReadiness(theme) === 'READY').length;
   const buildingThemes = themes.filter((theme) => themeBuildReadiness(theme) === 'BUILDING').length;
   const failedThemes = themes.filter((theme) => themeBuildReadiness(theme) === 'FAILED').length;
+  const presetCounts = useMemo(() => {
+    return CURATION_PRESETS.reduce<Record<CurationPresetId, number>>((acc, preset) => {
+      acc[preset.id] = themes.filter((theme) => matchesPreset(theme, preset)).length;
+      return acc;
+    }, {
+      ALL_THEMES: 0,
+      INVESTOR_DEMO: 0,
+      NEEDS_ATTENTION: 0,
+      REVENUE_FIRST: 0,
+    });
+  }, [themes]);
   const activePresetMeta =
     activeCurationPreset === 'CUSTOM' ? null : presetById(activeCurationPreset);
 
@@ -695,7 +725,7 @@ export default function ThemesClient() {
                     }`}
                     aria-pressed={isActive}
                   >
-                    {preset.label}
+                    {preset.label} ({presetCounts[preset.id]})
                   </button>
                 );
               })}
