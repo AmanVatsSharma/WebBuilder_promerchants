@@ -10,6 +10,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { apiGet, apiPost } from '../../../../lib/api';
+import { InlineNotice, type NoticeTone } from '../../../../components/inline-notice';
 
 type ThemeInstall = {
   siteId: string;
@@ -47,7 +48,6 @@ type Page = {
   isPublished?: boolean;
 };
 
-type NoticeTone = 'info' | 'success' | 'error';
 type NoticeState = { tone: NoticeTone; message: string } | null;
 
 function statusBadgeClass(status: string) {
@@ -64,12 +64,6 @@ function statusBadgeClass(status: string) {
     default:
       return 'bg-slate-100 text-slate-700';
   }
-}
-
-function noticeToneClass(tone: NoticeTone) {
-  if (tone === 'success') return 'bg-emerald-50 border-emerald-200 text-emerald-800';
-  if (tone === 'error') return 'bg-rose-50 border-rose-200 text-rose-800';
-  return 'bg-blue-50 border-blue-200 text-blue-800';
 }
 
 export default function PublishClient({ siteId }: { siteId: string }) {
@@ -282,9 +276,11 @@ export default function PublishClient({ siteId }: { siteId: string }) {
 
       <main className="mx-auto max-w-7xl space-y-6 px-6 py-6">
         {notice ? (
-          <div className={`rounded-lg border px-3 py-2 text-sm ${noticeToneClass(notice.tone)}`}>
-            {notice.message}
-          </div>
+          <InlineNotice
+            tone={notice.tone}
+            message={notice.message}
+            onDismiss={() => setNotice(null)}
+          />
         ) : null}
         {error ? (
           <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">

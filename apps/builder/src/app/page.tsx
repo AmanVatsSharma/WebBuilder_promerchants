@@ -10,6 +10,7 @@
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 import { apiGet, apiPost } from '../lib/api';
+import { InlineNotice, type NoticeTone } from '../components/inline-notice';
 
 type SiteDto = {
   id: string;
@@ -67,16 +68,9 @@ type PageDraft = {
   slug: string;
 };
 
-type NoticeTone = 'info' | 'success' | 'error';
 type NoticeState = { tone: NoticeTone; message: string } | null;
 
 const defaultDraft: PageDraft = { title: 'Home', slug: 'home' };
-
-function noticeClass(tone: NoticeTone) {
-  if (tone === 'success') return 'bg-emerald-50 border-emerald-200 text-emerald-800';
-  if (tone === 'error') return 'bg-rose-50 border-rose-200 text-rose-800';
-  return 'bg-blue-50 border-blue-200 text-blue-800';
-}
 
 export default function BuilderDashboardPage() {
   const [sites, setSites] = useState<SiteDto[]>([]);
@@ -332,8 +326,12 @@ export default function BuilderDashboardPage() {
 
       <section className="mx-auto max-w-7xl px-6 py-6">
         {notice ? (
-          <div className={`mb-4 rounded-lg border px-3 py-2 text-sm ${noticeClass(notice.tone)}`}>
-            {notice.message}
+          <div className="mb-4">
+            <InlineNotice
+              tone={notice.tone}
+              message={notice.message}
+              onDismiss={() => setNotice(null)}
+            />
           </div>
         ) : null}
 

@@ -11,6 +11,7 @@
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 import { apiGet, apiPost, apiUpload } from '../../lib/api';
+import { InlineNotice, type NoticeTone } from '../../components/inline-notice';
 
 type ThemeVersion = { id: string; version: string; status: string; createdAt: string };
 type Theme = {
@@ -26,14 +27,7 @@ type Theme = {
   versions?: ThemeVersion[];
 };
 
-type NoticeTone = 'info' | 'success' | 'error';
 type NoticeState = { tone: NoticeTone; message: string } | null;
-
-function toneClass(tone: NoticeTone) {
-  if (tone === 'success') return 'bg-emerald-50 border-emerald-200 text-emerald-800';
-  if (tone === 'error') return 'bg-rose-50 border-rose-200 text-rose-800';
-  return 'bg-blue-50 border-blue-200 text-blue-800';
-}
 
 function formatPrice(theme: Theme) {
   if (theme.pricingModel !== 'PAID') return 'Free';
@@ -246,8 +240,12 @@ export default function ThemesClient() {
 
       <main className="mx-auto max-w-7xl px-6 py-6">
         {notice ? (
-          <div className={`mb-4 rounded-lg border px-3 py-2 text-sm ${toneClass(notice.tone)}`}>
-            {notice.message}
+          <div className="mb-4">
+            <InlineNotice
+              tone={notice.tone}
+              message={notice.message}
+              onDismiss={() => setNotice(null)}
+            />
           </div>
         ) : null}
         {error ? (
