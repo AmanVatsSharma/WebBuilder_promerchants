@@ -39,7 +39,7 @@ Examples:
 - Theme card with build-readiness and latest-version chips.
 - Curation export/import loop proof:
   - export curation JSON from Theme Studio
-  - re-import same JSON and confirm view restores
+  - re-import same JSON (file import or clipboard paste) and confirm view restores
 - Import confirmation screenshot (success inline notice and restored filtered view).
 
 ### Chapter 3 — Safe releases
