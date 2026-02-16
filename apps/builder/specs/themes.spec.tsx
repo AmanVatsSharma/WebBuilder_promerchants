@@ -18,9 +18,31 @@ jest.mock('../src/lib/api', () => ({
       return [
         {
           id: 'theme_1',
-          name: 'Demo Theme',
-          description: 'Demo',
+          name: 'Aurora Commerce',
+          description: 'Premium built template',
+          pricingModel: 'FREE',
+          isListed: true,
           versions: [{ id: 'tv_1', version: '1.0.0', status: 'BUILT', createdAt: FIXED_ISO }],
+        },
+        {
+          id: 'theme_2',
+          name: 'Nebula Fashion',
+          description: 'Needs build attention',
+          pricingModel: 'PAID',
+          priceCents: 4900,
+          currency: 'USD',
+          isListed: true,
+          versions: [{ id: 'tv_2', version: '2.1.0', status: 'FAILED', createdAt: FIXED_ISO }],
+        },
+        {
+          id: 'theme_3',
+          name: 'Horizon Capsule',
+          description: 'In active build queue',
+          pricingModel: 'PAID',
+          priceCents: 9900,
+          currency: 'USD',
+          isListed: false,
+          versions: [{ id: 'tv_3', version: '3.0.0', status: 'BUILDING', createdAt: FIXED_ISO }],
         },
       ];
     }
@@ -36,11 +58,11 @@ describe('ThemesClient', () => {
     apiUploadMock.mockClear();
   });
 
-  it('renders upload controls and theme versions', async () => {
-    const { asFragment, getByRole, getByText, getByPlaceholderText, container } = render(<ThemesClient />);
+  it('renders curation controls, supports filtering, and keeps upload flow', async () => {
+    const { asFragment, getByRole, getByText, getByDisplayValue, getByPlaceholderText, queryByText, container } = render(<ThemesClient />);
 
     await waitFor(() => {
-      expect(getByText(/Demo Theme/i)).toBeTruthy();
+      expect(getByText(/Aurora Commerce/i)).toBeTruthy();
       expect(getByText(/Upload Theme Bundle/i)).toBeTruthy();
     });
 
@@ -55,6 +77,17 @@ describe('ThemesClient', () => {
       fireEvent.change(fileInput, { target: { files: [file] } });
       expect(fileInput.files?.[0]?.name).toBe('demo-theme.zip');
     }
+
+    expect(getByText(/All build states/i)).toBeTruthy();
+    expect(getByText(/Sort: Build ready first/i)).toBeTruthy();
+    expect(getByText(/Build: READY/i)).toBeTruthy();
+
+    fireEvent.change(getByDisplayValue('All build states'), { target: { value: 'FAILED' } });
+
+    await waitFor(() => {
+      expect(getByText(/Nebula Fashion/i)).toBeTruthy();
+      expect(queryByText(/Aurora Commerce/i)).toBeNull();
+    });
 
     expect(asFragment()).toMatchSnapshot();
   });

@@ -28,6 +28,15 @@ type Theme = {
 };
 
 type NoticeState = { tone: NoticeTone; message: string } | null;
+type ThemeBuildReadiness = 'READY' | 'BUILDING' | 'FAILED' | 'NO_VERSION' | 'UNKNOWN';
+type SortMode =
+  | 'UPDATED_DESC'
+  | 'PRICE_ASC'
+  | 'PRICE_DESC'
+  | 'LISTED_FIRST'
+  | 'BUILD_READY_FIRST'
+  | 'BUILD_ISSUES_FIRST'
+  | 'NAME_ASC';
 
 function formatPrice(theme: Theme) {
   if (theme.pricingModel !== 'PAID') return 'Free';
@@ -42,6 +51,75 @@ function versionStatusClass(status: string) {
   if (normalized === 'FAILED') return 'bg-rose-100 text-rose-700';
   if (normalized === 'BUILDING') return 'bg-amber-100 text-amber-700';
   return 'bg-slate-200 text-slate-700';
+}
+
+function normalizeVersionStatus(status: string) {
+  return String(status || '').toUpperCase();
+}
+
+function latestVersion(theme: Theme): ThemeVersion | null {
+  const versions = Array.isArray(theme.versions) ? theme.versions : [];
+  if (!versions.length) return null;
+  return versions.reduce((latest, current) => {
+    if (!latest) return current;
+    const latestTime = Date.parse(latest.createdAt || '');
+    const currentTime = Date.parse(current.createdAt || '');
+    if (Number.isFinite(latestTime) && Number.isFinite(currentTime)) {
+      return currentTime > latestTime ? current : latest;
+    }
+    return current.version > latest.version ? current : latest;
+  }, versions[0]);
+}
+
+function latestVersionTimestamp(theme: Theme): number {
+  const latest = latestVersion(theme);
+  if (!latest?.createdAt) return 0;
+  const time = Date.parse(latest.createdAt);
+  return Number.isFinite(time) ? time : 0;
+}
+
+function themeBuildReadiness(theme: Theme): ThemeBuildReadiness {
+  const latest = latestVersion(theme);
+  if (!latest) return 'NO_VERSION';
+  const status = normalizeVersionStatus(latest.status);
+  if (status === 'BUILT') return 'READY';
+  if (status === 'BUILDING') return 'BUILDING';
+  if (status === 'FAILED') return 'FAILED';
+  return 'UNKNOWN';
+}
+
+function buildReadinessClass(readiness: ThemeBuildReadiness) {
+  if (readiness === 'READY') return 'bg-emerald-100 text-emerald-700';
+  if (readiness === 'BUILDING') return 'bg-amber-100 text-amber-700';
+  if (readiness === 'FAILED') return 'bg-rose-100 text-rose-700';
+  if (readiness === 'NO_VERSION') return 'bg-slate-200 text-slate-700';
+  return 'bg-violet-100 text-violet-700';
+}
+
+function buildReadinessLabel(readiness: ThemeBuildReadiness) {
+  if (readiness === 'NO_VERSION') return 'NO VERSION';
+  return readiness;
+}
+
+function sortByBuildPriority(readiness: ThemeBuildReadiness, issuesFirst: boolean) {
+  // Keep the priority explicit so demo curation orders are deterministic.
+  if (issuesFirst) {
+    if (readiness === 'FAILED') return 0;
+    if (readiness === 'BUILDING') return 1;
+    if (readiness === 'NO_VERSION') return 2;
+    if (readiness === 'UNKNOWN') return 3;
+    return 4;
+  }
+  if (readiness === 'READY') return 0;
+  if (readiness === 'BUILDING') return 1;
+  if (readiness === 'NO_VERSION') return 2;
+  if (readiness === 'UNKNOWN') return 3;
+  return 4;
+}
+
+function priceSortValue(theme: Theme) {
+  if (theme.pricingModel === 'PAID') return Number(theme.priceCents || 0);
+  return 0;
 }
 
 export default function ThemesClient() {
@@ -66,6 +144,8 @@ export default function ThemesClient() {
   const [searchValue, setSearchValue] = useState('');
   const [pricingFilter, setPricingFilter] = useState<'ALL' | 'FREE' | 'PAID'>('ALL');
   const [listingFilter, setListingFilter] = useState<'ALL' | 'LISTED' | 'UNLISTED'>('ALL');
+  const [buildFilter, setBuildFilter] = useState<'ALL' | ThemeBuildReadiness>('ALL');
+  const [sortMode, setSortMode] = useState<SortMode>('UPDATED_DESC');
 
   const reload = async () => {
     console.debug('[themes] reload:start');
@@ -167,8 +247,8 @@ export default function ThemesClient() {
   };
 
   const filteredThemes = useMemo(() => {
-    return themes.filter((theme) => {
-      const query = searchValue.trim().toLowerCase();
+    const query = searchValue.trim().toLowerCase();
+    const filtered = themes.filter((theme) => {
       const matchesQuery = !query
         ? true
         : [theme.name, theme.description, theme.author]
@@ -185,9 +265,38 @@ export default function ThemesClient() {
           : listingFilter === 'LISTED'
           ? listed
           : !listed;
-      return matchesQuery && matchesPricing && matchesListing;
+      const readiness = themeBuildReadiness(theme);
+      const matchesBuild = buildFilter === 'ALL' ? true : readiness === buildFilter;
+      return matchesQuery && matchesPricing && matchesListing && matchesBuild;
     });
-  }, [themes, searchValue, pricingFilter, listingFilter]);
+
+    return filtered.sort((a, b) => {
+      // Deterministic sort order powers investor demos and seller curation workflows.
+      if (sortMode === 'PRICE_ASC') {
+        return priceSortValue(a) - priceSortValue(b) || a.name.localeCompare(b.name);
+      }
+      if (sortMode === 'PRICE_DESC') {
+        return priceSortValue(b) - priceSortValue(a) || a.name.localeCompare(b.name);
+      }
+      if (sortMode === 'LISTED_FIRST') {
+        return Number(Boolean(b.isListed)) - Number(Boolean(a.isListed)) || a.name.localeCompare(b.name);
+      }
+      if (sortMode === 'BUILD_READY_FIRST') {
+        const aPriority = sortByBuildPriority(themeBuildReadiness(a), false);
+        const bPriority = sortByBuildPriority(themeBuildReadiness(b), false);
+        return aPriority - bPriority || a.name.localeCompare(b.name);
+      }
+      if (sortMode === 'BUILD_ISSUES_FIRST') {
+        const aPriority = sortByBuildPriority(themeBuildReadiness(a), true);
+        const bPriority = sortByBuildPriority(themeBuildReadiness(b), true);
+        return aPriority - bPriority || a.name.localeCompare(b.name);
+      }
+      if (sortMode === 'NAME_ASC') {
+        return a.name.localeCompare(b.name);
+      }
+      return latestVersionTimestamp(b) - latestVersionTimestamp(a) || a.name.localeCompare(b.name);
+    });
+  }, [themes, searchValue, pricingFilter, listingFilter, buildFilter, sortMode]);
 
   const totalThemes = themes.length;
   const listedThemes = themes.filter((theme) => Boolean(theme.isListed)).length;
@@ -348,10 +457,10 @@ export default function ThemesClient() {
             <div>
               <h2 className="text-base font-semibold text-slate-900">Theme inventory</h2>
               <p className="text-xs text-slate-500">
-                Search and filter to focus on storefront-ready themes.
+                Search, filter, and sort to curate storefront-ready marketplace inventory.
               </p>
             </div>
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
               <input
                 className="rounded-lg border px-3 py-2 text-sm"
                 placeholder="Search name/author/description"
@@ -376,15 +485,61 @@ export default function ThemesClient() {
                 <option value="LISTED">Listed</option>
                 <option value="UNLISTED">Unlisted</option>
               </select>
+              <select
+                className="rounded-lg border px-3 py-2 text-sm"
+                value={buildFilter}
+                onChange={(e) =>
+                  setBuildFilter(
+                    (e.target.value as 'ALL' | ThemeBuildReadiness) || 'ALL',
+                  )
+                }
+              >
+                <option value="ALL">All build states</option>
+                <option value="READY">Ready</option>
+                <option value="BUILDING">Building</option>
+                <option value="FAILED">Failed</option>
+                <option value="NO_VERSION">No version</option>
+                <option value="UNKNOWN">Unknown</option>
+              </select>
+              <select
+                className="rounded-lg border px-3 py-2 text-sm"
+                value={sortMode}
+                onChange={(e) => setSortMode((e.target.value as SortMode) || 'UPDATED_DESC')}
+              >
+                <option value="UPDATED_DESC">Sort: Recently updated</option>
+                <option value="PRICE_ASC">Sort: Price low to high</option>
+                <option value="PRICE_DESC">Sort: Price high to low</option>
+                <option value="LISTED_FIRST">Sort: Listed first</option>
+                <option value="BUILD_READY_FIRST">Sort: Build ready first</option>
+                <option value="BUILD_ISSUES_FIRST">Sort: Build issues first</option>
+                <option value="NAME_ASC">Sort: Name A-Z</option>
+              </select>
             </div>
+          </div>
+
+          <div className="mt-3 text-xs text-slate-500">
+            Showing {filteredThemes.length} of {themes.length} themes
           </div>
 
           {loading ? <div className="mt-6 text-sm text-slate-500">Loading themes…</div> : null}
 
           <div className="mt-4 space-y-4">
-            {filteredThemes.map((theme) => (
-              <article key={theme.id} className="rounded-xl border bg-slate-50 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+            {filteredThemes.map((theme) => {
+              const readiness = themeBuildReadiness(theme);
+              const latest = latestVersion(theme);
+              return (
+                <article key={theme.id} className="rounded-xl border bg-slate-50 p-4">
+                  <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px]">
+                    <span className={`rounded-full px-2 py-0.5 font-semibold ${buildReadinessClass(readiness)}`}>
+                      Build: {buildReadinessLabel(readiness)}
+                    </span>
+                    {latest ? (
+                      <span className="rounded-full bg-slate-200 px-2 py-0.5 font-semibold text-slate-700">
+                        Latest: {latest.version}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-lg font-semibold text-slate-900">{theme.name}</div>
                     <div className="mt-1 text-sm text-slate-600">
@@ -413,40 +568,41 @@ export default function ThemesClient() {
                     <div>Author: {theme.author || 'Unknown'}</div>
                     <div className="mt-1">Versions: {theme.versions?.length || 0}</div>
                   </div>
-                </div>
+                  </div>
 
-                <div className="mt-4">
-                  <div className="mb-2 text-sm font-semibold text-slate-800">Versions</div>
-                  {theme.versions?.length ? (
-                    <div className="space-y-2">
-                      {theme.versions.map((version) => (
-                        <div key={version.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2">
-                          <div className="text-sm">
-                            <span className="font-mono">{version.version}</span>
-                            <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ${versionStatusClass(version.status)}`}>
-                              {version.status}
-                            </span>
-                            <div className="mt-1 text-xs text-slate-500">
-                              themeVersionId=<span className="font-mono">{version.id}</span>
+                  <div className="mt-4">
+                    <div className="mb-2 text-sm font-semibold text-slate-800">Versions</div>
+                    {theme.versions?.length ? (
+                      <div className="space-y-2">
+                        {theme.versions.map((version) => (
+                          <div key={version.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2">
+                            <div className="text-sm">
+                              <span className="font-mono">{version.version}</span>
+                              <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ${versionStatusClass(version.status)}`}>
+                                {version.status}
+                              </span>
+                              <div className="mt-1 text-xs text-slate-500">
+                                themeVersionId=<span className="font-mono">{version.id}</span>
+                              </div>
                             </div>
+                            <Link
+                              href={`/themes/versions/${version.id}`}
+                              className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                            >
+                              Open Editor
+                            </Link>
                           </div>
-                          <Link
-                            href={`/themes/versions/${version.id}`}
-                            className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
-                          >
-                            Open Editor
-                          </Link>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="rounded-lg border border-dashed bg-white px-3 py-3 text-sm text-slate-500">
-                      No versions yet. Upload a new bundle version to start editing.
-                    </div>
-                  )}
-                </div>
-              </article>
-            ))}
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-dashed bg-white px-3 py-3 text-sm text-slate-500">
+                        No versions yet. Upload a new bundle version to start editing.
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
 
             {!loading && !filteredThemes.length ? (
               <div className="rounded-lg border border-dashed bg-slate-50 px-3 py-4 text-sm text-slate-500">
