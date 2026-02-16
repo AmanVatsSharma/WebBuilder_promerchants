@@ -41,7 +41,11 @@ Use when runtime binaries/config change caused instability.
    ```bash
    docker compose up --build
    ```
-4. Run health checks:
+4. Revert latest migration batch if schema is incompatible:
+   ```bash
+   npm run db:migrate:revert
+   ```
+5. Run health checks:
    - `GET /api/health`
    - builder/storefront page loads
 

@@ -48,6 +48,13 @@ Expected exposed ports:
 - Storefront:
   - Open `http://localhost:4201`
 
+## 2.5) Database migrations (pre-traffic)
+
+```bash
+npm run db:migrate
+npm run db:migrate:show
+```
+
 ## 3) Seed and validate local MVP data
 
 ```bash

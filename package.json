@@ -7,7 +7,10 @@
     "docs:dev": "npm run docs:sync && npm --prefix docs-site start",
     "docs:build": "npm run docs:sync && npm --prefix docs-site run build",
     "mvp:seed": "node tools/editor-mvp-seed.mjs",
-    "mvp:validate": "node tools/editor-mvp-validate.mjs"
+    "mvp:validate": "node tools/editor-mvp-validate.mjs",
+    "db:migrate": "typeorm-ts-node-commonjs migration:run -d apps/api/src/typeorm-migration.datasource.ts",
+    "db:migrate:revert": "typeorm-ts-node-commonjs migration:revert -d apps/api/src/typeorm-migration.datasource.ts",
+    "db:migrate:show": "typeorm-ts-node-commonjs migration:show -d apps/api/src/typeorm-migration.datasource.ts"
   },
   "private": true,
   "devDependencies": {
