@@ -19,6 +19,8 @@ The API uses these defaults if unset:
 
 Optional:
 - `STORAGE_DIR=<repo>/storage` (defaults to `<repo>/storage`)
+- `API_AUTH_KEY=<key>` (enforces `x-api-key` header globally)
+- `ENFORCE_SITE_SCOPE=true` (enforces `x-site-id` header for `/api/sites/:siteId/*`)
 
 ## Start services
 

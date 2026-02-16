@@ -25,6 +25,9 @@ npx nx serve storefront
 - `STORAGE_DIR` (defaults to `<repo>/storage`)
 - Redis: `REDIS_URL` or `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` / `REDIS_DB`
 - Queue tuning: `THEME_BUILD_CONCURRENCY`, `THEME_BUILD_MAX_ATTEMPTS`
+- Optional auth hardening:
+  - `API_AUTH_KEY` (require `x-api-key` on all API requests)
+  - `ENFORCE_SITE_SCOPE=true` (require `x-site-id` to match route `:siteId` for site-scoped endpoints)
 
 ### Builder
 - Uses `/api/*` rewrite -> `http://localhost:3000/api/*`

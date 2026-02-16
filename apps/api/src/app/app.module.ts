@@ -6,7 +6,7 @@
  * @created 2025-02-09
  */
 import { Module } from '@nestjs/common';
-import { APP_FILTER } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -18,6 +18,8 @@ import { ThemesModule } from '../modules/themes/themes.module';
 import { CommerceModule } from '../modules/commerce/commerce.module';
 import { MediaModule } from '../modules/media/media.module';
 import { ExtensionsModule } from '../modules/extensions/extensions.module';
+import { ApiKeyGuard } from '../common/guards/api-key.guard';
+import { SiteScopeGuard } from '../common/guards/site-scope.guard';
 
 @Module({
   imports: [
@@ -63,6 +65,14 @@ import { ExtensionsModule } from '../modules/extensions/extensions.module';
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ApiKeyGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: SiteScopeGuard,
     },
   ],
 })
