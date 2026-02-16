@@ -11,8 +11,10 @@ Validate the editor-first MVP loop locally with deterministic seed data and repe
 ## Prerequisites
 
 - API server running (`npx nx serve api`)
+- Worker process running (`npx nx run api:worker`)
 - Builder app running (`npx nx serve builder`)
 - Storefront app running (`npx nx serve storefront`)
+- Redis running (theme builds are queued and processed by worker)
 
 ## 1) Seed deterministic data
 
@@ -64,3 +66,11 @@ Local editor workflow should reliably support:
 - visual style controls
 - live preview confidence
 - publish with rollback visibility
+
+## Common failure mode
+
+If theme build jobs remain in `QUEUED` and never move to `RUNNING`, verify:
+
+1. Redis is reachable by API + worker.
+2. Worker process (`npx nx run api:worker`) is running.
+3. `REDIS_*` (or `REDIS_URL`) env values are consistent across API and worker terminals.

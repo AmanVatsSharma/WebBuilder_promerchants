@@ -7,6 +7,7 @@ sidebar_position: 1
 ## Prerequisites
 - Node: v20+ (repo currently uses Node v24 locally)
 - PostgreSQL running locally
+- Redis running locally (required for theme build queue + worker)
 
 ## Environment variables (API)
 The API uses these defaults if unset:
@@ -23,6 +24,7 @@ Optional:
 
 ```bash
 npx nx serve api
+npx nx run api:worker
 npx nx serve builder
 npx nx serve storefront
 ```

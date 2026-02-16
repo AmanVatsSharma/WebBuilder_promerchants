@@ -7,11 +7,13 @@ sidebar_position: 20
 ## Prerequisites
 - Node v20+ (repo currently tested with Node v24)
 - PostgreSQL
+- Redis (required for durable theme build queue)
 
 ## Start commands
 
 ```bash
 npx nx serve api
+npx nx run api:worker
 npx nx serve builder
 npx nx serve storefront
 ```
@@ -21,6 +23,8 @@ npx nx serve storefront
 ### API
 - `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME`
 - `STORAGE_DIR` (defaults to `<repo>/storage`)
+- Redis: `REDIS_URL` or `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` / `REDIS_DB`
+- Queue tuning: `THEME_BUILD_CONCURRENCY`, `THEME_BUILD_MAX_ATTEMPTS`
 
 ### Builder
 - Uses `/api/*` rewrite -> `http://localhost:3000/api/*`
