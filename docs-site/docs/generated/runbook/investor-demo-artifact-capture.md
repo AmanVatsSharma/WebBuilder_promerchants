@@ -74,3 +74,9 @@ Optional structured summary output:
 ```bash
 npm run demo:artifact:verify -- --output=/tmp/investor-demo-verify-summary.json
 ```
+
+Optional auto-generated capture checklist (markdown file with suggested artifact names):
+
+```bash
+npm run demo:artifact:verify -- --dry-run --capture-plan=/tmp/investor-demo-capture-plan.md
+```

@@ -14,12 +14,62 @@ const argv = process.argv.slice(2);
 const isDryRun = argv.includes('--dry-run');
 const outputArg = argv.find((arg) => arg.startsWith('--output='));
 const outputPath = outputArg ? path.resolve(outputArg.split('=')[1] || '') : '';
+const capturePlanArg = argv.find((arg) => arg.startsWith('--capture-plan='));
+const capturePlanPath = capturePlanArg
+  ? path.resolve(capturePlanArg.split('=')[1] || '')
+  : '';
 
 const commands = [
   { id: 'test-builder', command: 'npx', args: ['nx', 'test', 'builder'] },
   { id: 'build-builder', command: 'npx', args: ['nx', 'build', 'builder'] },
   { id: 'build-docs', command: 'npm', args: ['run', 'docs:build'] },
 ];
+
+function compactTimestamp() {
+  const now = new Date();
+  const year = `${now.getFullYear()}`;
+  const month = `${now.getMonth() + 1}`.padStart(2, '0');
+  const day = `${now.getDate()}`.padStart(2, '0');
+  const hours = `${now.getHours()}`.padStart(2, '0');
+  const mins = `${now.getMinutes()}`.padStart(2, '0');
+  return `${year}${month}${day}-${hours}${mins}`;
+}
+
+function captureChecklistRows() {
+  return [
+    ['ch1', 'dashboard', 'hero-metrics', 'png'],
+    ['ch1', 'dashboard', 'project-card-release-context', 'png'],
+    ['ch1', 'dashboard', 'domain-ops-pulse', 'png'],
+    ['ch2', 'theme-studio', 'curation-presets', 'png'],
+    ['ch2', 'theme-studio', 'inventory-focus', 'png'],
+    ['ch2', 'theme-studio', 'theme-card-readiness', 'png'],
+    ['ch3', 'publish-center', 'release-snapshot', 'png'],
+    ['ch3', 'publish-center', 'quick-actions', 'png'],
+    ['ch3', 'publish-center', 'rollback-history', 'png'],
+    ['ch4', 'storefront', 'published-proof', 'png'],
+    ['ops', 'terminal', 'demo-verify-log', 'log'],
+    ['ops', 'theme-studio', 'curation-export-json', 'json'],
+  ];
+}
+
+function buildCapturePlanMarkdown(generatedAt) {
+  const rows = captureChecklistRows();
+  const lines = [
+    '# Investor Demo Artifact Capture Plan',
+    '',
+    `Generated at: ${generatedAt}`,
+    '',
+    '## Capture checklist',
+    '',
+  ];
+  for (const [chapter, surface, label, ext] of rows) {
+    const suggested = `${generatedAt}-${chapter}-${surface}-${label}-v1.${ext}`;
+    lines.push(`- [ ] ${chapter.toUpperCase()} ${surface} — ${label} -> \`${suggested}\``);
+  }
+  lines.push('', '## Notes', '', '- Keep viewport and zoom consistent across captures.');
+  lines.push('- Regenerate plan if demo flow significantly changes.');
+  return `${lines.join('\n')}\n`;
+}
 
 function runCommand(entry) {
   return new Promise((resolve) => {
@@ -84,6 +134,13 @@ async function main() {
   if (outputPath) {
     await writeFile(outputPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
     console.log(`[investor-demo-verify] wrote summary to ${outputPath}`);
+  }
+
+  if (capturePlanPath) {
+    const stamp = compactTimestamp();
+    const markdown = buildCapturePlanMarkdown(stamp);
+    await writeFile(capturePlanPath, markdown, 'utf8');
+    console.log(`[investor-demo-verify] wrote capture plan to ${capturePlanPath}`);
   }
 
   console.log('[investor-demo-verify] summary', {
