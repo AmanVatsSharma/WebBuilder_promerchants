@@ -96,4 +96,26 @@ describe('ThemesClient', () => {
 
     expect(asFragment()).toMatchSnapshot();
   });
+
+  it('restores saved curation preset from session storage', async () => {
+    window.sessionStorage.setItem(
+      'builder.themeStudio.curationView.v1',
+      JSON.stringify({
+        activePreset: 'NEEDS_ATTENTION',
+        searchValue: '',
+        pricingFilter: 'ALL',
+        listingFilter: 'ALL',
+        buildFilter: 'FAILED',
+        sortMode: 'BUILD_ISSUES_FIRST',
+      }),
+    );
+
+    const { getByText, queryByText } = render(<ThemesClient />);
+
+    await waitFor(() => {
+      expect(getByText(/Active preset: Needs attention/i)).toBeTruthy();
+      expect(getByText(/Nebula Fashion/i)).toBeTruthy();
+      expect(queryByText(/Aurora Commerce/i)).toBeNull();
+    });
+  });
 });
