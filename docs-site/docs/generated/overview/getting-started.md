@@ -31,6 +31,14 @@ npx nx serve builder
 npx nx serve storefront
 ```
 
+## Optional containerized startup
+
+```bash
+docker compose up --build
+```
+
+Environment reference is available at repo root in `.env.example`.
+
 ## Minimal “happy path” demo
 1. Create a Site: `POST /api/sites`
 2. Map a domain: `POST /api/domains` (host + siteId)

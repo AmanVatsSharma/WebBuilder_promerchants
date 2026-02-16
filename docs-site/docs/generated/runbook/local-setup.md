@@ -18,6 +18,14 @@ npx nx serve builder
 npx nx serve storefront
 ```
 
+## Containerized start (optional)
+
+```bash
+docker compose up --build
+```
+
+This starts Postgres, Redis, API, worker, builder, and storefront.
+
 ## Key env vars
 
 ### API
@@ -28,6 +36,8 @@ npx nx serve storefront
 - Optional auth hardening:
   - `API_AUTH_KEY` (require `x-api-key` on all API requests)
   - `ENFORCE_SITE_SCOPE=true` (require `x-site-id` to match route `:siteId` for site-scoped endpoints)
+
+You can copy baseline values from `.env.example`.
 
 ### Builder
 - Uses `/api/*` rewrite -> `http://localhost:3000/api/*`
