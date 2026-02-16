@@ -71,6 +71,32 @@ type PageDraft = {
 type NoticeState = { tone: NoticeTone; message: string } | null;
 
 const defaultDraft: PageDraft = { title: 'Home', slug: 'home' };
+const storefrontBase = (process.env.NEXT_PUBLIC_STOREFRONT_URL as string) || 'http://localhost:4201';
+
+function inferProtocol(host: string) {
+  const normalized = String(host || '').trim().toLowerCase();
+  if (!normalized) return 'http';
+  if (normalized.includes('localhost') || normalized.startsWith('127.') || normalized.startsWith('0.0.0.0')) {
+    return 'http';
+  }
+  return 'https';
+}
+
+function toSlugPath(page?: PageDto | null) {
+  if (!page?.slug) return '/';
+  return page.slug === 'home' ? '/' : `/${page.slug}`;
+}
+
+function storefrontUrlForSite(site: SiteDto, domains: DomainMappingDto[], page?: PageDto | null) {
+  const verifiedDomain = domains.find((item) => item.status === 'VERIFIED')?.host;
+  const candidateDomain = verifiedDomain || site.domain || '';
+  const path = toSlugPath(page);
+  if (candidateDomain) {
+    const protocol = inferProtocol(candidateDomain);
+    return `${protocol}://${candidateDomain}${path}`;
+  }
+  return `${storefrontBase}${path}`;
+}
 
 export default function BuilderDashboardPage() {
   const [sites, setSites] = useState<SiteDto[]>([]);
@@ -453,6 +479,9 @@ export default function BuilderDashboardPage() {
                 const domains = domainsBySite[site.id] || [];
                 const pageDraft = pageDraftBySite[site.id] || defaultDraft;
                 const domainDraft = domainDraftBySite[site.id] || '';
+                const latestPage = pages[0] || null;
+                const publishedPage = pages.find((item) => item.isPublished) || latestPage;
+                const liveStorefrontUrl = storefrontUrlForSite(site, domains, publishedPage);
 
                 return (
                   <section key={site.id} className="rounded-lg border bg-slate-50 p-4">
@@ -463,6 +492,28 @@ export default function BuilderDashboardPage() {
                           siteId: <span className="font-mono">{site.id}</span>
                         </div>
                         <div className="text-xs text-slate-600">domain: {site.domain || 'not set'}</div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          {latestPage ? (
+                            <Link
+                              className="rounded border bg-white px-2 py-1 text-[11px] hover:bg-slate-100"
+                              href={`/editor/${encodeURIComponent(latestPage.id)}`}
+                            >
+                              Open Latest Editor
+                            </Link>
+                          ) : (
+                            <span className="rounded border bg-slate-100 px-2 py-1 text-[11px] text-slate-500">
+                              No page to edit yet
+                            </span>
+                          )}
+                          <a
+                            className="rounded border bg-white px-2 py-1 text-[11px] hover:bg-slate-100"
+                            href={liveStorefrontUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Open Live Storefront
+                          </a>
+                        </div>
                       </div>
                       <Link
                         className="rounded border bg-white px-3 py-2 text-xs"

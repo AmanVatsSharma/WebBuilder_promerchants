@@ -333,6 +333,24 @@ exports[`Page should render dashboard shell 1`] = `
                   >
                     domain: demo.localhost
                   </div>
+                  <div
+                    class="mt-2 flex flex-wrap items-center gap-2"
+                  >
+                    <a
+                      class="rounded border bg-white px-2 py-1 text-[11px] hover:bg-slate-100"
+                      href="/editor/page_1"
+                    >
+                      Open Latest Editor
+                    </a>
+                    <a
+                      class="rounded border bg-white px-2 py-1 text-[11px] hover:bg-slate-100"
+                      href="http://demo.localhost/"
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Open Live Storefront
+                    </a>
+                  </div>
                 </div>
                 <a
                   class="rounded border bg-white px-3 py-2 text-xs"
