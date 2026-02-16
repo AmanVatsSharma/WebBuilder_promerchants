@@ -77,6 +77,7 @@ npm run mvp:validate
 2. Open themes page, seed/upload theme, build/install/publish.
 3. Open publish center and verify rollback history visibility.
 4. Open storefront published URL and preview URL.
+5. Optional investor narrative flow: follow `runbook/investor-demo-playbook`.
 
 ## Known signals to watch
 
