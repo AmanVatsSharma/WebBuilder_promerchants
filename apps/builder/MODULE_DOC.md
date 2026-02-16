@@ -17,6 +17,7 @@ The **seller-facing editor** for:
 - Builder production build is forced to webpack via `apps/builder/project.json`.
 
 ## Changelog
+- 2026-02-16: Redesigned Theme Studio UX with premium visual hierarchy (hero stats, inventory filters, polished cards) and replaced blocking alert popups with inline operation notices for smoother seller workflows.
 - 2026-02-16: Added domain challenge SLO dashboard panel on home route with success-rate/retry/alert signal cards and recent alert feed for investor-demo operations visibility.
 - 2026-02-16: Builder API helper now supports bearer auth propagation (`NEXT_PUBLIC_API_AUTH_TOKEN`) for JWT auth-context guard environments.
 - 2026-02-16: Theme upload panel now captures marketplace metadata (`FREE/PAID`, price, currency, license, listed toggle) for theme store governance narratives.
