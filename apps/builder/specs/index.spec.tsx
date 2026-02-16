@@ -19,6 +19,32 @@ jest.mock('../src/lib/api', () => ({
     if (path === '/api/sites/site_1/pages') {
       return [{ id: 'page_1', title: 'Home', slug: 'home', isPublished: true }];
     }
+    if (path === '/api/sites/site_1/theme') {
+      return {
+        siteId: 'site_1',
+        themeId: 'theme_1',
+        draftThemeVersionId: 'tv_draft_1',
+        publishedThemeVersionId: 'tv_published_1',
+      };
+    }
+    if (path === '/api/sites/site_1/theme/audits') {
+      return [
+        {
+          id: 'audit_1',
+          action: 'PUBLISH',
+          actor: 'demo',
+          fromThemeVersionId: null,
+          toThemeVersionId: 'tv_published_1',
+          createdAt: FIXED_ISO,
+        },
+      ];
+    }
+    if (path === '/api/themes/versions/tv_draft_1') {
+      return { id: 'tv_draft_1', version: '1.1.0-draft', status: 'DRAFT' };
+    }
+    if (path === '/api/themes/versions/tv_published_1') {
+      return { id: 'tv_published_1', version: '1.0.0', status: 'BUILT' };
+    }
     if (path === '/api/domains') {
       return [{ id: 'domain_1', siteId: 'site_1', host: 'shop.demo.localhost', status: 'PENDING' }];
     }
@@ -77,7 +103,8 @@ describe('Page', () => {
     expect(getByText(/Domain Ops Pulse/i)).toBeTruthy();
     expect(getByText(/Success rate/i)).toBeTruthy();
     expect(getByText(/TXT record mismatch/i)).toBeTruthy();
-    expect(getByText(/Published theme:/i)).toBeTruthy();
+    expect(getByText(/Published theme version:/i)).toBeTruthy();
+    expect(getByText(/Draft status:/i)).toBeTruthy();
     expect(getByText(/Last release:/i)).toBeTruthy();
     expect(getByText(/Open Latest Editor/i)).toBeTruthy();
     expect(getByText(/Open Live Storefront/i)).toBeTruthy();

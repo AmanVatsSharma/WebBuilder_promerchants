@@ -339,12 +339,32 @@ exports[`Page should render dashboard shell 1`] = `
                     <span
                       class="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700"
                     >
-                      Published theme: 
+                      Published theme version: 
                       <span
                         class="font-mono"
                       >
-                        —
+                        1.0.0
                       </span>
+                    </span>
+                    <span
+                      class="rounded-full px-2 py-0.5 font-semibold bg-emerald-100 text-emerald-700"
+                    >
+                      Published status: BUILT
+                    </span>
+                    <span
+                      class="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700"
+                    >
+                      Draft theme version: 
+                      <span
+                        class="font-mono"
+                      >
+                        1.1.0-draft
+                      </span>
+                    </span>
+                    <span
+                      class="rounded-full px-2 py-0.5 font-semibold bg-slate-200 text-slate-700"
+                    >
+                      Draft status: DRAFT
                     </span>
                     <span
                       class="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700"
@@ -353,7 +373,7 @@ exports[`Page should render dashboard shell 1`] = `
                       <span
                         class="font-medium"
                       >
-                        never
+                        2/16/2026, 10:00:00 AM
                       </span>
                     </span>
                   </div>

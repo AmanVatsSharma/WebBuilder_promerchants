@@ -70,6 +70,12 @@ type ThemeInstallDto = {
   publishedThemeVersionId?: string | null;
 };
 
+type ThemeVersionSummaryDto = {
+  id: string;
+  version?: string;
+  status: string;
+};
+
 type ThemeAuditDto = {
   id: string;
   action: 'PUBLISH' | 'ROLLBACK';
@@ -114,12 +120,25 @@ function storefrontUrlForSite(site: SiteDto, domains: DomainMappingDto[], page?:
   return `${storefrontBase}${path}`;
 }
 
+function themeStatusChipClass(status?: string | null) {
+  const normalized = String(status || '').toUpperCase();
+  if (normalized === 'BUILT') return 'bg-emerald-100 text-emerald-700';
+  if (normalized === 'FAILED') return 'bg-rose-100 text-rose-700';
+  if (normalized === 'BUILDING' || normalized === 'QUEUED') return 'bg-amber-100 text-amber-700';
+  if (normalized === 'PUBLISHED') return 'bg-indigo-100 text-indigo-700';
+  if (normalized === 'DRAFT') return 'bg-slate-200 text-slate-700';
+  return 'bg-slate-200 text-slate-700';
+}
+
 export default function BuilderDashboardPage() {
   const [sites, setSites] = useState<SiteDto[]>([]);
   const [pagesBySite, setPagesBySite] = useState<Record<string, PageDto[]>>({});
   const [domainsBySite, setDomainsBySite] = useState<Record<string, DomainMappingDto[]>>({});
   const [themeInstallBySite, setThemeInstallBySite] = useState<Record<string, ThemeInstallDto | null>>({});
   const [latestThemeAuditBySite, setLatestThemeAuditBySite] = useState<Record<string, ThemeAuditDto | null>>({});
+  const [themeVersionBySite, setThemeVersionBySite] = useState<
+    Record<string, { draft: ThemeVersionSummaryDto | null; published: ThemeVersionSummaryDto | null }>
+  >({});
   const [challengeMetrics, setChallengeMetrics] = useState<DomainChallengeMetricsDto | null>(null);
   const [challengeAlerts, setChallengeAlerts] = useState<DomainChallengeAlertDto[]>([]);
 
@@ -194,6 +213,26 @@ export default function BuilderDashboardPage() {
       const nextPagesBySite: Record<string, PageDto[]> = {};
       const nextThemeInstallBySite: Record<string, ThemeInstallDto | null> = {};
       const nextLatestThemeAuditBySite: Record<string, ThemeAuditDto | null> = {};
+      const nextThemeVersionBySite: Record<
+        string,
+        { draft: ThemeVersionSummaryDto | null; published: ThemeVersionSummaryDto | null }
+      > = {};
+      const versionSummaryCache = new Map<string, Promise<ThemeVersionSummaryDto | null>>();
+      const getThemeVersionSummary = async (themeVersionId?: string | null) => {
+        const id = String(themeVersionId || '').trim();
+        if (!id) return null;
+        const existing = versionSummaryCache.get(id);
+        if (existing) return existing;
+        const request = apiGet<ThemeVersionSummaryDto>(`/api/themes/versions/${encodeURIComponent(id)}`)
+          .then((response) => ({
+            id: response.id || id,
+            version: response.version || id,
+            status: response.status || 'UNKNOWN',
+          }))
+          .catch(() => null);
+        versionSummaryCache.set(id, request);
+        return request;
+      };
       await Promise.all(
         nextSites.map(async (site) => {
           const [pagesResult, installResult, auditsResult] = await Promise.all([
@@ -201,10 +240,18 @@ export default function BuilderDashboardPage() {
             apiGet<ThemeInstallDto>(`/api/sites/${encodeURIComponent(site.id)}/theme`).catch(() => null),
             apiGet<ThemeAuditDto[]>(`/api/sites/${encodeURIComponent(site.id)}/theme/audits`).catch(() => []),
           ]);
+          const [draftThemeVersion, publishedThemeVersion] = await Promise.all([
+            getThemeVersionSummary(installResult?.draftThemeVersionId),
+            getThemeVersionSummary(installResult?.publishedThemeVersionId),
+          ]);
           try {
             nextPagesBySite[site.id] = pagesResult;
             nextThemeInstallBySite[site.id] = installResult;
             nextLatestThemeAuditBySite[site.id] = auditsResult[0] || null;
+            nextThemeVersionBySite[site.id] = {
+              draft: draftThemeVersion,
+              published: publishedThemeVersion,
+            };
           } catch (error: any) {
             console.error('[builder-dashboard] site-data load failed', {
               siteId: site.id,
@@ -213,12 +260,14 @@ export default function BuilderDashboardPage() {
             nextPagesBySite[site.id] = [];
             nextThemeInstallBySite[site.id] = null;
             nextLatestThemeAuditBySite[site.id] = null;
+            nextThemeVersionBySite[site.id] = { draft: null, published: null };
           }
         }),
       );
       setPagesBySite(nextPagesBySite);
       setThemeInstallBySite(nextThemeInstallBySite);
       setLatestThemeAuditBySite(nextLatestThemeAuditBySite);
+      setThemeVersionBySite(nextThemeVersionBySite);
 
       try {
         const mappings = await apiGet<DomainMappingDto[]>('/api/domains');
@@ -511,6 +560,10 @@ export default function BuilderDashboardPage() {
                 const pages = pagesBySite[site.id] || [];
                 const domains = domainsBySite[site.id] || [];
                 const themeInstall = themeInstallBySite[site.id];
+                const themeVersions = themeVersionBySite[site.id] || {
+                  draft: null,
+                  published: null,
+                };
                 const latestThemeAudit = latestThemeAuditBySite[site.id];
                 const pageDraft = pageDraftBySite[site.id] || defaultDraft;
                 const domainDraft = domainDraftBySite[site.id] || '';
@@ -529,10 +582,30 @@ export default function BuilderDashboardPage() {
                         <div className="text-xs text-slate-600">domain: {site.domain || 'not set'}</div>
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
                           <span className="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700">
-                            Published theme:{' '}
+                            Published theme version:{' '}
                             <span className="font-mono">
-                              {themeInstall?.publishedThemeVersionId || '—'}
+                              {themeVersions.published?.version || themeInstall?.publishedThemeVersionId || '—'}
                             </span>
+                          </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 font-semibold ${
+                              themeStatusChipClass(themeVersions.published?.status)
+                            }`}
+                          >
+                            Published status: {themeVersions.published?.status || 'UNKNOWN'}
+                          </span>
+                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700">
+                            Draft theme version:{' '}
+                            <span className="font-mono">
+                              {themeVersions.draft?.version || themeInstall?.draftThemeVersionId || '—'}
+                            </span>
+                          </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 font-semibold ${
+                              themeStatusChipClass(themeVersions.draft?.status)
+                            }`}
+                          >
+                            Draft status: {themeVersions.draft?.status || 'UNKNOWN'}
                           </span>
                           <span className="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700">
                             Last release:{' '}
