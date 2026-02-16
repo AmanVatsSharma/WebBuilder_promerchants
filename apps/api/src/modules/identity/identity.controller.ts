@@ -1,0 +1,28 @@
+/**
+ * @file identity.controller.ts
+ * @module identity
+ * @description Auth endpoints for identity registration and login
+ * @author BharatERP
+ * @created 2026-02-16
+ */
+
+import { Body, Controller, Post } from '@nestjs/common';
+import { IdentityService } from './identity.service';
+import { RegisterOwnerDto } from './dto/register-owner.dto';
+import { LoginDto } from './dto/login.dto';
+
+@Controller('auth')
+export class IdentityController {
+  constructor(private readonly identityService: IdentityService) {}
+
+  @Post('register')
+  registerOwner(@Body() dto: RegisterOwnerDto) {
+    return this.identityService.registerOwner(dto);
+  }
+
+  @Post('login')
+  login(@Body() dto: LoginDto) {
+    return this.identityService.login(dto);
+  }
+}
+

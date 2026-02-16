@@ -43,6 +43,7 @@ This starts Postgres, Redis, API, worker, builder, and storefront.
   - `API_AUTH_KEY` (require `x-api-key` on all API requests)
   - `ENFORCE_AUTH_CONTEXT=true` + `AUTH_JWT_SECRET` (require bearer JWT with `sub` + `workspaceIds`)
   - Optional `AUTH_JWT_ISSUER` / `AUTH_JWT_AUDIENCE` for extra JWT claim checks
+  - Optional `AUTH_JWT_TTL_SECONDS` (token lifetime, default 3600)
   - `ENFORCE_SITE_SCOPE=true` (require `x-site-id` to match route `:siteId` for site-scoped endpoints)
   - `ENFORCE_SITE_OWNER=true` (enforce `x-actor-id` ownership checks for protected site/editor routes)
   - `AUTO_CLAIM_SITE_OWNER=true` (first actor touching ownerless site becomes owner; default true)
@@ -59,4 +60,19 @@ You can copy baseline values from `.env.example`.
 - Optional: `API_BASE_URL` (defaults to `http://localhost:3000/api`)
 - Optional: `API_ACTOR_ID` (forward actor context for guarded API modes)
 - Optional: `API_AUTH_TOKEN` (forward bearer token for auth-context guard)
+
+## Identity bootstrap (when auth context is enabled)
+
+1. Register owner:
+```bash
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "content-type: application/json" \
+  -d '{"email":"owner@example.com","password":"password123","workspaceName":"My Workspace"}'
+```
+2. Login and copy `token`:
+```bash
+curl -X POST http://localhost:3000/api/auth/login \
+  -H "content-type: application/json" \
+  -d '{"email":"owner@example.com","password":"password123"}'
+```
 

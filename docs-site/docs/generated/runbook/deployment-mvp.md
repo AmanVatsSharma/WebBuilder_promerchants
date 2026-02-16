@@ -25,6 +25,7 @@ Deploy the editor-first MVP with:
   - `AUTH_JWT_SECRET` (+ optional issuer/audience checks)
   - `NEXT_PUBLIC_API_AUTH_TOKEN` (builder)
   - `API_AUTH_TOKEN` (storefront)
+  - bootstrap owner identity via `/api/auth/register` and `/api/auth/login` before opening builder/storefront traffic
 
 ## 1) Build and start stack
 

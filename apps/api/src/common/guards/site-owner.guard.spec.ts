@@ -116,6 +116,15 @@ describe('SiteOwnerGuard', () => {
     expect(repository.findOne).not.toHaveBeenCalled();
   });
 
+  it('allows auth routes without actor header', async () => {
+    process.env.ENFORCE_SITE_OWNER = 'true';
+    const repository = { findOne: jest.fn(), save: jest.fn() };
+    const guard = new SiteOwnerGuard({ getRepository: () => repository } as any);
+
+    await expect(guard.canActivate(mockContext({ method: 'POST', path: '/api/auth/login' }))).resolves.toBe(true);
+    expect(repository.findOne).not.toHaveBeenCalled();
+  });
+
   it('accepts actor from auth context when header is absent', async () => {
     process.env.ENFORCE_SITE_OWNER = 'true';
     const repository = {

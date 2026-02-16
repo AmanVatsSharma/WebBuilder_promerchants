@@ -28,6 +28,8 @@ function firstHeaderValue(value: unknown) {
 function isProtectedRoute(method: string, path: string) {
   const upperMethod = (method || '').toUpperCase();
   if (!path.startsWith('/api/')) return false;
+  if (path === '/api' || path === '/api/health') return false;
+  if (path.startsWith('/api/auth/')) return false;
   if (path.startsWith('/api/domains/resolve')) return false;
   if (upperMethod === 'GET' && !path.startsWith('/api/sites')) return false;
   return true;
@@ -68,7 +70,7 @@ export class SiteOwnerGuard implements CanActivate {
 
     const req = context.switchToHttp().getRequest();
     const method = String(req.method || '').toUpperCase();
-    const path = String(req.originalUrl || req.url || '');
+    const path = String(req.originalUrl || req.url || '').split('?')[0];
     if (!isProtectedRoute(method, path)) return true;
 
     const actorId = resolveActorId(req);

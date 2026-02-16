@@ -13,6 +13,16 @@ function authContextEnforced() {
   return String(process.env.ENFORCE_AUTH_CONTEXT || '').toLowerCase() === 'true';
 }
 
+function isPublicAuthRoute(path: string) {
+  return (
+    path === '/api' ||
+    path === '/api/health' ||
+    path.startsWith('/api/auth/login') ||
+    path.startsWith('/api/auth/register') ||
+    path.startsWith('/api/domains/resolve')
+  );
+}
+
 function firstHeaderValue(value: unknown) {
   if (Array.isArray(value)) return String(value[0] || '').trim();
   return String(value || '').trim();
@@ -24,6 +34,9 @@ export class AuthContextGuard implements CanActivate {
     if (!authContextEnforced()) return true;
 
     const req = context.switchToHttp().getRequest();
+    const path = String(req.originalUrl || req.url || '').split('?')[0];
+    if (isPublicAuthRoute(path)) return true;
+
     const authHeader = firstHeaderValue(req.headers['authorization']);
     const token = parseAuthorizationBearer(authHeader);
     if (!token) {

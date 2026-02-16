@@ -21,6 +21,8 @@ module.exports = async function() {
       PORT: String(port),
       DB_TYPE: process.env.DB_TYPE || 'sqljs',
       THEME_BUILD_MODE: process.env.THEME_BUILD_MODE || 'inline',
+      ENFORCE_AUTH_CONTEXT: process.env.ENFORCE_AUTH_CONTEXT || 'true',
+      AUTH_JWT_SECRET: process.env.AUTH_JWT_SECRET || 'e2e-secret',
       NODE_ENV: process.env.NODE_ENV || 'development',
     },
   });

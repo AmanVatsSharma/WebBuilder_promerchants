@@ -18,6 +18,7 @@ const outRoot = path.join(repoRoot, 'docs-site', 'docs', 'generated');
 
 const sources = [
   { label: 'api-sites', from: 'apps/api/src/modules/sites/MODULE_DOC.md', to: 'modules/api/sites.md' },
+  { label: 'api-identity', from: 'apps/api/src/modules/identity/MODULE_DOC.md', to: 'modules/api/identity.md' },
   { label: 'api-domains', from: 'apps/api/src/modules/domains/MODULE_DOC.md', to: 'modules/api/domains.md' },
   { label: 'api-themes', from: 'apps/api/src/modules/themes/MODULE_DOC.md', to: 'modules/api/themes.md' },
   { label: 'api-storage', from: 'apps/api/src/shared/storage/MODULE_DOC.md', to: 'modules/api/storage.md' },

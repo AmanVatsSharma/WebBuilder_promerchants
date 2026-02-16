@@ -22,10 +22,14 @@ function signToken(payload: Record<string, unknown>, secret: string) {
   return `${header}.${body}.${signature}`;
 }
 
-function mockContext(headers: Record<string, string>): ExecutionContext {
+function mockContext(input: { headers?: Record<string, string>; path?: string }): ExecutionContext {
   return {
     switchToHttp: () => ({
-      getRequest: () => ({ headers }),
+      getRequest: () => ({
+        headers: input.headers || {},
+        originalUrl: input.path || '/api/sites/site_1',
+        url: input.path || '/api/sites/site_1',
+      }),
     }),
   } as unknown as ExecutionContext;
 }
@@ -46,14 +50,21 @@ describe('AuthContextGuard', () => {
   it('allows requests when auth context is disabled', () => {
     process.env.ENFORCE_AUTH_CONTEXT = 'false';
     const guard = new AuthContextGuard();
-    expect(guard.canActivate(mockContext({}))).toBe(true);
+    expect(guard.canActivate(mockContext({ headers: {} }))).toBe(true);
   });
 
   it('rejects requests with missing bearer token when enabled', () => {
     process.env.ENFORCE_AUTH_CONTEXT = 'true';
     process.env.AUTH_JWT_SECRET = 'test-secret';
     const guard = new AuthContextGuard();
-    expect(() => guard.canActivate(mockContext({}))).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(mockContext({ headers: {} }))).toThrow(ForbiddenException);
+  });
+
+  it('allows public auth/login route without token when enabled', () => {
+    process.env.ENFORCE_AUTH_CONTEXT = 'true';
+    process.env.AUTH_JWT_SECRET = 'test-secret';
+    const guard = new AuthContextGuard();
+    expect(guard.canActivate(mockContext({ headers: {}, path: '/api/auth/login' }))).toBe(true);
   });
 
   it('accepts valid bearer token and populates auth context', () => {

@@ -22,11 +22,13 @@ import { ApiKeyGuard } from '../common/guards/api-key.guard';
 import { SiteScopeGuard } from '../common/guards/site-scope.guard';
 import { SiteOwnerGuard } from '../common/guards/site-owner.guard';
 import { AuthContextGuard } from '../common/guards/auth-context.guard';
+import { IdentityModule } from '../modules/identity/identity.module';
 
 @Module({
   imports: [
     LoggerModule,
     SitesModule,
+    IdentityModule,
     DomainsModule,
     ThemesModule,
     CommerceModule,
