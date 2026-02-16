@@ -26,12 +26,14 @@ For repeatable evidence packaging, use the companion runbook:
    - `npm run mvp:seed`
 3. Verify baseline:
    - `npm run mvp:validate`
-4. Open these tabs in advance:
+4. Run investor verification bundle:
+   - `npm run demo:artifact:verify`
+5. Open these tabs in advance:
    - `/` (dashboard)
    - `/themes` (Theme Studio)
    - `/sites/<siteId>/publish` (Publish Center)
    - storefront URL
-5. Prepare artifact naming and chapter capture checklist:
+6. Prepare artifact naming and chapter capture checklist:
    - follow [Investor Demo Artifact Capture](./investor-demo-artifact-capture)
 
 ## Demo story arc
