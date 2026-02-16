@@ -46,9 +46,12 @@ function apiBase() {
   return process.env.API_BASE_URL || 'http://localhost:3000/api';
 }
 
-function requestHeaders(requestId?: string | null) {
+function requestHeaders(requestId?: string | null, siteId?: string | null) {
+  const apiKey = process.env.API_AUTH_KEY;
   return {
     ...(requestId ? { 'x-request-id': requestId } : {}),
+    ...(siteId ? { 'x-site-id': siteId } : {}),
+    ...(apiKey ? { 'x-api-key': apiKey } : {}),
   };
 }
 
@@ -69,7 +72,10 @@ export async function resolveSiteByHost(host: string, requestId?: string | null)
     });
     if (resolveRes.ok) {
       const resolved: { siteId: string } = await resolveRes.json();
-      const siteRes = await fetch(`${apiBase()}/sites/${resolved.siteId}`, { cache: 'no-store', headers: requestHeaders(rid) });
+      const siteRes = await fetch(`${apiBase()}/sites/${resolved.siteId}`, {
+        cache: 'no-store',
+        headers: requestHeaders(rid, resolved.siteId),
+      });
       if (siteRes.ok) return (await siteRes.json()) as SiteDto;
       console.error('[storefront] site get failed after domain resolve', { siteId: resolved.siteId, status: siteRes.status });
     }
@@ -93,7 +99,10 @@ export async function resolvePageContentBySlug(siteId: string, slug: string, req
   try {
     const rid = ensureRequestId(requestId);
     console.debug('[storefront] resolvePageContentBySlug', { siteId, slug, requestId: rid });
-    const pagesRes = await fetch(`${apiBase()}/sites/${siteId}/pages`, { cache: 'no-store', headers: requestHeaders(rid) });
+    const pagesRes = await fetch(`${apiBase()}/sites/${siteId}/pages`, {
+      cache: 'no-store',
+      headers: requestHeaders(rid, siteId),
+    });
     if (!pagesRes.ok) {
       console.error('[storefront] pages list failed', { status: pagesRes.status, siteId });
       return null;
@@ -102,7 +111,10 @@ export async function resolvePageContentBySlug(siteId: string, slug: string, req
     const match = pages.find((p) => p.slug === slug) || pages[0];
     if (!match) return null;
 
-    const pageRes = await fetch(`${apiBase()}/sites/pages/${match.id}?mode=published`, { cache: 'no-store', headers: requestHeaders(rid) });
+    const pageRes = await fetch(`${apiBase()}/sites/pages/${match.id}?mode=published`, {
+      cache: 'no-store',
+      headers: requestHeaders(rid, siteId),
+    });
     if (!pageRes.ok) {
       console.error('[storefront] page get failed', { status: pageRes.status, pageId: match.id });
       return null;
@@ -124,7 +136,10 @@ export async function resolveInstalledThemeVersion(
 ): Promise<{ published?: string | null; draft?: string | null } | null> {
   try {
     const rid = ensureRequestId(requestId);
-    const res = await fetch(`${apiBase()}/sites/${siteId}/theme`, { cache: 'no-store', headers: requestHeaders(rid) });
+    const res = await fetch(`${apiBase()}/sites/${siteId}/theme`, {
+      cache: 'no-store',
+      headers: requestHeaders(rid, siteId),
+    });
     if (!res.ok) return null;
     const install: ThemeInstallDto = await res.json();
     return { published: install.publishedThemeVersionId ?? null, draft: install.draftThemeVersionId ?? null };
@@ -140,7 +155,10 @@ export async function resolveThemeSettings(siteId: string, requestId?: string | 
 } | null> {
   try {
     const rid = ensureRequestId(requestId);
-    const res = await fetch(`${apiBase()}/sites/${siteId}/theme/settings`, { cache: 'no-store', headers: requestHeaders(rid) });
+    const res = await fetch(`${apiBase()}/sites/${siteId}/theme/settings`, {
+      cache: 'no-store',
+      headers: requestHeaders(rid, siteId),
+    });
     if (!res.ok) return null;
     const data = (await res.json()) as any;
     return {
@@ -168,7 +186,7 @@ export async function resolveThemeLayout(siteId: string, templateId: string, req
     const rid = ensureRequestId(requestId);
     const res = await fetch(
       `${apiBase()}/sites/${encodeURIComponent(siteId)}/theme/layouts?templateId=${encodeURIComponent(templateId)}`,
-      { cache: 'no-store', headers: requestHeaders(rid) },
+      { cache: 'no-store', headers: requestHeaders(rid, siteId) },
     );
     if (!res.ok) return null;
     const data = (await res.json()) as any;
@@ -191,7 +209,10 @@ export async function resolveThemeLayout(siteId: string, templateId: string, req
 export async function resolveInstalledExtensions(siteId: string, requestId?: string | null): Promise<ExtensionInstallDto[]> {
   try {
     const rid = ensureRequestId(requestId);
-    const res = await fetch(`${apiBase()}/sites/${encodeURIComponent(siteId)}/extensions`, { cache: 'no-store', headers: requestHeaders(rid) });
+    const res = await fetch(`${apiBase()}/sites/${encodeURIComponent(siteId)}/extensions`, {
+      cache: 'no-store',
+      headers: requestHeaders(rid, siteId),
+    });
     if (!res.ok) return [];
     const data = (await res.json()) as any;
     return Array.isArray(data) ? (data as ExtensionInstallDto[]) : [];
