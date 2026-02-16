@@ -27,6 +27,14 @@ describe('Theme lifecycle (seed -> build -> install -> publish) + commerce + set
     const domainId = domainRes.data.id as string;
     expect(typeof domainId).toBe('string');
 
+    const challengeRes = await axios.post(`/api/domains/${domainId}/challenges`, { method: 'DNS_TXT' });
+    expect(challengeRes.status).toBe(201);
+    expect(challengeRes.data?.instructions?.type).toBe('DNS_TXT');
+
+    const challengeVerifyRes = await axios.post(`/api/domains/challenges/${challengeRes.data.id}/verify`);
+    expect(challengeVerifyRes.status).toBe(201);
+    expect(challengeVerifyRes.data?.challenge?.status).toBe('VERIFIED');
+
     const verifyDomainRes = await axios.post(`/api/domains/${domainId}/verify`);
     expect(verifyDomainRes.status).toBe(201);
     expect(verifyDomainRes.data.status).toBe('VERIFIED');

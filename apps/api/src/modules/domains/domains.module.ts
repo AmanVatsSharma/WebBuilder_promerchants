@@ -13,10 +13,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DomainsController } from './domains.controller';
 import { DomainsService } from './domains.service';
 import { DomainMapping } from './entities/domain-mapping.entity';
+import { DomainVerificationChallenge } from './entities/domain-verification-challenge.entity';
 import { DomainVerificationService } from './verification/domain-verification.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([DomainMapping])],
+  imports: [TypeOrmModule.forFeature([DomainMapping, DomainVerificationChallenge])],
   controllers: [DomainsController],
   providers: [DomainsService, DomainVerificationService],
   exports: [DomainsService],

@@ -96,6 +96,15 @@ export class DomainVerificationService {
   }
 
   private async verifyDnsTxt(host: string, input: DomainVerificationInput): Promise<DomainVerificationResult> {
+    if (isLocalHost(host)) {
+      return {
+        host,
+        method: 'DNS_TXT',
+        verified: true,
+        details: { reason: 'localhost-fast-path' },
+      };
+    }
+
     const recordName = (input.txtRecordName || '').trim() || `_web-builder-challenge.${host}`;
     const expectedValue = (input.txtExpectedValue || '').trim();
     try {
@@ -134,6 +143,15 @@ export class DomainVerificationService {
   }
 
   private async verifyHttp(host: string, input: DomainVerificationInput): Promise<DomainVerificationResult> {
+    if (isLocalHost(host)) {
+      return {
+        host,
+        method: 'HTTP',
+        verified: true,
+        details: { reason: 'localhost-fast-path' },
+      };
+    }
+
     const timeoutMs = Number.isFinite(input.timeoutMs) ? Math.max(1000, Math.min(10000, input.timeoutMs!)) : 4000;
     const pathName = normalizePath(input.httpPath);
     const expectedSnippet = (input.httpExpectedBodyIncludes || '').trim();

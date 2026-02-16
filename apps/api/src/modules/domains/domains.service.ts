@@ -16,6 +16,9 @@ import { DomainMapping } from './entities/domain-mapping.entity';
 import { CreateDomainMappingDto } from './dto/create-domain-mapping.dto';
 import { VerifyDomainMappingDto } from './dto/verify-domain-mapping.dto';
 import { DomainVerificationService } from './verification/domain-verification.service';
+import { DomainVerificationChallenge } from './entities/domain-verification-challenge.entity';
+import { CreateDomainChallengeDto } from './dto/create-domain-challenge.dto';
+import { randomUUID } from 'crypto';
 
 function normalizeHost(host: string) {
   const trimmed = (host || '').trim();
@@ -28,6 +31,18 @@ function normalizeHost(host: string) {
   return onlyHost.split(':')[0].toLowerCase();
 }
 
+function normalizeHttpPath(rawPath?: string) {
+  const candidate = String(rawPath || '').trim();
+  if (!candidate) return '/.well-known/web-builder-verification.txt';
+  return candidate.startsWith('/') ? candidate : `/${candidate}`;
+}
+
+function normalizeChallengeMethod(rawMethod?: string) {
+  const method = String(rawMethod || '').toUpperCase();
+  if (method === 'HTTP') return 'HTTP';
+  return 'DNS_TXT';
+}
+
 @Injectable()
 export class DomainsService {
   private readonly logger = new Logger(DomainsService.name);
@@ -35,6 +50,8 @@ export class DomainsService {
   constructor(
     @InjectRepository(DomainMapping)
     private readonly repo: Repository<DomainMapping>,
+    @InjectRepository(DomainVerificationChallenge)
+    private readonly challengeRepo: Repository<DomainVerificationChallenge>,
     private readonly verificationService: DomainVerificationService,
   ) {}
 
@@ -94,6 +111,100 @@ export class DomainsService {
     const saved = await this.repo.save(mapping);
     return {
       ...saved,
+      verification,
+    };
+  }
+
+  async issueChallenge(mappingId: string, dto?: CreateDomainChallengeDto) {
+    const mapping = await this.repo.findOne({ where: { id: mappingId } });
+    if (!mapping) throw new NotFoundException(`Domain mapping not found: ${mappingId}`);
+
+    const method = normalizeChallengeMethod(dto?.method);
+    const token = randomUUID().replace(/-/g, '');
+    const expectedValue = String(dto?.expectedValue || token).trim();
+    const challenge = this.challengeRepo.create({
+      domainMappingId: mapping.id,
+      method,
+      status: 'ISSUED',
+      token,
+      expectedValue,
+      txtRecordName: method === 'DNS_TXT' ? (dto?.txtRecordName || `_web-builder-challenge.${mapping.host}`) : null,
+      httpPath: method === 'HTTP' ? normalizeHttpPath(dto?.httpPath) : null,
+      proof: null,
+      lastError: null,
+      verifiedAt: null,
+    });
+
+    mapping.status = 'PENDING';
+    mapping.lastError = null;
+    await this.repo.save(mapping);
+    const saved = await this.challengeRepo.save(challenge);
+
+    return {
+      ...saved,
+      instructions:
+        method === 'DNS_TXT'
+          ? {
+              type: 'DNS_TXT',
+              host: mapping.host,
+              recordName: saved.txtRecordName,
+              expectedValue: saved.expectedValue,
+            }
+          : {
+              type: 'HTTP',
+              host: mapping.host,
+              path: saved.httpPath,
+              expectedValue: saved.expectedValue,
+            },
+    };
+  }
+
+  async listChallenges(mappingId: string) {
+    const mapping = await this.repo.findOne({ where: { id: mappingId } });
+    if (!mapping) throw new NotFoundException(`Domain mapping not found: ${mappingId}`);
+    return await this.challengeRepo.find({
+      where: { domainMappingId: mappingId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async verifyChallenge(challengeId: string) {
+    const challenge = await this.challengeRepo.findOne({ where: { id: challengeId } });
+    if (!challenge) throw new NotFoundException(`Domain challenge not found: ${challengeId}`);
+
+    const mapping = await this.repo.findOne({ where: { id: challenge.domainMappingId } });
+    if (!mapping) throw new NotFoundException(`Domain mapping not found: ${challenge.domainMappingId}`);
+
+    const verification = await this.verificationService.verify({
+      host: mapping.host,
+      method: challenge.method,
+      txtRecordName: challenge.txtRecordName || undefined,
+      txtExpectedValue: challenge.method === 'DNS_TXT' ? challenge.expectedValue || undefined : undefined,
+      httpPath: challenge.httpPath || undefined,
+      httpExpectedBodyIncludes: challenge.method === 'HTTP' ? challenge.expectedValue || undefined : undefined,
+    });
+
+    if (verification.verified) {
+      challenge.status = 'VERIFIED';
+      challenge.lastError = null;
+      challenge.verifiedAt = new Date();
+      mapping.status = 'VERIFIED';
+      mapping.lastError = null;
+    } else {
+      challenge.status = 'FAILED';
+      challenge.lastError = verification.error || 'Challenge verification failed';
+      challenge.verifiedAt = null;
+      mapping.status = 'FAILED';
+      mapping.lastError = challenge.lastError;
+    }
+
+    challenge.proof = verification.details || null;
+    await this.repo.save(mapping);
+    const savedChallenge = await this.challengeRepo.save(challenge);
+
+    return {
+      challenge: savedChallenge,
+      mapping,
       verification,
     };
   }

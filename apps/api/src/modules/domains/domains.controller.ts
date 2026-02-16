@@ -12,6 +12,7 @@ import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { DomainsService } from './domains.service';
 import { CreateDomainMappingDto } from './dto/create-domain-mapping.dto';
 import { VerifyDomainMappingDto } from './dto/verify-domain-mapping.dto';
+import { CreateDomainChallengeDto } from './dto/create-domain-challenge.dto';
 
 @Controller('domains')
 export class DomainsController {
@@ -30,6 +31,21 @@ export class DomainsController {
   @Get('resolve')
   resolve(@Query('host') host: string) {
     return this.domainsService.resolveHost(host);
+  }
+
+  @Post(':id/challenges')
+  issueChallenge(@Param('id') id: string, @Body() dto?: CreateDomainChallengeDto) {
+    return this.domainsService.issueChallenge(id, dto);
+  }
+
+  @Get(':id/challenges')
+  listChallenges(@Param('id') id: string) {
+    return this.domainsService.listChallenges(id);
+  }
+
+  @Post('challenges/:challengeId/verify')
+  verifyChallenge(@Param('challengeId') challengeId: string) {
+    return this.domainsService.verifyChallenge(challengeId);
   }
 
   @Post(':id/verify')

@@ -55,6 +55,17 @@ describe('DomainVerificationService', () => {
     expect(result.error).toContain('Expected TXT value not found');
   });
 
+  it('should short-circuit DNS_TXT verification for localhost domains', async () => {
+    const result = await service.verify({
+      host: 'preview.localhost',
+      method: 'DNS_TXT',
+      txtExpectedValue: 'token',
+    });
+
+    expect(result.verified).toBe(true);
+    expect(result.details).toEqual({ reason: 'localhost-fast-path' });
+  });
+
   it('should verify HTTP challenge payload', async () => {
     jest
       .spyOn(service as any, 'fetchUrl')
