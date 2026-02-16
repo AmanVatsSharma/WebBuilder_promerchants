@@ -91,9 +91,12 @@ type PageDraft = {
 };
 
 type NoticeState = { tone: NoticeTone; message: string } | null;
+type ShortcutAction = 'editor' | 'storefront' | 'publish';
+type ShortcutStats = { editorClicks: number; storefrontClicks: number; publishClicks: number };
 
 const defaultDraft: PageDraft = { title: 'Home', slug: 'home' };
 const storefrontBase = (process.env.NEXT_PUBLIC_STOREFRONT_URL as string) || 'http://localhost:4201';
+const shortcutsStorageKey = 'builder.dashboard.shortcutStats.v1';
 
 function inferProtocol(host: string) {
   const normalized = String(host || '').trim().toLowerCase();
@@ -130,6 +133,10 @@ function themeStatusChipClass(status?: string | null) {
   return 'bg-slate-200 text-slate-700';
 }
 
+function emptyShortcutStats(): ShortcutStats {
+  return { editorClicks: 0, storefrontClicks: 0, publishClicks: 0 };
+}
+
 export default function BuilderDashboardPage() {
   const [sites, setSites] = useState<SiteDto[]>([]);
   const [pagesBySite, setPagesBySite] = useState<Record<string, PageDto[]>>({});
@@ -154,6 +161,7 @@ export default function BuilderDashboardPage() {
   const [siteFilter, setSiteFilter] = useState('');
   const [pageDraftBySite, setPageDraftBySite] = useState<Record<string, PageDraft>>({});
   const [domainDraftBySite, setDomainDraftBySite] = useState<Record<string, string>>({});
+  const [shortcutStatsBySite, setShortcutStatsBySite] = useState<Record<string, ShortcutStats>>({});
 
   const totalPages = useMemo(
     () => Object.values(pagesBySite).reduce((sum, rows) => sum + rows.length, 0),
@@ -181,6 +189,40 @@ export default function BuilderDashboardPage() {
         .includes(query),
     );
   }, [sites, siteFilter]);
+
+  const loadShortcutStats = () => {
+    try {
+      const raw = window.sessionStorage.getItem(shortcutsStorageKey);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw) as Record<string, ShortcutStats>;
+      if (!parsed || typeof parsed !== 'object') return {};
+      return parsed;
+    } catch {
+      return {};
+    }
+  };
+
+  const persistShortcutStats = (next: Record<string, ShortcutStats>) => {
+    try {
+      window.sessionStorage.setItem(shortcutsStorageKey, JSON.stringify(next));
+    } catch {
+      // no-op fallback for restricted browser storage environments
+    }
+  };
+
+  const trackShortcutAction = (siteId: string, action: ShortcutAction) => {
+    setShortcutStatsBySite((prev) => {
+      const current = prev[siteId] || emptyShortcutStats();
+      const updated: ShortcutStats = {
+        editorClicks: current.editorClicks + (action === 'editor' ? 1 : 0),
+        storefrontClicks: current.storefrontClicks + (action === 'storefront' ? 1 : 0),
+        publishClicks: current.publishClicks + (action === 'publish' ? 1 : 0),
+      };
+      const next = { ...prev, [siteId]: updated };
+      persistShortcutStats(next);
+      return next;
+    });
+  };
 
   const loadOpsSnapshot = async () => {
     setOpsLoading(true);
@@ -296,6 +338,27 @@ export default function BuilderDashboardPage() {
   useEffect(() => {
     void loadSitesAndPages();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setShortcutStatsBySite(loadShortcutStats());
+  }, []);
+
+  useEffect(() => {
+    if (!sites.length) return;
+    setShortcutStatsBySite((prev) => {
+      const next = { ...prev };
+      let touched = false;
+      for (const site of sites) {
+        if (!next[site.id]) {
+          next[site.id] = emptyShortcutStats();
+          touched = true;
+        }
+      }
+      if (touched) persistShortcutStats(next);
+      return touched ? next : prev;
+    });
+  }, [sites]);
 
   const createSite = async () => {
     if (!siteName.trim()) {
@@ -564,6 +627,7 @@ export default function BuilderDashboardPage() {
                   draft: null,
                   published: null,
                 };
+                const shortcutStats = shortcutStatsBySite[site.id] || emptyShortcutStats();
                 const latestThemeAudit = latestThemeAuditBySite[site.id];
                 const pageDraft = pageDraftBySite[site.id] || defaultDraft;
                 const domainDraft = domainDraftBySite[site.id] || '';
@@ -615,12 +679,19 @@ export default function BuilderDashboardPage() {
                                 : 'never'}
                             </span>
                           </span>
+                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700">
+                            Shortcut clicks:{' '}
+                            <span className="font-medium">
+                              E {shortcutStats.editorClicks} · S {shortcutStats.storefrontClicks} · P {shortcutStats.publishClicks}
+                            </span>
+                          </span>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           {latestPage ? (
                             <Link
                               className="rounded border bg-white px-2 py-1 text-[11px] hover:bg-slate-100"
                               href={`/editor/${encodeURIComponent(latestPage.id)}`}
+                              onClick={() => trackShortcutAction(site.id, 'editor')}
                             >
                               Open Latest Editor
                             </Link>
@@ -634,6 +705,7 @@ export default function BuilderDashboardPage() {
                             href={liveStorefrontUrl}
                             target="_blank"
                             rel="noreferrer"
+                            onClick={() => trackShortcutAction(site.id, 'storefront')}
                           >
                             Open Live Storefront
                           </a>
@@ -642,6 +714,7 @@ export default function BuilderDashboardPage() {
                       <Link
                         className="rounded border bg-white px-3 py-2 text-xs"
                         href={`/sites/${encodeURIComponent(site.id)}/publish`}
+                        onClick={() => trackShortcutAction(site.id, 'publish')}
                       >
                         Publish Center
                       </Link>

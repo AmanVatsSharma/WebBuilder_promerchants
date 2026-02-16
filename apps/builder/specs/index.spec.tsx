@@ -106,6 +106,7 @@ describe('Page', () => {
     expect(getByText(/Published theme version:/i)).toBeTruthy();
     expect(getByText(/Draft status:/i)).toBeTruthy();
     expect(getByText(/Last release:/i)).toBeTruthy();
+    expect(getByText(/Shortcut clicks:/i)).toBeTruthy();
     expect(getByText(/Open Latest Editor/i)).toBeTruthy();
     expect(getByText(/Open Live Storefront/i)).toBeTruthy();
     expect(asFragment()).toMatchSnapshot();

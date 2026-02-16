@@ -376,6 +376,16 @@ exports[`Page should render dashboard shell 1`] = `
                         2/16/2026, 10:00:00 AM
                       </span>
                     </span>
+                    <span
+                      class="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700"
+                    >
+                      Shortcut clicks: 
+                      <span
+                        class="font-medium"
+                      >
+                        E 0 · S 0 · P 0
+                      </span>
+                    </span>
                   </div>
                   <div
                     class="mt-2 flex flex-wrap items-center gap-2"
