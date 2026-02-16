@@ -17,6 +17,7 @@ The **seller-facing editor** for:
 - Builder production build is forced to webpack via `apps/builder/project.json`.
 
 ## Changelog
+- 2026-02-16: Builder API helper now supports bearer auth propagation (`NEXT_PUBLIC_API_AUTH_TOKEN`) for JWT auth-context guard environments.
 - 2026-02-16: Theme upload panel now captures marketplace metadata (`FREE/PAID`, price, currency, license, listed toggle) for theme store governance narratives.
 - 2026-02-16: Builder API helper now forwards optional `x-actor-id` (`NEXT_PUBLIC_ACTOR_ID`) for site-ownership authorization guard compatibility.
 - 2026-02-16: Builder API helper now auto-attaches `x-site-id` for site-scoped routes and optional `x-api-key` (`NEXT_PUBLIC_API_AUTH_KEY`) to support API auth/scope guards.

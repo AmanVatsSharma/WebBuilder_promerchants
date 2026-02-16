@@ -21,6 +21,7 @@ import { ExtensionsModule } from '../modules/extensions/extensions.module';
 import { ApiKeyGuard } from '../common/guards/api-key.guard';
 import { SiteScopeGuard } from '../common/guards/site-scope.guard';
 import { SiteOwnerGuard } from '../common/guards/site-owner.guard';
+import { AuthContextGuard } from '../common/guards/auth-context.guard';
 
 @Module({
   imports: [
@@ -70,6 +71,10 @@ import { SiteOwnerGuard } from '../common/guards/site-owner.guard';
     {
       provide: APP_GUARD,
       useClass: ApiKeyGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AuthContextGuard,
     },
     {
       provide: APP_GUARD,

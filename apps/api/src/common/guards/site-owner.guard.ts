@@ -43,6 +43,22 @@ function resolveSiteId(req: any) {
   return '';
 }
 
+function resolveActorId(req: any) {
+  const fromAuth = String(req?.authContext?.actorId || '').trim();
+  if (fromAuth) return fromAuth;
+  return firstHeaderValue(req?.headers?.['x-actor-id']);
+}
+
+function resolveWorkspaceIds(req: any) {
+  const fromAuth = Array.isArray(req?.authContext?.workspaceIds)
+    ? req.authContext.workspaceIds.map((value: unknown) => String(value || '').trim()).filter(Boolean)
+    : [];
+  if (fromAuth.length) return fromAuth;
+
+  const fromHeader = firstHeaderValue(req?.headers?.['x-workspace-id']);
+  return fromHeader ? [fromHeader] : [];
+}
+
 @Injectable()
 export class SiteOwnerGuard implements CanActivate {
   constructor(private readonly dataSource: DataSource) {}
@@ -55,11 +71,12 @@ export class SiteOwnerGuard implements CanActivate {
     const path = String(req.originalUrl || req.url || '');
     if (!isProtectedRoute(method, path)) return true;
 
-    const actorId = firstHeaderValue(req.headers['x-actor-id']);
+    const actorId = resolveActorId(req);
     if (!actorId) {
       throw new ForbiddenException('Missing actor context');
     }
     req.actorId = actorId;
+    req.workspaceIds = resolveWorkspaceIds(req);
 
     const siteId = resolveSiteId(req);
     if (!siteId) {
@@ -83,6 +100,11 @@ export class SiteOwnerGuard implements CanActivate {
 
     if (site.ownerId !== actorId) {
       throw new ForbiddenException('Site ownership mismatch');
+    }
+
+    const workspaceIds = resolveWorkspaceIds(req);
+    if (workspaceIds.length && site.workspaceId && !workspaceIds.includes(site.workspaceId)) {
+      throw new ForbiddenException('Workspace membership mismatch');
     }
 
     return true;

@@ -5,29 +5,53 @@
  * @author BharatERP
  * @created 2025-02-09
  */
-import { Controller, Get, Post, Body, Param, Put, Query, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Query, Headers, Req } from '@nestjs/common';
 import { SitesService } from './sites.service';
 import { CreateSiteDto } from './dto/create-site.dto';
 import { CreatePageDto } from './dto/create-page.dto';
 import { UpdatePageDto } from './dto/update-page.dto';
+
+function firstHeaderValue(value: unknown) {
+  if (Array.isArray(value)) return String(value[0] || '').trim();
+  return String(value || '').trim();
+}
 
 @Controller('sites')
 export class SitesController {
   constructor(private readonly sitesService: SitesService) {}
 
   @Post()
-  createSite(@Body() createSiteDto: CreateSiteDto, @Headers('x-actor-id') actorId?: string) {
-    return this.sitesService.createSite(createSiteDto, actorId);
+  createSite(@Req() req: any, @Body() createSiteDto: CreateSiteDto, @Headers('x-actor-id') actorHeader?: string) {
+    const actorId = String(req?.authContext?.actorId || actorHeader || '').trim() || undefined;
+    const workspaceFromAuth = Array.isArray(req?.authContext?.workspaceIds)
+      ? String(req.authContext.workspaceIds[0] || '').trim()
+      : '';
+    const workspaceFromHeader = firstHeaderValue(req?.headers?.['x-workspace-id']);
+    const workspaceId = workspaceFromAuth || workspaceFromHeader || undefined;
+
+    return this.sitesService.createSite(createSiteDto, {
+      actorId,
+      workspaceId,
+      workspaceIds: req?.authContext?.workspaceIds,
+    });
   }
 
   @Get()
-  findAllSites(@Headers('x-actor-id') actorId?: string) {
-    return this.sitesService.findAllSites(actorId);
+  findAllSites(@Req() req: any, @Headers('x-actor-id') actorHeader?: string) {
+    const actorId = String(req?.authContext?.actorId || actorHeader || '').trim() || undefined;
+    return this.sitesService.findAllSites({
+      actorId,
+      workspaceIds: req?.authContext?.workspaceIds,
+    });
   }
 
   @Get(':id')
-  findOneSite(@Param('id') id: string, @Headers('x-actor-id') actorId?: string) {
-    return this.sitesService.findOneSite(id, actorId);
+  findOneSite(@Req() req: any, @Param('id') id: string, @Headers('x-actor-id') actorHeader?: string) {
+    const actorId = String(req?.authContext?.actorId || actorHeader || '').trim() || undefined;
+    return this.sitesService.findOneSite(id, {
+      actorId,
+      workspaceIds: req?.authContext?.workspaceIds,
+    });
   }
 
   @Post(':siteId/pages')

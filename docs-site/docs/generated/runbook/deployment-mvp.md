@@ -21,6 +21,10 @@ Deploy the editor-first MVP with:
 - If enabling ownership guard (`ENFORCE_SITE_OWNER=true`), set:
   - `NEXT_PUBLIC_ACTOR_ID` (builder)
   - `API_ACTOR_ID` (storefront server runtime)
+- If enabling JWT auth context (`ENFORCE_AUTH_CONTEXT=true`), set:
+  - `AUTH_JWT_SECRET` (+ optional issuer/audience checks)
+  - `NEXT_PUBLIC_API_AUTH_TOKEN` (builder)
+  - `API_AUTH_TOKEN` (storefront)
 
 ## 1) Build and start stack
 

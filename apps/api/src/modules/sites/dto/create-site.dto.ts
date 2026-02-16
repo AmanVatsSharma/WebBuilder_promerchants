@@ -18,5 +18,9 @@ export class CreateSiteDto {
   @IsString()
   @IsOptional()
   ownerId?: string;
+
+  @IsString()
+  @IsOptional()
+  workspaceId?: string;
 }
 

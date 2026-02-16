@@ -17,10 +17,12 @@ function apiBase() {
 function requestHeaders(siteId: string, extra?: HeadersInit) {
   const apiKey = process.env.API_AUTH_KEY;
   const actorId = process.env.API_ACTOR_ID;
+  const authToken = process.env.API_AUTH_TOKEN;
   return {
     'x-site-id': siteId,
     ...(apiKey ? { 'x-api-key': apiKey } : {}),
     ...(actorId ? { 'x-actor-id': actorId } : {}),
+    ...(authToken ? { authorization: `Bearer ${authToken}` } : {}),
     ...(extra || {}),
   };
 }

@@ -32,11 +32,13 @@ function requestHeaders(path: string, extra?: HeadersInit): HeadersInit {
   const siteScope = deriveSiteScope(path);
   const apiAuthKey = process.env.NEXT_PUBLIC_API_AUTH_KEY;
   const actorId = process.env.NEXT_PUBLIC_ACTOR_ID;
+  const authToken = process.env.NEXT_PUBLIC_API_AUTH_TOKEN;
   return {
     ...(requestId ? { 'x-request-id': requestId } : {}),
     ...(siteScope ? { 'x-site-id': siteScope } : {}),
     ...(apiAuthKey ? { 'x-api-key': apiAuthKey } : {}),
     ...(actorId ? { 'x-actor-id': actorId } : {}),
+    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
     ...(extra || {}),
   };
 }

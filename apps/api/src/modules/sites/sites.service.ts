@@ -7,12 +7,18 @@
  */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Site } from './entities/site.entity';
 import { Page } from './entities/page.entity';
 import { CreateSiteDto } from './dto/create-site.dto';
 import { CreatePageDto } from './dto/create-page.dto';
 import { UpdatePageDto } from './dto/update-page.dto';
+
+export interface SiteAccessContext {
+  actorId?: string;
+  workspaceId?: string;
+  workspaceIds?: string[];
+}
 
 @Injectable()
 export class SitesService {
@@ -23,24 +29,44 @@ export class SitesService {
     private readonly pageRepository: Repository<Page>,
   ) {}
 
-  async createSite(createSiteDto: CreateSiteDto, actorId?: string) {
+  async createSite(createSiteDto: CreateSiteDto, access?: SiteAccessContext) {
     const site = this.siteRepository.create({
       ...createSiteDto,
-      ownerId: actorId || createSiteDto.ownerId || null,
+      ownerId: access?.actorId || createSiteDto.ownerId || null,
+      workspaceId: access?.workspaceId || createSiteDto.workspaceId || null,
     });
     return await this.siteRepository.save(site);
   }
 
-  async findAllSites(actorId?: string) {
-    if (actorId) {
-      return await this.siteRepository.find({ where: { ownerId: actorId } });
+  async findAllSites(access?: SiteAccessContext) {
+    const workspaceIds = (access?.workspaceIds || []).filter(Boolean);
+    if (workspaceIds.length) {
+      return await this.siteRepository.find({ where: { workspaceId: In(workspaceIds) } });
+    }
+
+    if (access?.actorId) {
+      return await this.siteRepository.find({ where: { ownerId: access.actorId } });
     }
     return await this.siteRepository.find();
   }
 
-  async findOneSite(id: string, actorId?: string) {
-    const where = actorId ? { id, ownerId: actorId } : { id };
-    const site = await this.siteRepository.findOne({ where, relations: ['pages'] });
+  async findOneSite(id: string, access?: SiteAccessContext) {
+    const workspaceIds = (access?.workspaceIds || []).filter(Boolean);
+    let site: Site | null = null;
+    if (workspaceIds.length) {
+      site = await this.siteRepository.findOne({
+        where: { id, workspaceId: In(workspaceIds) },
+        relations: ['pages'],
+      });
+    } else if (access?.actorId) {
+      site = await this.siteRepository.findOne({
+        where: { id, ownerId: access.actorId },
+        relations: ['pages'],
+      });
+    } else {
+      site = await this.siteRepository.findOne({ where: { id }, relations: ['pages'] });
+    }
+
     if (!site) throw new NotFoundException(`Site with ID ${id} not found`);
     return site;
   }

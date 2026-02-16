@@ -17,6 +17,7 @@ function mockContext(input: {
   headers?: Record<string, string>;
   body?: Record<string, unknown>;
   query?: Record<string, unknown>;
+  authContext?: { actorId?: string; workspaceIds?: string[] };
 }): ExecutionContext {
   return {
     switchToHttp: () => ({
@@ -27,6 +28,7 @@ function mockContext(input: {
         headers: input.headers || {},
         body: input.body || {},
         query: input.query || {},
+        authContext: input.authContext,
       }),
     }),
   } as unknown as ExecutionContext;
@@ -112,6 +114,46 @@ describe('SiteOwnerGuard', () => {
 
     await expect(guard.canActivate(mockContext({ method: 'GET', path: '/api/domains/resolve' }))).resolves.toBe(true);
     expect(repository.findOne).not.toHaveBeenCalled();
+  });
+
+  it('accepts actor from auth context when header is absent', async () => {
+    process.env.ENFORCE_SITE_OWNER = 'true';
+    const repository = {
+      findOne: jest.fn().mockResolvedValue({ id: 'site_1', ownerId: 'actor_1' }),
+      save: jest.fn(),
+    };
+    const guard = new SiteOwnerGuard({ getRepository: () => repository } as any);
+
+    await expect(
+      guard.canActivate(
+        mockContext({
+          method: 'POST',
+          path: '/api/sites/site_1/pages',
+          params: { siteId: 'site_1' },
+          authContext: { actorId: 'actor_1', workspaceIds: ['ws_1'] },
+        }),
+      ),
+    ).resolves.toBe(true);
+  });
+
+  it('rejects when site workspace is not in auth context membership', async () => {
+    process.env.ENFORCE_SITE_OWNER = 'true';
+    const repository = {
+      findOne: jest.fn().mockResolvedValue({ id: 'site_1', ownerId: 'actor_1', workspaceId: 'ws_1' }),
+      save: jest.fn(),
+    };
+    const guard = new SiteOwnerGuard({ getRepository: () => repository } as any);
+
+    await expect(
+      guard.canActivate(
+        mockContext({
+          method: 'POST',
+          path: '/api/sites/site_1/pages',
+          params: { siteId: 'site_1' },
+          authContext: { actorId: 'actor_1', workspaceIds: ['ws_2'] },
+        }),
+      ),
+    ).rejects.toThrow(ForbiddenException);
   });
 });
 
