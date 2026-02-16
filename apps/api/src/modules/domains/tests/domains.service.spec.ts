@@ -169,5 +169,32 @@ describe('DomainsService', () => {
     expect(result.scanned).toBe(2);
     expect(result.processed).toHaveLength(2);
   });
+
+  it('should ingest webhook READY event and trigger challenge verification', async () => {
+    const { service, repo, challengeRepo } = buildService();
+    const challenge = {
+      id: 'c20',
+      domainMappingId: 'd20',
+      status: 'ISSUED',
+      provider: null,
+      providerReferenceId: null,
+      propagationState: 'PENDING',
+    };
+    const mapping = { id: 'd20', host: 'shop.example.com', siteId: 's20', status: 'PENDING' } as DomainMapping;
+    challengeRepo.findOne.mockResolvedValue(challenge);
+    repo.findOne.mockResolvedValue(mapping);
+    challengeRepo.save.mockImplementation(async (value) => value);
+    repo.save.mockImplementation(async (value) => value);
+    jest.spyOn(service, 'verifyChallenge').mockResolvedValue({ challenge: { id: 'c20', status: 'VERIFIED' } } as any);
+
+    const result = await service.ingestChallengeWebhook('c20', {
+      status: 'READY',
+      provider: 'cloudflare',
+      providerReferenceId: 'ref-1',
+    });
+
+    expect(service.verifyChallenge).toHaveBeenCalledWith('c20', 'scheduler');
+    expect(result.challenge.status).toBe('VERIFIED');
+  });
 });
 

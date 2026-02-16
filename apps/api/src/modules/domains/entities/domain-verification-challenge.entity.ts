@@ -10,6 +10,7 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, Update
 
 export type DomainChallengeMethod = 'DNS_TXT' | 'HTTP';
 export type DomainChallengeStatus = 'ISSUED' | 'VERIFIED' | 'FAILED';
+export type DomainPropagationState = 'PENDING' | 'PROPAGATING' | 'READY' | 'FAILED';
 
 function dateType() {
   return (process.env.DB_TYPE === 'sqljs' ? 'datetime' : 'timestamptz') as any;
@@ -42,6 +43,15 @@ export class DomainVerificationChallenge {
   @Column({ type: 'text', nullable: true })
   expectedValue?: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  provider?: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  providerReferenceId?: string | null;
+
+  @Column({ type: 'varchar', default: 'PENDING' })
+  propagationState: DomainPropagationState;
+
   @Column({ type: 'int', default: 0 })
   attemptCount: number;
 
@@ -53,6 +63,9 @@ export class DomainVerificationChallenge {
 
   @Column({ type: dateType(), nullable: true })
   lastAttemptAt?: Date | null;
+
+  @Column({ type: dateType(), nullable: true })
+  lastEventAt?: Date | null;
 
   @Column({ type: 'simple-json', nullable: true })
   proof?: Record<string, unknown> | null;

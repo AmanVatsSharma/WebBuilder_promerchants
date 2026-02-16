@@ -24,5 +24,13 @@ export class CreateDomainChallengeDto {
   @IsOptional()
   @IsString()
   expectedValue?: string;
+
+  @IsOptional()
+  @IsString()
+  provider?: string;
+
+  @IsOptional()
+  @IsString()
+  providerReferenceId?: string;
 }
 

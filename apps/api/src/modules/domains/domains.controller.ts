@@ -13,6 +13,7 @@ import { DomainsService } from './domains.service';
 import { CreateDomainMappingDto } from './dto/create-domain-mapping.dto';
 import { VerifyDomainMappingDto } from './dto/verify-domain-mapping.dto';
 import { CreateDomainChallengeDto } from './dto/create-domain-challenge.dto';
+import { DomainChallengeWebhookDto } from './dto/domain-challenge-webhook.dto';
 
 @Controller('domains')
 export class DomainsController {
@@ -46,6 +47,11 @@ export class DomainsController {
   @Post('challenges/:challengeId/verify')
   verifyChallenge(@Param('challengeId') challengeId: string) {
     return this.domainsService.verifyChallenge(challengeId);
+  }
+
+  @Post('challenges/:challengeId/webhook')
+  webhookChallenge(@Param('challengeId') challengeId: string, @Body() dto: DomainChallengeWebhookDto) {
+    return this.domainsService.ingestChallengeWebhook(challengeId, dto);
   }
 
   @Post('challenges/poll')

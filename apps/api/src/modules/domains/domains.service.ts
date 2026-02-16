@@ -19,6 +19,7 @@ import { DomainVerificationService } from './verification/domain-verification.se
 import { DomainVerificationChallenge } from './entities/domain-verification-challenge.entity';
 import { CreateDomainChallengeDto } from './dto/create-domain-challenge.dto';
 import { randomUUID } from 'crypto';
+import { DomainChallengeWebhookDto } from './dto/domain-challenge-webhook.dto';
 
 function normalizeHost(host: string) {
   const trimmed = (host || '').trim();
@@ -51,6 +52,11 @@ function maxChallengeAttempts() {
 function challengeRetryDelayMs() {
   const configured = Number(process.env.DOMAIN_CHALLENGE_RETRY_DELAY_MS || 30000);
   return Number.isFinite(configured) ? Math.max(1000, Math.min(300000, Math.floor(configured))) : 30000;
+}
+
+function normalizeProvider(rawProvider?: string) {
+  const value = String(rawProvider || '').trim();
+  return value || null;
 }
 
 @Injectable()
@@ -138,10 +144,14 @@ export class DomainsService {
       status: 'ISSUED',
       token,
       expectedValue,
+      provider: normalizeProvider(dto?.provider),
+      providerReferenceId: dto?.providerReferenceId?.trim() || null,
+      propagationState: 'PENDING',
       attemptCount: 0,
       maxAttempts: maxChallengeAttempts(),
       nextAttemptAt: new Date(),
       lastAttemptAt: null,
+      lastEventAt: null,
       txtRecordName: method === 'DNS_TXT' ? (dto?.txtRecordName || `_web-builder-challenge.${mapping.host}`) : null,
       httpPath: method === 'HTTP' ? normalizeHttpPath(dto?.httpPath) : null,
       proof: null,
@@ -203,6 +213,7 @@ export class DomainsService {
       challenge.lastError = null;
       challenge.verifiedAt = new Date();
       challenge.nextAttemptAt = null;
+      challenge.propagationState = 'READY';
       mapping.status = 'VERIFIED';
       mapping.lastError = null;
     } else {
@@ -213,12 +224,14 @@ export class DomainsService {
       challenge.nextAttemptAt = nextAttempts < Number(challenge.maxAttempts || 1)
         ? new Date(Date.now() + challengeRetryDelayMs())
         : null;
+      challenge.propagationState = challenge.nextAttemptAt ? 'PROPAGATING' : 'FAILED';
       mapping.status = 'FAILED';
       mapping.lastError = challenge.lastError;
     }
 
     challenge.attemptCount = Number(challenge.attemptCount || 0) + 1;
     challenge.lastAttemptAt = new Date();
+    challenge.lastEventAt = new Date();
     challenge.proof = verification.details || null;
     await this.repo.save(mapping);
     const savedChallenge = await this.challengeRepo.save(challenge);
@@ -230,6 +243,47 @@ export class DomainsService {
       challenge: savedChallenge,
       mapping,
       verification,
+    };
+  }
+
+  async ingestChallengeWebhook(challengeId: string, dto: DomainChallengeWebhookDto) {
+    const challenge = await this.challengeRepo.findOne({ where: { id: challengeId } });
+    if (!challenge) throw new NotFoundException(`Domain challenge not found: ${challengeId}`);
+
+    const mapping = await this.repo.findOne({ where: { id: challenge.domainMappingId } });
+    if (!mapping) throw new NotFoundException(`Domain mapping not found: ${challenge.domainMappingId}`);
+
+    challenge.provider = normalizeProvider(dto.provider) || challenge.provider || null;
+    challenge.providerReferenceId = dto.providerReferenceId?.trim() || challenge.providerReferenceId || null;
+    challenge.propagationState = dto.status;
+    challenge.lastEventAt = new Date();
+    if (dto.status === 'FAILED') {
+      challenge.status = 'FAILED';
+      challenge.lastError = dto.detail || 'Provider webhook reported failure';
+      challenge.nextAttemptAt = null;
+      mapping.status = 'FAILED';
+      mapping.lastError = challenge.lastError;
+      await this.emitChallengeAlert({
+        challengeId: challenge.id,
+        mappingId: mapping.id,
+        reason: challenge.lastError,
+      });
+    }
+
+    await this.challengeRepo.save(challenge);
+    await this.repo.save(mapping);
+
+    if (dto.status === 'READY') {
+      return await this.verifyChallenge(challenge.id, 'scheduler');
+    }
+
+    return {
+      challenge,
+      mapping,
+      webhook: {
+        status: dto.status,
+        detail: dto.detail || null,
+      },
     };
   }
 
@@ -264,6 +318,16 @@ export class DomainsService {
           attemptCount: result.challenge.attemptCount,
           maxAttempts: result.challenge.maxAttempts,
         });
+        if (
+          result.challenge.status === 'FAILED' &&
+          result.challenge.attemptCount >= result.challenge.maxAttempts
+        ) {
+          await this.emitChallengeAlert({
+            challengeId: result.challenge.id,
+            reason: result.challenge.lastError || 'Domain challenge exhausted retries',
+            mappingId: result.mapping?.id || '',
+          });
+        }
       } catch (error: any) {
         this.logger.warn(`pollDueChallenges failed challengeId=${challenge.id} reason=${error?.message || error}`);
       }
@@ -274,6 +338,30 @@ export class DomainsService {
       scanned: challenges.length,
       processed,
     };
+  }
+
+  private async emitChallengeAlert(payload: { challengeId: string; mappingId: string; reason: string }) {
+    const url = String(process.env.DOMAIN_CHALLENGE_ALERT_WEBHOOK_URL || '').trim();
+    if (!url) return;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          event: 'domain.challenge.failed',
+          challengeId: payload.challengeId,
+          mappingId: payload.mappingId,
+          reason: payload.reason,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+      if (!response.ok) {
+        this.logger.warn(`emitChallengeAlert non-2xx status=${response.status}`);
+      }
+    } catch (error: any) {
+      this.logger.warn(`emitChallengeAlert failed reason=${error?.message || error}`);
+    }
   }
 }
 

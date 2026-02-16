@@ -59,6 +59,13 @@ describe('Theme lifecycle (seed -> build -> install -> publish) + commerce + set
     expect(challengeRes.status).toBe(201);
     expect(challengeRes.data?.instructions?.type).toBe('DNS_TXT');
 
+    const webhookRes = await client.post(`/api/domains/challenges/${challengeRes.data.id}/webhook`, {
+      status: 'READY',
+      provider: 'e2e',
+      providerReferenceId: 'evt-1',
+    });
+    expect(webhookRes.status).toBe(201);
+
     const pollRes = await client.post(`/api/domains/challenges/poll?limit=5`);
     expect(pollRes.status).toBe(201);
     expect(Array.isArray(pollRes.data?.processed)).toBe(true);
