@@ -85,6 +85,12 @@ Optional auto-generated capture checklist (markdown file with suggested artifact
 npm run demo:artifact:plan -- --capture-plan=/tmp/investor-demo-capture-plan.md
 ```
 
+Optional artifact slot scaffolding (creates placeholder files, auto-increments revisions if names already exist):
+
+```bash
+npm run demo:artifact:scaffold -- --dir=/tmp/investor-artifacts --plan=/tmp/investor-demo-capture-plan.md --manifest=/tmp/investor-artifact-scaffold-manifest.json
+```
+
 Optional artifact-pack coverage validation (after captures are created):
 
 ```bash

@@ -29,6 +29,7 @@ For repeatable evidence packaging, use the companion runbook:
 4. Run investor verification bundle:
    - `npm run demo:artifact:verify`
    - optional prefilled checklist: `npm run demo:artifact:plan -- --capture-plan=/tmp/investor-demo-capture-plan.md`
+   - optional placeholder slots: `npm run demo:artifact:scaffold -- --dir=/tmp/investor-artifacts`
 5. Open these tabs in advance:
    - `/` (dashboard)
    - `/themes` (Theme Studio)
