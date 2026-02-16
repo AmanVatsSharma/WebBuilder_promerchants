@@ -9,6 +9,8 @@ import React from 'react';
 import { render, waitFor } from '@testing-library/react';
 import PublishClient from '../src/app/sites/[siteId]/publish/publish.client';
 
+const FIXED_ISO = '2026-02-16T10:00:00.000Z';
+
 jest.mock('../src/lib/api', () => ({
   apiGet: jest.fn(async (path: string) => {
     if (path.includes('/theme/audits')) {
@@ -19,7 +21,7 @@ jest.mock('../src/lib/api', () => ({
           actor: 'test',
           fromThemeVersionId: null,
           toThemeVersionId: 'tv_1',
-          createdAt: new Date().toISOString(),
+          createdAt: FIXED_ISO,
         },
       ];
     }
@@ -55,7 +57,7 @@ jest.mock('../src/lib/api', () => ({
 
 describe('PublishClient', () => {
   it('renders publish sections and rollback controls', async () => {
-    const { getByText } = render(<PublishClient siteId="site_1" />);
+    const { asFragment, getByText } = render(<PublishClient siteId="site_1" />);
 
     await waitFor(() => {
       expect(getByText(/Publish Center/i)).toBeTruthy();
@@ -63,5 +65,7 @@ describe('PublishClient', () => {
       expect(getByText(/Rollback Theme/i)).toBeTruthy();
       expect(getByText(/Theme Publish History/i)).toBeTruthy();
     });
+
+    expect(asFragment()).toMatchSnapshot();
   });
 });

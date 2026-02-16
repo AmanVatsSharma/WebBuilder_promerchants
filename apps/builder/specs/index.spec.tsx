@@ -9,6 +9,8 @@ import React from 'react';
 import { render, waitFor } from '@testing-library/react';
 import Page from '../src/app/page';
 
+const FIXED_ISO = '2026-02-16T10:00:00.000Z';
+
 jest.mock('../src/lib/api', () => ({
   apiGet: jest.fn(async (path: string) => {
     if (path === '/api/sites') {
@@ -22,7 +24,7 @@ jest.mock('../src/lib/api', () => ({
     }
     if (path === '/api/domains/challenges/metrics') {
       return {
-        generatedAt: new Date().toISOString(),
+        generatedAt: FIXED_ISO,
         totalChallenges: 12,
         issuedCount: 1,
         verifiedCount: 9,
@@ -50,7 +52,7 @@ jest.mock('../src/lib/api', () => ({
           eventType: 'domain.challenge.failed',
           message: 'TXT record mismatch',
           delivered: false,
-          createdAt: new Date().toISOString(),
+          createdAt: FIXED_ISO,
         },
       ];
     }
@@ -61,7 +63,7 @@ jest.mock('../src/lib/api', () => ({
 
 describe('Page', () => {
   it('should render dashboard shell', async () => {
-    const { getByRole, getByText, getAllByText, queryByText } = render(<Page />);
+    const { asFragment, getByRole, getByText, getAllByText, queryByText } = render(<Page />);
     expect(getByText(/WebBuilder Studio/i)).toBeTruthy();
     expect(getByRole('heading', { name: /Create Site/i })).toBeTruthy();
 
@@ -75,5 +77,6 @@ describe('Page', () => {
     expect(getByText(/Domain Ops Pulse/i)).toBeTruthy();
     expect(getByText(/Success rate/i)).toBeTruthy();
     expect(getByText(/TXT record mismatch/i)).toBeTruthy();
+    expect(asFragment()).toMatchSnapshot();
   });
 });

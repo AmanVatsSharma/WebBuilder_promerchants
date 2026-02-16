@@ -10,6 +10,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react';
 import ThemesClient from '../src/app/themes/themes.client';
 
 const apiUploadMock = jest.fn(async () => ({}));
+const FIXED_ISO = '2026-02-16T10:00:00.000Z';
 
 jest.mock('../src/lib/api', () => ({
   apiGet: jest.fn(async (path: string) => {
@@ -19,7 +20,7 @@ jest.mock('../src/lib/api', () => ({
           id: 'theme_1',
           name: 'Demo Theme',
           description: 'Demo',
-          versions: [{ id: 'tv_1', version: '1.0.0', status: 'BUILT', createdAt: new Date().toISOString() }],
+          versions: [{ id: 'tv_1', version: '1.0.0', status: 'BUILT', createdAt: FIXED_ISO }],
         },
       ];
     }
@@ -36,7 +37,7 @@ describe('ThemesClient', () => {
   });
 
   it('renders upload controls and theme versions', async () => {
-    const { getByRole, getByText, getByPlaceholderText, container } = render(<ThemesClient />);
+    const { asFragment, getByRole, getByText, getByPlaceholderText, container } = render(<ThemesClient />);
 
     await waitFor(() => {
       expect(getByText(/Demo Theme/i)).toBeTruthy();
@@ -54,5 +55,7 @@ describe('ThemesClient', () => {
       fireEvent.change(fileInput, { target: { files: [file] } });
       expect(fileInput.files?.[0]?.name).toBe('demo-theme.zip');
     }
+
+    expect(asFragment()).toMatchSnapshot();
   });
 });

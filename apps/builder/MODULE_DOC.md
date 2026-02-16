@@ -17,6 +17,7 @@ The **seller-facing editor** for:
 - Builder production build is forced to webpack via `apps/builder/project.json`.
 
 ## Changelog
+- 2026-02-16: Added snapshot-backed builder route smoke tests (dashboard, themes, publish center) to catch unintentional visual/layout regressions during rapid UX iteration.
 - 2026-02-16: Redesigned dashboard home UX with premium hero metrics, project search/filter, and inline action notices replacing interruptive popups for smoother site/domain/page workflows.
 - 2026-02-16: Upgraded Publish Center UX with premium navigation shell, inline operation notices (no blocking alerts), and cleaner release/rollback status surfaces for faster merchant publishing decisions.
 - 2026-02-16: Redesigned Theme Studio UX with premium visual hierarchy (hero stats, inventory filters, polished cards) and replaced blocking alert popups with inline operation notices for smoother seller workflows.

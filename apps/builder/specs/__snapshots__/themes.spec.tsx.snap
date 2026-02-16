@@ -1,0 +1,386 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`ThemesClient renders upload controls and theme versions 1`] = `
+<DocumentFragment>
+  <div
+    class="min-h-screen bg-slate-50"
+  >
+    <section
+      class="border-b bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white"
+    >
+      <div
+        class="mx-auto max-w-7xl px-6 py-8"
+      >
+        <div
+          class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
+        >
+          <div>
+            <h1
+              class="text-3xl font-bold tracking-tight"
+            >
+              Theme Studio
+            </h1>
+            <p
+              class="mt-2 max-w-2xl text-sm text-slate-200"
+            >
+              Curate theme inventory, package marketplace-ready metadata, and jump into version editors quickly.
+            </p>
+          </div>
+          <div
+            class="flex flex-wrap items-center gap-2"
+          >
+            <button
+              class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
+            >
+              Seed Default Theme
+            </button>
+            <button
+              class="rounded-lg border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20 disabled:opacity-60"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+        <div
+          class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3"
+        >
+          <div
+            class="rounded-xl border border-white/20 bg-white/10 px-4 py-3"
+          >
+            <div
+              class="text-xs uppercase tracking-wide text-slate-300"
+            >
+              Total themes
+            </div>
+            <div
+              class="mt-1 text-2xl font-semibold"
+            >
+              1
+            </div>
+          </div>
+          <div
+            class="rounded-xl border border-white/20 bg-white/10 px-4 py-3"
+          >
+            <div
+              class="text-xs uppercase tracking-wide text-slate-300"
+            >
+              Marketplace listed
+            </div>
+            <div
+              class="mt-1 text-2xl font-semibold"
+            >
+              0
+            </div>
+          </div>
+          <div
+            class="rounded-xl border border-white/20 bg-white/10 px-4 py-3"
+          >
+            <div
+              class="text-xs uppercase tracking-wide text-slate-300"
+            >
+              Paid themes
+            </div>
+            <div
+              class="mt-1 text-2xl font-semibold"
+            >
+              0
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <main
+      class="mx-auto max-w-7xl px-6 py-6"
+    >
+      <section
+        class="rounded-xl border bg-white p-4 shadow-sm"
+      >
+        <div
+          class="flex flex-col gap-1"
+        >
+          <h2
+            class="text-base font-semibold text-slate-900"
+          >
+            Upload Theme Bundle
+          </h2>
+          <p
+            class="text-xs text-slate-500"
+          >
+            Upload zip packages containing 
+            <span
+              class="font-mono"
+            >
+              manifest.json
+            </span>
+            , entry source, and template files.
+          </p>
+        </div>
+        <div
+          class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2"
+        >
+          <input
+            class="rounded-lg border px-3 py-2 text-sm"
+            placeholder="Theme name"
+            value=""
+          />
+          <input
+            class="rounded-lg border px-3 py-2 text-sm"
+            placeholder="Version (optional)"
+            value=""
+          />
+          <input
+            class="rounded-lg border px-3 py-2 text-sm"
+            placeholder="Author (optional)"
+            value=""
+          />
+          <input
+            class="rounded-lg border px-3 py-2 text-sm"
+            placeholder="Description (optional)"
+            value=""
+          />
+          <select
+            class="rounded-lg border px-3 py-2 text-sm"
+          >
+            <option
+              value="FREE"
+            >
+              FREE
+            </option>
+            <option
+              value="PAID"
+            >
+              PAID
+            </option>
+          </select>
+          <input
+            class="rounded-lg border px-3 py-2 text-sm"
+            disabled=""
+            placeholder="Price (cents, optional for PAID)"
+            value=""
+          />
+          <input
+            class="rounded-lg border px-3 py-2 text-sm"
+            placeholder="Currency (USD)"
+            value="USD"
+          />
+          <input
+            class="rounded-lg border px-3 py-2 text-sm"
+            placeholder="License (SINGLE_STORE)"
+            value="SINGLE_STORE"
+          />
+        </div>
+        <div
+          class="mt-4 flex flex-wrap items-center gap-3"
+        >
+          <input
+            accept=".zip,application/zip"
+            type="file"
+          />
+          <button
+            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+          >
+            Upload Theme
+          </button>
+          <div
+            class="text-xs text-slate-600"
+          >
+            Selected bundle: 
+            <span
+              class="font-mono"
+            >
+              demo-theme.zip
+            </span>
+          </div>
+          <label
+            class="text-xs text-slate-700 flex items-center gap-2"
+          >
+            <input
+              type="checkbox"
+            />
+            Listed in marketplace
+          </label>
+        </div>
+      </section>
+      <section
+        class="mt-6 rounded-xl border bg-white p-4 shadow-sm"
+      >
+        <div
+          class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+        >
+          <div>
+            <h2
+              class="text-base font-semibold text-slate-900"
+            >
+              Theme inventory
+            </h2>
+            <p
+              class="text-xs text-slate-500"
+            >
+              Search and filter to focus on storefront-ready themes.
+            </p>
+          </div>
+          <div
+            class="grid grid-cols-1 gap-2 md:grid-cols-3"
+          >
+            <input
+              class="rounded-lg border px-3 py-2 text-sm"
+              placeholder="Search name/author/description"
+              value=""
+            />
+            <select
+              class="rounded-lg border px-3 py-2 text-sm"
+            >
+              <option
+                value="ALL"
+              >
+                All pricing
+              </option>
+              <option
+                value="FREE"
+              >
+                Free
+              </option>
+              <option
+                value="PAID"
+              >
+                Paid
+              </option>
+            </select>
+            <select
+              class="rounded-lg border px-3 py-2 text-sm"
+            >
+              <option
+                value="ALL"
+              >
+                All listing states
+              </option>
+              <option
+                value="LISTED"
+              >
+                Listed
+              </option>
+              <option
+                value="UNLISTED"
+              >
+                Unlisted
+              </option>
+            </select>
+          </div>
+        </div>
+        <div
+          class="mt-4 space-y-4"
+        >
+          <article
+            class="rounded-xl border bg-slate-50 p-4"
+          >
+            <div
+              class="flex flex-wrap items-start justify-between gap-3"
+            >
+              <div>
+                <div
+                  class="text-lg font-semibold text-slate-900"
+                >
+                  Demo Theme
+                </div>
+                <div
+                  class="mt-1 text-sm text-slate-600"
+                >
+                  Demo
+                </div>
+                <div
+                  class="mt-2 flex flex-wrap items-center gap-2 text-xs"
+                >
+                  <span
+                    class="rounded-full bg-slate-900 px-2 py-0.5 font-semibold text-white"
+                  >
+                    Free
+                  </span>
+                  <span
+                    class="rounded-full px-2 py-0.5 font-semibold bg-slate-200 text-slate-700"
+                  >
+                    UNLISTED
+                  </span>
+                  <span
+                    class="rounded-full bg-violet-100 px-2 py-0.5 font-semibold text-violet-700"
+                  >
+                    SINGLE_STORE
+                  </span>
+                </div>
+                <div
+                  class="mt-2 text-xs text-slate-500"
+                >
+                  themeId=
+                  <span
+                    class="font-mono"
+                  >
+                    theme_1
+                  </span>
+                </div>
+              </div>
+              <div
+                class="text-right text-xs text-slate-500"
+              >
+                <div>
+                  Author: Unknown
+                </div>
+                <div
+                  class="mt-1"
+                >
+                  Versions: 1
+                </div>
+              </div>
+            </div>
+            <div
+              class="mt-4"
+            >
+              <div
+                class="mb-2 text-sm font-semibold text-slate-800"
+              >
+                Versions
+              </div>
+              <div
+                class="space-y-2"
+              >
+                <div
+                  class="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2"
+                >
+                  <div
+                    class="text-sm"
+                  >
+                    <span
+                      class="font-mono"
+                    >
+                      1.0.0
+                    </span>
+                    <span
+                      class="ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-emerald-100 text-emerald-700"
+                    >
+                      BUILT
+                    </span>
+                    <div
+                      class="mt-1 text-xs text-slate-500"
+                    >
+                      themeVersionId=
+                      <span
+                        class="font-mono"
+                      >
+                        tv_1
+                      </span>
+                    </div>
+                  </div>
+                  <a
+                    class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                    href="/themes/versions/tv_1"
+                  >
+                    Open Editor
+                  </a>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+</DocumentFragment>
+`;
