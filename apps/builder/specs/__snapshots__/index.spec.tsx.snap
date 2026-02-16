@@ -334,6 +334,30 @@ exports[`Page should render dashboard shell 1`] = `
                     domain: demo.localhost
                   </div>
                   <div
+                    class="mt-2 flex flex-wrap items-center gap-2 text-[11px]"
+                  >
+                    <span
+                      class="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700"
+                    >
+                      Published theme: 
+                      <span
+                        class="font-mono"
+                      >
+                        —
+                      </span>
+                    </span>
+                    <span
+                      class="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700"
+                    >
+                      Last release: 
+                      <span
+                        class="font-medium"
+                      >
+                        never
+                      </span>
+                    </span>
+                  </div>
+                  <div
                     class="mt-2 flex flex-wrap items-center gap-2"
                   >
                     <a

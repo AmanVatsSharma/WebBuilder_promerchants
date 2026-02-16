@@ -77,6 +77,8 @@ describe('Page', () => {
     expect(getByText(/Domain Ops Pulse/i)).toBeTruthy();
     expect(getByText(/Success rate/i)).toBeTruthy();
     expect(getByText(/TXT record mismatch/i)).toBeTruthy();
+    expect(getByText(/Published theme:/i)).toBeTruthy();
+    expect(getByText(/Last release:/i)).toBeTruthy();
     expect(getByText(/Open Latest Editor/i)).toBeTruthy();
     expect(getByText(/Open Live Storefront/i)).toBeTruthy();
     expect(asFragment()).toMatchSnapshot();

@@ -63,6 +63,22 @@ type DomainChallengeAlertDto = {
   createdAt: string;
 };
 
+type ThemeInstallDto = {
+  siteId: string;
+  themeId: string;
+  draftThemeVersionId?: string | null;
+  publishedThemeVersionId?: string | null;
+};
+
+type ThemeAuditDto = {
+  id: string;
+  action: 'PUBLISH' | 'ROLLBACK';
+  actor: string;
+  fromThemeVersionId?: string | null;
+  toThemeVersionId: string;
+  createdAt: string;
+};
+
 type PageDraft = {
   title: string;
   slug: string;
@@ -102,6 +118,8 @@ export default function BuilderDashboardPage() {
   const [sites, setSites] = useState<SiteDto[]>([]);
   const [pagesBySite, setPagesBySite] = useState<Record<string, PageDto[]>>({});
   const [domainsBySite, setDomainsBySite] = useState<Record<string, DomainMappingDto[]>>({});
+  const [themeInstallBySite, setThemeInstallBySite] = useState<Record<string, ThemeInstallDto | null>>({});
+  const [latestThemeAuditBySite, setLatestThemeAuditBySite] = useState<Record<string, ThemeAuditDto | null>>({});
   const [challengeMetrics, setChallengeMetrics] = useState<DomainChallengeMetricsDto | null>(null);
   const [challengeAlerts, setChallengeAlerts] = useState<DomainChallengeAlertDto[]>([]);
 
@@ -174,18 +192,33 @@ export default function BuilderDashboardPage() {
       setSites(nextSites);
 
       const nextPagesBySite: Record<string, PageDto[]> = {};
+      const nextThemeInstallBySite: Record<string, ThemeInstallDto | null> = {};
+      const nextLatestThemeAuditBySite: Record<string, ThemeAuditDto | null> = {};
       await Promise.all(
         nextSites.map(async (site) => {
+          const [pagesResult, installResult, auditsResult] = await Promise.all([
+            apiGet<PageDto[]>(`/api/sites/${encodeURIComponent(site.id)}/pages`).catch(() => []),
+            apiGet<ThemeInstallDto>(`/api/sites/${encodeURIComponent(site.id)}/theme`).catch(() => null),
+            apiGet<ThemeAuditDto[]>(`/api/sites/${encodeURIComponent(site.id)}/theme/audits`).catch(() => []),
+          ]);
           try {
-            nextPagesBySite[site.id] = await apiGet<PageDto[]>(
-              `/api/sites/${encodeURIComponent(site.id)}/pages`,
-            );
-          } catch {
+            nextPagesBySite[site.id] = pagesResult;
+            nextThemeInstallBySite[site.id] = installResult;
+            nextLatestThemeAuditBySite[site.id] = auditsResult[0] || null;
+          } catch (error: any) {
+            console.error('[builder-dashboard] site-data load failed', {
+              siteId: site.id,
+              reason: error?.message || error,
+            });
             nextPagesBySite[site.id] = [];
+            nextThemeInstallBySite[site.id] = null;
+            nextLatestThemeAuditBySite[site.id] = null;
           }
         }),
       );
       setPagesBySite(nextPagesBySite);
+      setThemeInstallBySite(nextThemeInstallBySite);
+      setLatestThemeAuditBySite(nextLatestThemeAuditBySite);
 
       try {
         const mappings = await apiGet<DomainMappingDto[]>('/api/domains');
@@ -477,6 +510,8 @@ export default function BuilderDashboardPage() {
               {filteredSites.map((site) => {
                 const pages = pagesBySite[site.id] || [];
                 const domains = domainsBySite[site.id] || [];
+                const themeInstall = themeInstallBySite[site.id];
+                const latestThemeAudit = latestThemeAuditBySite[site.id];
                 const pageDraft = pageDraftBySite[site.id] || defaultDraft;
                 const domainDraft = domainDraftBySite[site.id] || '';
                 const latestPage = pages[0] || null;
@@ -492,6 +527,22 @@ export default function BuilderDashboardPage() {
                           siteId: <span className="font-mono">{site.id}</span>
                         </div>
                         <div className="text-xs text-slate-600">domain: {site.domain || 'not set'}</div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700">
+                            Published theme:{' '}
+                            <span className="font-mono">
+                              {themeInstall?.publishedThemeVersionId || '—'}
+                            </span>
+                          </span>
+                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700">
+                            Last release:{' '}
+                            <span className="font-medium">
+                              {latestThemeAudit
+                                ? new Date(latestThemeAudit.createdAt).toLocaleString()
+                                : 'never'}
+                            </span>
+                          </span>
+                        </div>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           {latestPage ? (
                             <Link
