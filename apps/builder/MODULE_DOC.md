@@ -17,6 +17,7 @@ The **seller-facing editor** for:
 - Builder production build is forced to webpack via `apps/builder/project.json`.
 
 ## Changelog
+- 2026-02-16: Redesigned dashboard home UX with premium hero metrics, project search/filter, and inline action notices replacing interruptive popups for smoother site/domain/page workflows.
 - 2026-02-16: Upgraded Publish Center UX with premium navigation shell, inline operation notices (no blocking alerts), and cleaner release/rollback status surfaces for faster merchant publishing decisions.
 - 2026-02-16: Redesigned Theme Studio UX with premium visual hierarchy (hero stats, inventory filters, polished cards) and replaced blocking alert popups with inline operation notices for smoother seller workflows.
 - 2026-02-16: Added domain challenge SLO dashboard panel on home route with success-rate/retry/alert signal cards and recent alert feed for investor-demo operations visibility.

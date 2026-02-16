@@ -61,7 +61,7 @@ jest.mock('../src/lib/api', () => ({
 
 describe('Page', () => {
   it('should render dashboard shell', async () => {
-    const { getByRole, getByText, queryByText } = render(<Page />);
+    const { getByRole, getByText, getAllByText, queryByText } = render(<Page />);
     expect(getByText(/WebBuilder Studio/i)).toBeTruthy();
     expect(getByRole('heading', { name: /Create Site/i })).toBeTruthy();
 
@@ -69,7 +69,7 @@ describe('Page', () => {
       expect(queryByText(/Loading projects/i)).toBeFalsy();
     });
 
-    expect(getByText(/Domains/i)).toBeTruthy();
+    expect(getAllByText(/Domains/i).length).toBeGreaterThan(0);
     expect(getByText(/shop.demo.localhost/i)).toBeTruthy();
     expect(getByText(/Verify/i)).toBeTruthy();
     expect(getByText(/Domain Ops Pulse/i)).toBeTruthy();
