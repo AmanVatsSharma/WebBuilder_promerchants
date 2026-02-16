@@ -106,6 +106,8 @@ async function verifyPassword(password: string, passwordHash: string) {
 @Injectable()
 export class IdentityService {
   private readonly logger = new Logger(IdentityService.name);
+  private oidcDiscoveryCache: { expiresAt: number; data: unknown } | null = null;
+  private oidcJwksCache: { expiresAt: number; data: unknown } | null = null;
 
   constructor(
     @InjectRepository(User)
@@ -317,6 +319,55 @@ export class IdentityService {
         active: false,
       };
     }
+  }
+
+  async getOidcDiscovery() {
+    const url = String(process.env.AUTH_OIDC_DISCOVERY_URL || '').trim();
+    if (!url) throw new BadRequestException('AUTH_OIDC_DISCOVERY_URL is required');
+
+    const now = Date.now();
+    if (this.oidcDiscoveryCache && this.oidcDiscoveryCache.expiresAt > now) {
+      return this.oidcDiscoveryCache.data;
+    }
+
+    const response = await fetch(url, { method: 'GET' });
+    if (!response.ok) {
+      throw new BadRequestException(`OIDC discovery fetch failed: ${response.status}`);
+    }
+    const data = await response.json();
+    const ttlMs = Number(process.env.AUTH_OIDC_CACHE_TTL_MS || 300000);
+    this.oidcDiscoveryCache = {
+      expiresAt: now + Math.max(5000, ttlMs),
+      data,
+    };
+    return data;
+  }
+
+  async getOidcJwks() {
+    const explicitJwksUrl = String(process.env.AUTH_OIDC_JWKS_URL || '').trim();
+    let jwksUrl = explicitJwksUrl;
+    if (!jwksUrl) {
+      const discovery = (await this.getOidcDiscovery()) as Record<string, unknown>;
+      jwksUrl = String(discovery.jwks_uri || '').trim();
+    }
+    if (!jwksUrl) throw new BadRequestException('OIDC jwks_uri is not configured');
+
+    const now = Date.now();
+    if (this.oidcJwksCache && this.oidcJwksCache.expiresAt > now) {
+      return this.oidcJwksCache.data;
+    }
+
+    const response = await fetch(jwksUrl, { method: 'GET' });
+    if (!response.ok) {
+      throw new BadRequestException(`OIDC JWKS fetch failed: ${response.status}`);
+    }
+    const data = await response.json();
+    const ttlMs = Number(process.env.AUTH_OIDC_CACHE_TTL_MS || 300000);
+    this.oidcJwksCache = {
+      expiresAt: now + Math.max(5000, ttlMs),
+      data,
+    };
+    return data;
   }
 
   private async createSession(userId: string, workspaceIds: string[]) {

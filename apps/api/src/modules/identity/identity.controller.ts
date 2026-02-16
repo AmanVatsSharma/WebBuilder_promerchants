@@ -47,5 +47,15 @@ export class IdentityController {
   introspect(@Body() dto: IntrospectTokenDto) {
     return this.identityService.introspectToken(dto.token);
   }
+
+  @Get('oidc/discovery')
+  oidcDiscovery() {
+    return this.identityService.getOidcDiscovery();
+  }
+
+  @Get('oidc/jwks')
+  oidcJwks() {
+    return this.identityService.getOidcJwks();
+  }
 }
 

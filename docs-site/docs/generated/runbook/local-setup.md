@@ -51,6 +51,10 @@ This starts Postgres, Redis, API, worker, builder, and storefront.
   - Optional key rotation config:
     - `AUTH_JWT_ACTIVE_KID`
     - `AUTH_JWT_SECRETS_JSON` (JSON map of `{ "<kid>": "<secret>" }`)
+  - Optional OIDC bridge config:
+    - `AUTH_OIDC_DISCOVERY_URL`
+    - `AUTH_OIDC_JWKS_URL`
+    - `AUTH_OIDC_CACHE_TTL_MS`
   - Optional `AUTH_JWT_ISSUER` / `AUTH_JWT_AUDIENCE` for extra JWT claim checks
   - Optional `AUTH_JWT_TTL_SECONDS` (token lifetime, default 3600)
   - `ENFORCE_SITE_SCOPE=true` (require `x-site-id` to match route `:siteId` for site-scoped endpoints)
@@ -96,6 +100,8 @@ curl http://localhost:3000/api/auth/jwks
 curl -X POST http://localhost:3000/api/auth/introspect \
   -H "content-type: application/json" \
   -d '{"token":"<access-token>"}'
+curl http://localhost:3000/api/auth/oidc/discovery
+curl http://localhost:3000/api/auth/oidc/jwks
 ```
 
 ## Domain challenge SLO metrics

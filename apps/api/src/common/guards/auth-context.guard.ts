@@ -23,6 +23,7 @@ function isPublicAuthRoute(path: string) {
     path.startsWith('/api/auth/logout') ||
     path.startsWith('/api/auth/jwks') ||
     path.startsWith('/api/auth/introspect') ||
+    path.startsWith('/api/auth/oidc/') ||
     path.startsWith('/api/domains/resolve')
   );
 }

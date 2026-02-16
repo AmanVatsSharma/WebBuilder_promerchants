@@ -45,6 +45,11 @@ describe('Theme lifecycle (seed -> build -> install -> publish) + commerce + set
     expect(introspectRes.status).toBe(201);
     expect(introspectRes.data.active).toBe(true);
 
+    const oidcDiscoveryRes = await axios.get(`/api/auth/oidc/discovery`, {
+      validateStatus: () => true,
+    });
+    expect(oidcDiscoveryRes.status).toBe(400);
+
     const client = axios.create({
       headers: {
         Authorization: `Bearer ${refreshRes.data.token}`,

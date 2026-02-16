@@ -24,6 +24,7 @@ Deploy the editor-first MVP with:
 - If enabling JWT auth context (`ENFORCE_AUTH_CONTEXT=true`), set:
   - `AUTH_JWT_SECRET` (+ optional issuer/audience checks)
   - Optional key rotation: `AUTH_JWT_ACTIVE_KID` + `AUTH_JWT_SECRETS_JSON`
+  - Optional external OIDC bridge: `AUTH_OIDC_DISCOVERY_URL` / `AUTH_OIDC_JWKS_URL` / `AUTH_OIDC_CACHE_TTL_MS`
   - `AUTH_REFRESH_TTL_SECONDS` (session lifetime)
   - `NEXT_PUBLIC_API_AUTH_TOKEN` (builder)
   - `API_AUTH_TOKEN` (storefront)

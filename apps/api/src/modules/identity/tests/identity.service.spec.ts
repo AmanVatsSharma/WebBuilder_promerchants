@@ -15,6 +15,10 @@ describe('IdentityService', () => {
   const originalSecretsJson = process.env.AUTH_JWT_SECRETS_JSON;
   const originalTtl = process.env.AUTH_JWT_TTL_SECONDS;
   const originalRefreshTtl = process.env.AUTH_REFRESH_TTL_SECONDS;
+  const originalOidcDiscovery = process.env.AUTH_OIDC_DISCOVERY_URL;
+  const originalOidcJwks = process.env.AUTH_OIDC_JWKS_URL;
+  const originalOidcCacheTtl = process.env.AUTH_OIDC_CACHE_TTL_MS;
+  const originalFetch = global.fetch;
 
   afterEach(() => {
     process.env.AUTH_JWT_SECRET = originalSecret;
@@ -22,6 +26,10 @@ describe('IdentityService', () => {
     process.env.AUTH_JWT_SECRETS_JSON = originalSecretsJson;
     process.env.AUTH_JWT_TTL_SECONDS = originalTtl;
     process.env.AUTH_REFRESH_TTL_SECONDS = originalRefreshTtl;
+    process.env.AUTH_OIDC_DISCOVERY_URL = originalOidcDiscovery;
+    process.env.AUTH_OIDC_JWKS_URL = originalOidcJwks;
+    process.env.AUTH_OIDC_CACHE_TTL_MS = originalOidcCacheTtl;
+    global.fetch = originalFetch;
     jest.restoreAllMocks();
   });
 
@@ -201,6 +209,38 @@ describe('IdentityService', () => {
     expect(introspect.active).toBe(true);
     expect(introspect.actorId).toBe('user_1');
     expect(introspect.kid).toBe('k1');
+  });
+
+  it('fetches oidc discovery and jwks with cache', async () => {
+    const { service } = buildService();
+    process.env.AUTH_OIDC_DISCOVERY_URL = 'https://issuer/.well-known/openid-configuration';
+    process.env.AUTH_OIDC_CACHE_TTL_MS = '60000';
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ issuer: 'https://issuer', jwks_uri: 'https://issuer/jwks' }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ keys: [{ kid: 'k1', kty: 'RSA' }] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ) as any;
+
+    const discovery = await service.getOidcDiscovery();
+    const jwks = await service.getOidcJwks();
+
+    expect((discovery as any).issuer).toBe('https://issuer');
+    expect(Array.isArray((jwks as any).keys)).toBe(true);
+    expect((global.fetch as any).mock.calls.length).toBe(2);
+
+    // Cached path should avoid extra network call.
+    await service.getOidcDiscovery();
+    await service.getOidcJwks();
+    expect((global.fetch as any).mock.calls.length).toBe(2);
   });
 });
 
