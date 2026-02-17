@@ -1,0 +1,562 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Page should render dashboard shell 1`] = `
+<DocumentFragment>
+  <main
+    class="min-h-screen bg-slate-50"
+  >
+    <section
+      class="border-b bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white"
+    >
+      <div
+        class="mx-auto max-w-7xl px-6 py-6"
+      >
+        <div
+          class="flex flex-wrap items-start justify-between gap-4"
+        >
+          <div>
+            <h1
+              class="text-3xl font-bold tracking-tight"
+            >
+              WebBuilder Studio
+            </h1>
+            <p
+              class="mt-1 text-sm text-slate-200"
+            >
+              Build pages, launch domains, and run operations with confidence.
+            </p>
+          </div>
+          <div
+            class="flex items-center gap-2"
+          >
+            <a
+              class="rounded border border-white/30 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
+              href="/themes"
+            >
+              Themes
+            </a>
+            <a
+              class="rounded border border-white/30 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
+              href="/extensions"
+            >
+              Extensions
+            </a>
+            <button
+              class="rounded border border-white/30 bg-white/10 px-3 py-2 text-sm hover:bg-white/20 disabled:opacity-50"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+        <div
+          class="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4"
+        >
+          <div
+            class="rounded-lg border border-white/20 bg-white/10 px-3 py-2"
+          >
+            <div
+              class="text-xs text-slate-300"
+            >
+              Sites
+            </div>
+            <div
+              class="text-xl font-semibold"
+            >
+              1
+            </div>
+          </div>
+          <div
+            class="rounded-lg border border-white/20 bg-white/10 px-3 py-2"
+          >
+            <div
+              class="text-xs text-slate-300"
+            >
+              Pages
+            </div>
+            <div
+              class="text-xl font-semibold"
+            >
+              1
+            </div>
+          </div>
+          <div
+            class="rounded-lg border border-white/20 bg-white/10 px-3 py-2"
+          >
+            <div
+              class="text-xs text-slate-300"
+            >
+              Domains
+            </div>
+            <div
+              class="text-xl font-semibold"
+            >
+              1
+            </div>
+          </div>
+          <div
+            class="rounded-lg border border-white/20 bg-white/10 px-3 py-2"
+          >
+            <div
+              class="text-xs text-slate-300"
+            >
+              Verified
+            </div>
+            <div
+              class="text-xl font-semibold"
+            >
+              0
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section
+      class="mx-auto max-w-7xl px-6 py-6"
+    >
+      <div
+        class="grid grid-cols-1 gap-6 lg:grid-cols-3"
+      >
+        <div
+          class="space-y-6 lg:col-span-1"
+        >
+          <div
+            class="rounded-xl border bg-white p-4 shadow-sm"
+          >
+            <h2
+              class="font-semibold text-slate-900"
+            >
+              Create Site
+            </h2>
+            <p
+              class="mt-1 text-xs text-slate-600"
+            >
+              Start a new project and add pages in seconds.
+            </p>
+            <div
+              class="mt-4 space-y-3"
+            >
+              <input
+                class="w-full rounded border px-3 py-2 text-sm"
+                placeholder="Site name (required)"
+                value=""
+              />
+              <input
+                class="w-full rounded border px-3 py-2 text-sm"
+                placeholder="Domain (optional)"
+                value=""
+              />
+              <button
+                class="w-full rounded bg-blue-600 px-3 py-2 text-sm text-white disabled:opacity-50"
+              >
+                Create Site
+              </button>
+            </div>
+          </div>
+          <div
+            class="rounded-xl border bg-white p-4 shadow-sm"
+          >
+            <div
+              class="flex items-center justify-between gap-2"
+            >
+              <h2
+                class="font-semibold text-slate-900"
+              >
+                Domain Ops Pulse
+              </h2>
+              <span
+                class="text-[11px] text-slate-500"
+              >
+                SLO snapshot
+              </span>
+            </div>
+            <p
+              class="mt-1 text-xs text-slate-600"
+            >
+              Track domain challenge reliability before launch day.
+            </p>
+            <div
+              class="mt-3 grid grid-cols-2 gap-2 text-xs"
+            >
+              <div
+                class="rounded border bg-slate-50 px-2 py-2"
+              >
+                <div
+                  class="text-slate-500"
+                >
+                  Success rate
+                </div>
+                <div
+                  class="font-semibold text-slate-900"
+                >
+                  81.8%
+                </div>
+              </div>
+              <div
+                class="rounded border bg-slate-50 px-2 py-2"
+              >
+                <div
+                  class="text-slate-500"
+                >
+                  Challenges
+                </div>
+                <div
+                  class="font-semibold text-slate-900"
+                >
+                  12
+                </div>
+              </div>
+              <div
+                class="rounded border bg-slate-50 px-2 py-2"
+              >
+                <div
+                  class="text-slate-500"
+                >
+                  Due retries
+                </div>
+                <div
+                  class="font-semibold text-slate-900"
+                >
+                  1
+                </div>
+              </div>
+              <div
+                class="rounded border bg-slate-50 px-2 py-2"
+              >
+                <div
+                  class="text-slate-500"
+                >
+                  Undelivered alerts
+                </div>
+                <div
+                  class="font-semibold text-slate-900"
+                >
+                  1
+                </div>
+              </div>
+            </div>
+            <div
+              class="mt-3"
+            >
+              <div
+                class="text-xs font-semibold text-slate-700"
+              >
+                Recent challenge alerts
+              </div>
+              <div
+                class="mt-2 space-y-2"
+              >
+                <div
+                  class="rounded border bg-slate-50 px-2 py-2 text-[11px]"
+                >
+                  <div
+                    class="flex items-center justify-between gap-2"
+                  >
+                    <span
+                      class="font-semibold text-slate-800"
+                    >
+                      ERROR
+                    </span>
+                    <span
+                      class="rounded px-1.5 py-0.5 bg-amber-100 text-amber-700"
+                    >
+                      Pending delivery
+                    </span>
+                  </div>
+                  <div
+                    class="mt-1 text-slate-700"
+                  >
+                    TXT record mismatch
+                  </div>
+                  <div
+                    class="mt-1 text-slate-500"
+                  >
+                    2/16/2026, 10:00:00 AM
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rounded-xl border bg-white p-4 shadow-sm lg:col-span-2"
+        >
+          <div
+            class="flex flex-wrap items-center justify-between gap-3"
+          >
+            <h2
+              class="font-semibold text-slate-900"
+            >
+              Projects
+            </h2>
+            <div
+              class="flex flex-wrap items-center gap-2"
+            >
+              <input
+                class="rounded border px-3 py-2 text-xs"
+                placeholder="Search site/name/domain"
+                value=""
+              />
+              <div
+                class="text-xs text-slate-500"
+              >
+                1/1 site(s) · 1 page(s)
+              </div>
+              <div
+                class="rounded bg-slate-100 px-2 py-1 text-[11px] text-slate-700"
+              >
+                Shortcut totals: E 0 · S 0 · P 0
+              </div>
+              <button
+                class="rounded border px-2 py-1 text-[11px] hover:bg-slate-100"
+              >
+                Reset shortcut stats
+              </button>
+              <button
+                class="rounded border px-2 py-1 text-[11px] hover:bg-slate-100"
+              >
+                Export shortcut stats
+              </button>
+            </div>
+          </div>
+          <div
+            class="mt-4 space-y-4"
+          >
+            <section
+              class="rounded-lg border bg-slate-50 p-4"
+            >
+              <div
+                class="flex flex-wrap items-start justify-between gap-3"
+              >
+                <div>
+                  <div
+                    class="font-semibold text-slate-900"
+                  >
+                    Demo Site
+                  </div>
+                  <div
+                    class="mt-1 text-xs text-slate-600"
+                  >
+                    siteId: 
+                    <span
+                      class="font-mono"
+                    >
+                      site_1
+                    </span>
+                  </div>
+                  <div
+                    class="text-xs text-slate-600"
+                  >
+                    domain: demo.localhost
+                  </div>
+                  <div
+                    class="mt-2 flex flex-wrap items-center gap-2 text-[11px]"
+                  >
+                    <span
+                      class="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700"
+                    >
+                      Published theme version: 
+                      <span
+                        class="font-mono"
+                      >
+                        1.0.0
+                      </span>
+                    </span>
+                    <span
+                      class="rounded-full px-2 py-0.5 font-semibold bg-emerald-100 text-emerald-700"
+                    >
+                      Published status: BUILT
+                    </span>
+                    <span
+                      class="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700"
+                    >
+                      Draft theme version: 
+                      <span
+                        class="font-mono"
+                      >
+                        1.1.0-draft
+                      </span>
+                    </span>
+                    <span
+                      class="rounded-full px-2 py-0.5 font-semibold bg-slate-200 text-slate-700"
+                    >
+                      Draft status: DRAFT
+                    </span>
+                    <span
+                      class="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700"
+                    >
+                      Last release: 
+                      <span
+                        class="font-medium"
+                      >
+                        2/16/2026, 10:00:00 AM
+                      </span>
+                    </span>
+                    <span
+                      class="rounded-full bg-slate-200 px-2 py-0.5 text-slate-700"
+                    >
+                      Shortcut clicks: 
+                      <span
+                        class="font-medium"
+                      >
+                        E 0 · S 0 · P 0
+                      </span>
+                    </span>
+                  </div>
+                  <div
+                    class="mt-2 flex flex-wrap items-center gap-2"
+                  >
+                    <a
+                      class="rounded border bg-white px-2 py-1 text-[11px] hover:bg-slate-100"
+                      href="/editor/page_1"
+                    >
+                      Open Latest Editor
+                    </a>
+                    <a
+                      class="rounded border bg-white px-2 py-1 text-[11px] hover:bg-slate-100"
+                      href="http://demo.localhost/"
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Open Live Storefront
+                    </a>
+                  </div>
+                </div>
+                <a
+                  class="rounded border bg-white px-3 py-2 text-xs"
+                  href="/sites/site_1/publish"
+                >
+                  Publish Center
+                </a>
+              </div>
+              <div
+                class="mt-4 rounded border bg-white p-3"
+              >
+                <div
+                  class="text-xs font-semibold text-slate-700"
+                >
+                  Domains
+                </div>
+                <div
+                  class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-5"
+                >
+                  <input
+                    class="rounded border px-2 py-2 text-sm md:col-span-4"
+                    placeholder="shop.example.com"
+                    value=""
+                  />
+                  <button
+                    class="rounded bg-violet-600 px-3 py-2 text-sm text-white disabled:opacity-50 md:col-span-1"
+                  >
+                    Add Domain
+                  </button>
+                </div>
+                <div
+                  class="mt-2 space-y-2"
+                >
+                  <div
+                    class="flex items-center justify-between gap-3 rounded border bg-slate-50 px-2 py-2 text-xs"
+                  >
+                    <div
+                      class="font-mono break-all"
+                    >
+                      shop.demo.localhost
+                    </div>
+                    <div
+                      class="flex items-center gap-2"
+                    >
+                      <span
+                        class="rounded px-2 py-1 bg-amber-100 text-amber-700"
+                      >
+                        PENDING
+                      </span>
+                      <button
+                        class="rounded border px-2 py-1 text-[11px] disabled:opacity-50"
+                      >
+                        Verify
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="mt-4 rounded border bg-white p-3"
+              >
+                <div
+                  class="text-xs font-semibold text-slate-700"
+                >
+                  Add Page
+                </div>
+                <div
+                  class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-5"
+                >
+                  <input
+                    class="rounded border px-2 py-2 text-sm md:col-span-2"
+                    placeholder="Title"
+                    value="Home"
+                  />
+                  <input
+                    class="rounded border px-2 py-2 text-sm md:col-span-2"
+                    placeholder="Slug"
+                    value="home"
+                  />
+                  <button
+                    class="rounded bg-emerald-600 px-3 py-2 text-sm text-white disabled:opacity-50 md:col-span-1"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+              <div
+                class="mt-3 space-y-2"
+              >
+                <div
+                  class="flex flex-wrap items-center justify-between gap-2 rounded border bg-white px-3 py-2"
+                >
+                  <div>
+                    <div
+                      class="text-sm font-semibold text-slate-800"
+                    >
+                      Home
+                    </div>
+                    <div
+                      class="text-xs text-slate-600"
+                    >
+                      /home · pageId: 
+                      <span
+                        class="font-mono"
+                      >
+                        page_1
+                      </span>
+                    </div>
+                  </div>
+                  <div
+                    class="flex items-center gap-2"
+                  >
+                    <span
+                      class="rounded px-2 py-1 text-[11px] bg-emerald-100 text-emerald-700"
+                    >
+                      PUBLISHED
+                    </span>
+                    <a
+                      class="rounded border bg-white px-2 py-1 text-xs"
+                      href="/editor/page_1"
+                    >
+                      Edit
+                    </a>
+                    <a
+                      class="rounded border bg-white px-2 py-1 text-xs"
+                      href="/preview/page_1"
+                    >
+                      Preview
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</DocumentFragment>
+`;

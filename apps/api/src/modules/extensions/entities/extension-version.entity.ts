@@ -11,6 +11,10 @@ import { Extension } from './extension.entity';
 
 export type ExtensionVersionStatus = 'DRAFT' | 'BUILDING' | 'BUILT' | 'FAILED';
 
+function dateType() {
+  return (process.env.DB_TYPE === 'sqljs' ? 'datetime' : 'timestamptz') as any;
+}
+
 @Entity('extension_versions')
 @Index(['extensionId', 'version'], { unique: false })
 export class ExtensionVersion {
@@ -36,10 +40,10 @@ export class ExtensionVersion {
   @Column({ type: 'text', nullable: true })
   buildLog?: string | null;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ type: dateType() })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ type: dateType() })
   updatedAt: Date;
 }
 

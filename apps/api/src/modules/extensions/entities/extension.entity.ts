@@ -8,6 +8,10 @@
 
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
+function dateType() {
+  return (process.env.DB_TYPE === 'sqljs' ? 'datetime' : 'timestamptz') as any;
+}
+
 @Entity('extensions')
 export class Extension {
   @PrimaryGeneratedColumn('uuid')
@@ -22,10 +26,10 @@ export class Extension {
   @Column({ type: 'varchar', nullable: true })
   author?: string | null;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ type: dateType() })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ type: dateType() })
   updatedAt: Date;
 }
 

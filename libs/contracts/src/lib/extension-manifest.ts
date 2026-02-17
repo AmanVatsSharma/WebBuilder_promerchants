@@ -11,7 +11,7 @@
 
 import type { ExtensionManifestV1 } from './contracts';
 
-export type ValidationResult<T> =
+export type ExtensionManifestValidationResult<T> =
   | { ok: true; value: T }
   | { ok: false; errors: string[] };
 
@@ -23,11 +23,22 @@ function isNonEmptyString(v: unknown): v is string {
   return typeof v === 'string' && v.trim().length > 0;
 }
 
+function isSafeBundleRelativePath(v: unknown): v is string {
+  if (!isNonEmptyString(v)) return false;
+  const normalized = v.replace(/\\/g, '/').trim();
+  if (!normalized) return false;
+  if (normalized.startsWith('/')) return false;
+  if (normalized.includes('\0')) return false;
+  const segments = normalized.split('/');
+  if (segments.some((s) => s === '..' || s.length === 0)) return false;
+  return true;
+}
+
 function pushErr(errors: string[], path: string, msg: string) {
   errors.push(`${path}: ${msg}`);
 }
 
-export function parseExtensionManifestV1(input: unknown): ValidationResult<ExtensionManifestV1> {
+export function parseExtensionManifestV1(input: unknown): ExtensionManifestValidationResult<ExtensionManifestV1> {
   const errors: string[] = [];
   if (!isRecord(input)) {
     return { ok: false, errors: ['manifest: must be an object'] };
@@ -51,7 +62,11 @@ export function parseExtensionManifestV1(input: unknown): ValidationResult<Exten
         }
         if (!isNonEmptyString(b['type'])) pushErr(errors, `${p}.type`, 'must be a non-empty string');
         if (!isNonEmptyString(b['label'])) pushErr(errors, `${p}.label`, 'must be a non-empty string');
-        if (!isNonEmptyString(b['entry'])) pushErr(errors, `${p}.entry`, 'must be a non-empty string');
+        if (!isNonEmptyString(b['entry'])) {
+          pushErr(errors, `${p}.entry`, 'must be a non-empty string');
+        } else if (!isSafeBundleRelativePath(b['entry'])) {
+          pushErr(errors, `${p}.entry`, 'must be a safe bundle-relative path');
+        }
       });
     }
   }

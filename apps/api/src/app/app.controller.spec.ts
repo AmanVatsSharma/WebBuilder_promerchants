@@ -18,4 +18,14 @@ describe('AppController', () => {
       expect(appController.getData()).toEqual({message: 'Hello API'});
     });
   });
+
+  describe('getHealth', () => {
+    it('should return health status', () => {
+      const appController = app.get<AppController>(AppController);
+      const health = appController.getHealth();
+      expect(health.status).toBe('ok');
+      expect(typeof health.timestamp).toBe('string');
+      expect(typeof health.uptimeSeconds).toBe('number');
+    });
+  });
 });

@@ -13,6 +13,7 @@ import { resolveTemplateMatchForPath } from '../../../lib/theme-routing';
 import { createApiCommerceAdapter } from '../../../lib/commerce-adapter';
 import { randomUUID } from 'crypto';
 import { loadExtensionModule } from '../../../lib/extension-runtime';
+import { StorefrontFallbackShell } from '../../../components/storefront-fallback-shell';
 
 export default async function ProductPage({
   params,
@@ -29,10 +30,16 @@ export default async function ProductPage({
   const site = await resolveSiteByHost(host, requestId);
   if (!site) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>Storefront</h1>
-        <p>Tenant not found for host: {host}</p>
-      </main>
+      <StorefrontFallbackShell
+        badge="Tenant missing"
+        title="Storefront tenant could not be resolved"
+        description="This host is not connected to an active storefront tenant."
+        details={[
+          { label: 'Host', value: host },
+          { label: 'Request ID', value: requestId },
+        ]}
+        actions={[{ label: 'Open storefront root', href: '/' }]}
+      />
     );
   }
 
@@ -43,10 +50,21 @@ export default async function ProductPage({
   const themeVersionId = previewThemeVersionId || installed?.published || null;
   if (!themeVersionId) {
     return (
-      <main style={{ padding: 24 }}>
-        <h1>{site.name}</h1>
-        <p>No theme published yet.</p>
-      </main>
+      <StorefrontFallbackShell
+        badge="Theme missing"
+        title={`${site.name}: no published theme yet`}
+        description="Product routes require a published theme with product template mapping."
+        details={[
+          { label: 'Site ID', value: site.id },
+          { label: 'Product handle', value: handle },
+          { label: 'Request ID', value: requestId },
+        ]}
+        actions={[{ label: 'Open storefront home', href: '/' }]}
+        hints={[
+          'Publish a theme version from Builder.',
+          'Ensure manifest.routes includes products route mapping.',
+        ]}
+      />
     );
   }
 
@@ -81,10 +99,21 @@ export default async function ProductPage({
   }
 
   return (
-    <main style={{ padding: 24 }}>
-      <h1>{site.name}</h1>
-      <p>Theme could not resolve a product template for: {pathname}</p>
-    </main>
+    <StorefrontFallbackShell
+      badge="Template missing"
+      title={`${site.name}: product template not resolved`}
+      description="The current theme does not expose a template for this product route."
+      details={[
+        { label: 'Route', value: pathname },
+        { label: 'Theme version', value: themeVersionId },
+        { label: 'Request ID', value: requestId },
+      ]}
+      actions={[{ label: 'Back to storefront home', href: '/' }]}
+      hints={[
+        'Add route mapping for products path in manifest.routes.',
+        'Rebuild and republish theme after template changes.',
+      ]}
+    />
   );
 }
 

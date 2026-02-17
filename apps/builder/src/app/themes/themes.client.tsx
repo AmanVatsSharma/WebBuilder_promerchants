@@ -1,32 +1,346 @@
 /**
  * File: apps/builder/src/app/themes/themes.client.tsx
  * Module: builder-themes
- * Purpose: Client UI for theme list + seed + navigation
+ * Purpose: Client UX for theme inventory, upload, and editor navigation
  * Author: Cursor / Aman
- * Last-updated: 2025-12-16
+ * Last-updated: 2026-02-16
  */
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiGet, apiPost } from '../../lib/api';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { apiGet, apiPost, apiUpload } from '../../lib/api';
+import { InlineNotice, type NoticeTone } from '../../components/inline-notice';
 
 type ThemeVersion = { id: string; version: string; status: string; createdAt: string };
-type Theme = { id: string; name: string; description?: string | null; author?: string | null; versions?: ThemeVersion[] };
+type Theme = {
+  id: string;
+  name: string;
+  description?: string | null;
+  author?: string | null;
+  pricingModel?: 'FREE' | 'PAID';
+  priceCents?: number | null;
+  currency?: string | null;
+  licenseType?: string | null;
+  isListed?: boolean;
+  versions?: ThemeVersion[];
+};
+
+type NoticeState = { tone: NoticeTone; message: string } | null;
+type ThemeBuildReadiness = 'READY' | 'BUILDING' | 'FAILED' | 'NO_VERSION' | 'UNKNOWN';
+type SortMode =
+  | 'UPDATED_DESC'
+  | 'PRICE_ASC'
+  | 'PRICE_DESC'
+  | 'LISTED_FIRST'
+  | 'BUILD_READY_FIRST'
+  | 'BUILD_ISSUES_FIRST'
+  | 'NAME_ASC';
+type CurationPresetId = 'ALL_THEMES' | 'INVESTOR_DEMO' | 'NEEDS_ATTENTION' | 'REVENUE_FIRST';
+type ActiveCurationPreset = CurationPresetId | 'CUSTOM';
+
+type CurationPreset = {
+  id: CurationPresetId;
+  label: string;
+  hint: string;
+  pricingFilter: 'ALL' | 'FREE' | 'PAID';
+  listingFilter: 'ALL' | 'LISTED' | 'UNLISTED';
+  buildFilter: 'ALL' | ThemeBuildReadiness;
+  sortMode: SortMode;
+};
+
+const CURATION_PRESETS: CurationPreset[] = [
+  {
+    id: 'ALL_THEMES',
+    label: 'All themes',
+    hint: 'Balanced default catalog view',
+    pricingFilter: 'ALL',
+    listingFilter: 'ALL',
+    buildFilter: 'ALL',
+    sortMode: 'UPDATED_DESC',
+  },
+  {
+    id: 'INVESTOR_DEMO',
+    label: 'Investor demo',
+    hint: 'Listed + build-ready for high-confidence walkthroughs',
+    pricingFilter: 'ALL',
+    listingFilter: 'LISTED',
+    buildFilter: 'READY',
+    sortMode: 'BUILD_READY_FIRST',
+  },
+  {
+    id: 'NEEDS_ATTENTION',
+    label: 'Needs attention',
+    hint: 'Failed builds surfaced first for fast triage',
+    pricingFilter: 'ALL',
+    listingFilter: 'ALL',
+    buildFilter: 'FAILED',
+    sortMode: 'BUILD_ISSUES_FIRST',
+  },
+  {
+    id: 'REVENUE_FIRST',
+    label: 'Revenue-first',
+    hint: 'Paid + listed themes sorted by highest price',
+    pricingFilter: 'PAID',
+    listingFilter: 'LISTED',
+    buildFilter: 'READY',
+    sortMode: 'PRICE_DESC',
+  },
+];
+const CURATION_VIEW_STORAGE_KEY = 'builder.themeStudio.curationView.v1';
+
+function formatPrice(theme: Theme) {
+  if (theme.pricingModel !== 'PAID') return 'Free';
+  const currency = String(theme.currency || 'USD').toUpperCase();
+  const price = Number(theme.priceCents || 0) / 100;
+  return `${currency} ${price.toFixed(2)}`;
+}
+
+function versionStatusClass(status: string) {
+  const normalized = String(status || '').toUpperCase();
+  if (normalized === 'BUILT') return 'bg-emerald-100 text-emerald-700';
+  if (normalized === 'FAILED') return 'bg-rose-100 text-rose-700';
+  if (normalized === 'BUILDING') return 'bg-amber-100 text-amber-700';
+  return 'bg-slate-200 text-slate-700';
+}
+
+function normalizeVersionStatus(status: string) {
+  return String(status || '').toUpperCase();
+}
+
+function latestVersion(theme: Theme): ThemeVersion | null {
+  const versions = Array.isArray(theme.versions) ? theme.versions : [];
+  if (!versions.length) return null;
+  return versions.reduce((latest, current) => {
+    if (!latest) return current;
+    const latestTime = Date.parse(latest.createdAt || '');
+    const currentTime = Date.parse(current.createdAt || '');
+    if (Number.isFinite(latestTime) && Number.isFinite(currentTime)) {
+      return currentTime > latestTime ? current : latest;
+    }
+    return current.version > latest.version ? current : latest;
+  }, versions[0]);
+}
+
+function latestVersionTimestamp(theme: Theme): number {
+  const latest = latestVersion(theme);
+  if (!latest?.createdAt) return 0;
+  const time = Date.parse(latest.createdAt);
+  return Number.isFinite(time) ? time : 0;
+}
+
+function themeBuildReadiness(theme: Theme): ThemeBuildReadiness {
+  const latest = latestVersion(theme);
+  if (!latest) return 'NO_VERSION';
+  const status = normalizeVersionStatus(latest.status);
+  if (status === 'BUILT') return 'READY';
+  if (status === 'BUILDING') return 'BUILDING';
+  if (status === 'FAILED') return 'FAILED';
+  return 'UNKNOWN';
+}
+
+function buildReadinessClass(readiness: ThemeBuildReadiness) {
+  if (readiness === 'READY') return 'bg-emerald-100 text-emerald-700';
+  if (readiness === 'BUILDING') return 'bg-amber-100 text-amber-700';
+  if (readiness === 'FAILED') return 'bg-rose-100 text-rose-700';
+  if (readiness === 'NO_VERSION') return 'bg-slate-200 text-slate-700';
+  return 'bg-violet-100 text-violet-700';
+}
+
+function buildReadinessLabel(readiness: ThemeBuildReadiness) {
+  if (readiness === 'NO_VERSION') return 'NO VERSION';
+  return readiness;
+}
+
+function sortByBuildPriority(readiness: ThemeBuildReadiness, issuesFirst: boolean) {
+  // Keep the priority explicit so demo curation orders are deterministic.
+  if (issuesFirst) {
+    if (readiness === 'FAILED') return 0;
+    if (readiness === 'BUILDING') return 1;
+    if (readiness === 'NO_VERSION') return 2;
+    if (readiness === 'UNKNOWN') return 3;
+    return 4;
+  }
+  if (readiness === 'READY') return 0;
+  if (readiness === 'BUILDING') return 1;
+  if (readiness === 'NO_VERSION') return 2;
+  if (readiness === 'UNKNOWN') return 3;
+  return 4;
+}
+
+function priceSortValue(theme: Theme) {
+  if (theme.pricingModel === 'PAID') return Number(theme.priceCents || 0);
+  return 0;
+}
+
+function presetById(id: CurationPresetId) {
+  return CURATION_PRESETS.find((preset) => preset.id === id) || CURATION_PRESETS[0];
+}
+
+function isPresetId(value: unknown): value is CurationPresetId {
+  return CURATION_PRESETS.some((preset) => preset.id === value);
+}
+
+function isSortMode(value: unknown): value is SortMode {
+  return [
+    'UPDATED_DESC',
+    'PRICE_ASC',
+    'PRICE_DESC',
+    'LISTED_FIRST',
+    'BUILD_READY_FIRST',
+    'BUILD_ISSUES_FIRST',
+    'NAME_ASC',
+  ].includes(String(value));
+}
+
+function isPricingFilter(value: unknown): value is 'ALL' | 'FREE' | 'PAID' {
+  return ['ALL', 'FREE', 'PAID'].includes(String(value));
+}
+
+function isListingFilter(value: unknown): value is 'ALL' | 'LISTED' | 'UNLISTED' {
+  return ['ALL', 'LISTED', 'UNLISTED'].includes(String(value));
+}
+
+function isBuildFilter(value: unknown): value is 'ALL' | ThemeBuildReadiness {
+  return ['ALL', 'READY', 'BUILDING', 'FAILED', 'NO_VERSION', 'UNKNOWN'].includes(
+    String(value),
+  );
+}
+
+function focusButtonClass() {
+  return 'rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400';
+}
+
+function matchesPreset(theme: Theme, preset: CurationPreset) {
+  const matchesPricing =
+    preset.pricingFilter === 'ALL'
+      ? true
+      : String(theme.pricingModel || 'FREE').toUpperCase() === preset.pricingFilter;
+  const listed = Boolean(theme.isListed);
+  const matchesListing =
+    preset.listingFilter === 'ALL'
+      ? true
+      : preset.listingFilter === 'LISTED'
+      ? listed
+      : !listed;
+  const matchesBuild =
+    preset.buildFilter === 'ALL'
+      ? true
+      : themeBuildReadiness(theme) === preset.buildFilter;
+  return matchesPricing && matchesListing && matchesBuild;
+}
+
+async function readFileText(file: File) {
+  if (typeof file.text === 'function') {
+    return file.text();
+  }
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Failed to read file text.'));
+    reader.readAsText(file);
+  });
+}
+
+type CurationViewPayload = {
+  activePreset?: unknown;
+  searchValue?: unknown;
+  pricingFilter?: unknown;
+  listingFilter?: unknown;
+  buildFilter?: unknown;
+  sortMode?: unknown;
+};
 
 export default function ThemesClient() {
+  const importFileRef = useRef<HTMLInputElement | null>(null);
   const [themes, setThemes] = useState<Theme[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<NoticeState>(null);
+
+  const [uploadName, setUploadName] = useState('');
+  const [uploadVersion, setUploadVersion] = useState('');
+  const [uploadDescription, setUploadDescription] = useState('');
+  const [uploadAuthor, setUploadAuthor] = useState('');
+  const [uploadPricingModel, setUploadPricingModel] = useState<'FREE' | 'PAID'>('FREE');
+  const [uploadPriceCents, setUploadPriceCents] = useState('');
+  const [uploadCurrency, setUploadCurrency] = useState('USD');
+  const [uploadLicenseType, setUploadLicenseType] = useState('SINGLE_STORE');
+  const [uploadIsListed, setUploadIsListed] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+
+  const [searchValue, setSearchValue] = useState('');
+  const [pricingFilter, setPricingFilter] = useState<'ALL' | 'FREE' | 'PAID'>('ALL');
+  const [listingFilter, setListingFilter] = useState<'ALL' | 'LISTED' | 'UNLISTED'>('ALL');
+  const [buildFilter, setBuildFilter] = useState<'ALL' | ThemeBuildReadiness>('ALL');
+  const [sortMode, setSortMode] = useState<SortMode>('UPDATED_DESC');
+  const [activeCurationPreset, setActiveCurationPreset] =
+    useState<ActiveCurationPreset>('ALL_THEMES');
+
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(CURATION_VIEW_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        activePreset?: unknown;
+        searchValue?: unknown;
+        pricingFilter?: unknown;
+        listingFilter?: unknown;
+        buildFilter?: unknown;
+        sortMode?: unknown;
+      };
+      if (typeof parsed.searchValue === 'string') setSearchValue(parsed.searchValue);
+      if (isPricingFilter(parsed.pricingFilter)) setPricingFilter(parsed.pricingFilter);
+      if (isListingFilter(parsed.listingFilter)) setListingFilter(parsed.listingFilter);
+      if (isBuildFilter(parsed.buildFilter)) setBuildFilter(parsed.buildFilter);
+      if (isSortMode(parsed.sortMode)) setSortMode(parsed.sortMode);
+      if (parsed.activePreset === 'CUSTOM' || isPresetId(parsed.activePreset)) {
+        setActiveCurationPreset(parsed.activePreset);
+      }
+      console.debug('[themes] curationPreset:restore', {
+        activePreset: parsed.activePreset || 'ALL_THEMES',
+      });
+    } catch (e: any) {
+      console.error('[themes] curationPreset:restore:failed', { reason: e?.message || e });
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const payload = JSON.stringify({
+        activePreset: activeCurationPreset,
+        searchValue,
+        pricingFilter,
+        listingFilter,
+        buildFilter,
+        sortMode,
+      });
+      window.sessionStorage.setItem(CURATION_VIEW_STORAGE_KEY, payload);
+    } catch (e: any) {
+      console.error('[themes] curationPreset:persist:failed', { reason: e?.message || e });
+    }
+  }, [
+    activeCurationPreset,
+    searchValue,
+    pricingFilter,
+    listingFilter,
+    buildFilter,
+    sortMode,
+  ]);
 
   const reload = async () => {
+    console.debug('[themes] reload:start');
     setLoading(true);
     setError(null);
     try {
       const data = await apiGet<Theme[]>('/api/themes');
       setThemes(data);
+      console.debug('[themes] reload:success', { count: data.length });
     } catch (e: any) {
+      console.error('[themes] reload:failed', { reason: e?.message || e });
       setError(e?.message || 'Failed to load themes');
     } finally {
       setLoading(false);
@@ -38,71 +352,751 @@ export default function ThemesClient() {
   }, []);
 
   const seedDefault = async () => {
+    console.debug('[themes] seedDefault:start');
+    setSeeding(true);
+    setNotice({ tone: 'info', message: 'Seeding default theme…' });
     try {
       await apiPost('/api/themes/seed/default');
       await reload();
+      setNotice({ tone: 'success', message: 'Default theme seeded successfully.' });
     } catch (e: any) {
-      alert(e?.message || 'Seed failed');
+      console.error('[themes] seedDefault:failed', { reason: e?.message || e });
+      setNotice({ tone: 'error', message: e?.message || 'Default theme seed failed.' });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  const validateUpload = () => {
+    if (!uploadFile) return 'Pick a theme zip first.';
+    if (!uploadName.trim()) return 'Theme name is required.';
+    if (uploadPricingModel === 'PAID') {
+      const cents = Number(uploadPriceCents);
+      if (!Number.isFinite(cents) || cents < 0) {
+        return 'PAID themes require a valid non-negative price.';
+      }
+    }
+    return '';
+  };
+
+  const uploadTheme = async () => {
+    const validationError = validateUpload();
+    if (validationError) {
+      setNotice({ tone: 'error', message: validationError });
+      return;
+    }
+
+    console.debug('[themes] upload:start', {
+      name: uploadName.trim(),
+      version: uploadVersion.trim() || null,
+      pricingModel: uploadPricingModel,
+      listed: uploadIsListed,
+    });
+    setUploading(true);
+    setNotice({ tone: 'info', message: 'Uploading theme bundle…' });
+    try {
+      const form = new FormData();
+      form.append('bundle', uploadFile as Blob);
+      form.append('name', uploadName.trim());
+      if (uploadVersion.trim()) form.append('version', uploadVersion.trim());
+      if (uploadDescription.trim()) form.append('description', uploadDescription.trim());
+      if (uploadAuthor.trim()) form.append('author', uploadAuthor.trim());
+      form.append('pricingModel', uploadPricingModel);
+      if (uploadPricingModel === 'PAID' && uploadPriceCents.trim()) {
+        form.append('priceCents', uploadPriceCents.trim());
+      }
+      if (uploadCurrency.trim()) form.append('currency', uploadCurrency.trim().toUpperCase());
+      if (uploadLicenseType.trim()) form.append('licenseType', uploadLicenseType.trim());
+      form.append('isListed', uploadIsListed ? 'true' : 'false');
+
+      await apiUpload('/api/themes/upload', form);
+      setUploadFile(null);
+      setUploadName('');
+      setUploadVersion('');
+      setUploadDescription('');
+      setUploadAuthor('');
+      setUploadPricingModel('FREE');
+      setUploadPriceCents('');
+      setUploadCurrency('USD');
+      setUploadLicenseType('SINGLE_STORE');
+      setUploadIsListed(false);
+      await reload();
+      setNotice({ tone: 'success', message: 'Theme uploaded successfully.' });
+    } catch (e: any) {
+      console.error('[themes] upload:failed', { reason: e?.message || e });
+      setNotice({ tone: 'error', message: e?.message || 'Theme upload failed.' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const applyCurationPreset = (presetId: CurationPresetId) => {
+    const preset = presetById(presetId);
+    console.debug('[themes] curationPreset:apply', { presetId: preset.id });
+    setSearchValue('');
+    setPricingFilter(preset.pricingFilter);
+    setListingFilter(preset.listingFilter);
+    setBuildFilter(preset.buildFilter);
+    setSortMode(preset.sortMode);
+    setActiveCurationPreset(preset.id);
+  };
+
+  const setCustomSearchValue = (value: string) => {
+    setActiveCurationPreset('CUSTOM');
+    setSearchValue(value);
+  };
+
+  const setCustomPricingFilter = (value: 'ALL' | 'FREE' | 'PAID') => {
+    setActiveCurationPreset('CUSTOM');
+    setPricingFilter(value);
+  };
+
+  const setCustomListingFilter = (value: 'ALL' | 'LISTED' | 'UNLISTED') => {
+    setActiveCurationPreset('CUSTOM');
+    setListingFilter(value);
+  };
+
+  const setCustomBuildFilter = (value: 'ALL' | ThemeBuildReadiness) => {
+    setActiveCurationPreset('CUSTOM');
+    setBuildFilter(value);
+  };
+
+  const setCustomSortMode = (value: SortMode) => {
+    setActiveCurationPreset('CUSTOM');
+    setSortMode(value);
+  };
+
+  const applyInventoryFocus = (
+    focus: 'READY' | 'BUILDING' | 'FAILED' | 'LISTED' | 'PAID' | 'RESET',
+  ) => {
+    console.debug('[themes] inventoryFocus:apply', { focus });
+    if (focus === 'RESET') {
+      applyCurationPreset('ALL_THEMES');
+      return;
+    }
+    setActiveCurationPreset('CUSTOM');
+    // Reset dimensions before applying a single-focus lens so pivots stay deterministic.
+    setSearchValue('');
+    setPricingFilter('ALL');
+    setListingFilter('ALL');
+    setBuildFilter('ALL');
+    setSortMode('UPDATED_DESC');
+    if (focus === 'READY') {
+      setBuildFilter('READY');
+      setSortMode('BUILD_READY_FIRST');
+      return;
+    }
+    if (focus === 'BUILDING') {
+      setBuildFilter('BUILDING');
+      setSortMode('BUILD_ISSUES_FIRST');
+      return;
+    }
+    if (focus === 'FAILED') {
+      setBuildFilter('FAILED');
+      setSortMode('BUILD_ISSUES_FIRST');
+      return;
+    }
+    if (focus === 'LISTED') {
+      setListingFilter('LISTED');
+      setSortMode('LISTED_FIRST');
+      return;
+    }
+    setPricingFilter('PAID');
+    setSortMode('PRICE_DESC');
+  };
+
+  const filteredThemes = useMemo(() => {
+    const query = searchValue.trim().toLowerCase();
+    const filtered = themes.filter((theme) => {
+      const matchesQuery = !query
+        ? true
+        : [theme.name, theme.description, theme.author]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(query));
+      const matchesPricing =
+        pricingFilter === 'ALL'
+          ? true
+          : String(theme.pricingModel || 'FREE').toUpperCase() === pricingFilter;
+      const listed = Boolean(theme.isListed);
+      const matchesListing =
+        listingFilter === 'ALL'
+          ? true
+          : listingFilter === 'LISTED'
+          ? listed
+          : !listed;
+      const readiness = themeBuildReadiness(theme);
+      const matchesBuild = buildFilter === 'ALL' ? true : readiness === buildFilter;
+      return matchesQuery && matchesPricing && matchesListing && matchesBuild;
+    });
+
+    return filtered.sort((a, b) => {
+      // Deterministic sort order powers investor demos and seller curation workflows.
+      if (sortMode === 'PRICE_ASC') {
+        return priceSortValue(a) - priceSortValue(b) || a.name.localeCompare(b.name);
+      }
+      if (sortMode === 'PRICE_DESC') {
+        return priceSortValue(b) - priceSortValue(a) || a.name.localeCompare(b.name);
+      }
+      if (sortMode === 'LISTED_FIRST') {
+        return Number(Boolean(b.isListed)) - Number(Boolean(a.isListed)) || a.name.localeCompare(b.name);
+      }
+      if (sortMode === 'BUILD_READY_FIRST') {
+        const aPriority = sortByBuildPriority(themeBuildReadiness(a), false);
+        const bPriority = sortByBuildPriority(themeBuildReadiness(b), false);
+        return aPriority - bPriority || a.name.localeCompare(b.name);
+      }
+      if (sortMode === 'BUILD_ISSUES_FIRST') {
+        const aPriority = sortByBuildPriority(themeBuildReadiness(a), true);
+        const bPriority = sortByBuildPriority(themeBuildReadiness(b), true);
+        return aPriority - bPriority || a.name.localeCompare(b.name);
+      }
+      if (sortMode === 'NAME_ASC') {
+        return a.name.localeCompare(b.name);
+      }
+      return latestVersionTimestamp(b) - latestVersionTimestamp(a) || a.name.localeCompare(b.name);
+    });
+  }, [themes, searchValue, pricingFilter, listingFilter, buildFilter, sortMode]);
+
+  const totalThemes = themes.length;
+  const listedThemes = themes.filter((theme) => Boolean(theme.isListed)).length;
+  const paidThemes = themes.filter((theme) => theme.pricingModel === 'PAID').length;
+  const readyThemes = themes.filter((theme) => themeBuildReadiness(theme) === 'READY').length;
+  const buildingThemes = themes.filter((theme) => themeBuildReadiness(theme) === 'BUILDING').length;
+  const failedThemes = themes.filter((theme) => themeBuildReadiness(theme) === 'FAILED').length;
+  const presetCounts = useMemo(() => {
+    return CURATION_PRESETS.reduce<Record<CurationPresetId, number>>((acc, preset) => {
+      acc[preset.id] = themes.filter((theme) => matchesPreset(theme, preset)).length;
+      return acc;
+    }, {
+      ALL_THEMES: 0,
+      INVESTOR_DEMO: 0,
+      NEEDS_ATTENTION: 0,
+      REVENUE_FIRST: 0,
+    });
+  }, [themes]);
+  const activePresetMeta =
+    activeCurationPreset === 'CUSTOM' ? null : presetById(activeCurationPreset);
+
+  const exportCurationView = async () => {
+    const payload = {
+      activePreset: activeCurationPreset,
+      searchValue,
+      pricingFilter,
+      listingFilter,
+      buildFilter,
+      sortMode,
+      visibleThemeCount: filteredThemes.length,
+      visibleThemeIds: filteredThemes.map((theme) => theme.id),
+      generatedAt: new Date().toISOString(),
+    };
+    const body = JSON.stringify(payload, null, 2);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(body);
+        setNotice({ tone: 'success', message: 'Curation view copied to clipboard.' });
+        return;
+      }
+      const blob = new Blob([body], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'theme-studio-curation-view.json';
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setNotice({ tone: 'success', message: 'Curation view exported as JSON.' });
+    } catch (e: any) {
+      console.error('[themes] curationExport:failed', { reason: e?.message || e });
+      setNotice({ tone: 'error', message: 'Failed to export curation view.' });
+    }
+  };
+
+  const openImportDialog = () => {
+    importFileRef.current?.click();
+  };
+
+  const importCurationViewFromFile = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const content = await readFileText(file);
+      const parsed = JSON.parse(content) as CurationViewPayload;
+      applyImportedCurationPayload(parsed);
+      console.debug('[themes] curationImport:success', {
+        activePreset: parsed.activePreset || 'CUSTOM',
+      });
+      setNotice({ tone: 'success', message: 'Curation view imported from JSON.' });
+    } catch (e: any) {
+      console.error('[themes] curationImport:failed', { reason: e?.message || e });
+      setNotice({ tone: 'error', message: 'Invalid curation view JSON.' });
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  function applyImportedCurationPayload(payload: CurationViewPayload) {
+    if (payload.activePreset === 'CUSTOM' || isPresetId(payload.activePreset)) {
+      setActiveCurationPreset(payload.activePreset);
+    }
+    if (typeof payload.searchValue === 'string') setSearchValue(payload.searchValue);
+    if (isPricingFilter(payload.pricingFilter)) setPricingFilter(payload.pricingFilter);
+    if (isListingFilter(payload.listingFilter)) setListingFilter(payload.listingFilter);
+    if (isBuildFilter(payload.buildFilter)) setBuildFilter(payload.buildFilter);
+    if (isSortMode(payload.sortMode)) setSortMode(payload.sortMode);
+  }
+
+  const importCurationViewFromClipboard = async () => {
+    try {
+      if (!navigator.clipboard?.readText) {
+        setNotice({ tone: 'error', message: 'Clipboard read is unavailable in this browser.' });
+        return;
+      }
+      const content = await navigator.clipboard.readText();
+      const parsed = JSON.parse(content) as CurationViewPayload;
+      applyImportedCurationPayload(parsed);
+      console.debug('[themes] curationImport:clipboard:success', {
+        activePreset: parsed.activePreset || 'CUSTOM',
+      });
+      setNotice({ tone: 'success', message: 'Curation view imported from clipboard.' });
+    } catch (e: any) {
+      console.error('[themes] curationImport:clipboard:failed', { reason: e?.message || e });
+      setNotice({ tone: 'error', message: 'Invalid clipboard JSON for curation view.' });
     }
   };
 
   return (
-    <div className="p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Themes</h1>
-          <p className="text-gray-600 mt-1">
-            Theme Store, file editing, building, and installing per site.
-          </p>
-        </div>
-        <button onClick={seedDefault} className="px-4 py-2 rounded bg-green-600 text-white">
-          Seed Default Theme
-        </button>
-      </div>
-
-      {loading && <div className="mt-6">Loading…</div>}
-      {error && <div className="mt-6 text-red-600">{error}</div>}
-
-      <div className="mt-6 space-y-4">
-        {themes.map((t) => (
-          <div key={t.id} className="border rounded p-4 bg-white">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="font-bold">{t.name}</div>
-                <div className="text-sm text-gray-600">{t.description || '—'}</div>
-                <div className="text-xs text-gray-500 mt-1">themeId={t.id}</div>
-              </div>
+    <div className="min-h-screen bg-slate-50">
+      <section className="border-b bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white">
+        <div className="mx-auto max-w-7xl px-6 py-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Theme Studio</h1>
+              <p className="mt-2 max-w-2xl text-sm text-slate-200">
+                Curate theme inventory, package marketplace-ready metadata, and jump into version editors quickly.
+              </p>
             </div>
-
-            <div className="mt-4">
-              <div className="text-sm font-semibold mb-2">Versions</div>
-              {t.versions?.length ? (
-                <div className="space-y-2">
-                  {t.versions.map((v) => (
-                    <div key={v.id} className="flex items-center justify-between gap-4 border rounded px-3 py-2">
-                      <div className="text-sm">
-                        <span className="font-mono">{v.version}</span>{' '}
-                        <span className="text-gray-500">({v.status})</span>
-                        <div className="text-xs text-gray-500 font-mono">themeVersionId={v.id}</div>
-                      </div>
-                      <Link href={`/themes/versions/${v.id}`} className="px-3 py-1 rounded bg-blue-600 text-white text-sm">
-                        Open Editor
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-gray-500">No versions yet</div>
-              )}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={seedDefault}
+                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
+                disabled={seeding || uploading}
+              >
+                {seeding ? 'Seeding...' : 'Seed Default Theme'}
+              </button>
+              <button
+                onClick={() => void reload()}
+                className="rounded-lg border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20 disabled:opacity-60"
+                disabled={loading || uploading || seeding}
+              >
+                Refresh
+              </button>
             </div>
           </div>
-        ))}
-        {!loading && !themes.length && (
-          <div className="text-gray-500">No themes yet. Seed the default theme or upload a bundle.</div>
-        )}
-      </div>
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-slate-300">Total themes</div>
+              <div className="mt-1 text-2xl font-semibold">{totalThemes}</div>
+            </div>
+            <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-slate-300">Marketplace listed</div>
+              <div className="mt-1 text-2xl font-semibold">{listedThemes}</div>
+            </div>
+            <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-slate-300">Paid themes</div>
+              <div className="mt-1 text-2xl font-semibold">{paidThemes}</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <main className="mx-auto max-w-7xl px-6 py-6">
+        {notice ? (
+          <div className="mb-4">
+            <InlineNotice
+              tone={notice.tone}
+              message={notice.message}
+              onDismiss={() => setNotice(null)}
+            />
+          </div>
+        ) : null}
+        {error ? (
+          <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {error}
+          </div>
+        ) : null}
+
+        <section className="rounded-xl border bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-base font-semibold text-slate-900">Upload Theme Bundle</h2>
+            <p className="text-xs text-slate-500">
+              Upload zip packages containing <span className="font-mono">manifest.json</span>, entry source, and template files.
+            </p>
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <input
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="Theme name"
+              value={uploadName}
+              onChange={(e) => setUploadName(e.target.value)}
+            />
+            <input
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="Version (optional)"
+              value={uploadVersion}
+              onChange={(e) => setUploadVersion(e.target.value)}
+            />
+            <input
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="Author (optional)"
+              value={uploadAuthor}
+              onChange={(e) => setUploadAuthor(e.target.value)}
+            />
+            <input
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="Description (optional)"
+              value={uploadDescription}
+              onChange={(e) => setUploadDescription(e.target.value)}
+            />
+            <select
+              className="rounded-lg border px-3 py-2 text-sm"
+              value={uploadPricingModel}
+              onChange={(e) => setUploadPricingModel((e.target.value as 'FREE' | 'PAID') || 'FREE')}
+            >
+              <option value="FREE">FREE</option>
+              <option value="PAID">PAID</option>
+            </select>
+            <input
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="Price (cents, optional for PAID)"
+              value={uploadPriceCents}
+              onChange={(e) => setUploadPriceCents(e.target.value)}
+              disabled={uploadPricingModel !== 'PAID'}
+            />
+            <input
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="Currency (USD)"
+              value={uploadCurrency}
+              onChange={(e) => setUploadCurrency(e.target.value)}
+            />
+            <input
+              className="rounded-lg border px-3 py-2 text-sm"
+              placeholder="License (SINGLE_STORE)"
+              value={uploadLicenseType}
+              onChange={(e) => setUploadLicenseType(e.target.value)}
+            />
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <input
+              type="file"
+              accept=".zip,application/zip"
+              onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+            />
+            <button
+              onClick={uploadTheme}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+              disabled={uploading || seeding}
+            >
+              {uploading ? 'Uploading...' : 'Upload Theme'}
+            </button>
+            {uploadFile ? (
+              <div className="text-xs text-slate-600">
+                Selected bundle: <span className="font-mono">{uploadFile.name}</span>
+              </div>
+            ) : null}
+            <label className="text-xs text-slate-700 flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={uploadIsListed}
+                onChange={(e) => setUploadIsListed(e.target.checked)}
+              />
+              Listed in marketplace
+            </label>
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-xl border bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+              Curation presets
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {CURATION_PRESETS.map((preset) => {
+                const isActive = activeCurationPreset === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyCurationPreset(preset.id)}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      isActive
+                        ? 'border-blue-500 bg-blue-600 text-white'
+                        : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+                    }`}
+                    aria-pressed={isActive}
+                  >
+                    {preset.label} ({presetCounts[preset.id]})
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 text-xs text-slate-500">
+              {activePresetMeta
+                ? `Active preset: ${activePresetMeta.label} — ${activePresetMeta.hint}`
+                : 'Active preset: Custom mix'}
+            </div>
+            <div className="mt-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void exportCurationView()}
+                  className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+                >
+                  Export curation view
+                </button>
+                <button
+                  type="button"
+                  onClick={openImportDialog}
+                  className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+                >
+                  Import curation view
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void importCurationViewFromClipboard()}
+                  className="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+                >
+                  Paste curation JSON
+                </button>
+                <input
+                  ref={importFileRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="hidden"
+                  onChange={(event) => void importCurationViewFromFile(event)}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+              Inventory focus
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={focusButtonClass()}
+                onClick={() => applyInventoryFocus('READY')}
+              >
+                Ready builds ({readyThemes})
+              </button>
+              <button
+                type="button"
+                className={focusButtonClass()}
+                onClick={() => applyInventoryFocus('BUILDING')}
+              >
+                Building ({buildingThemes})
+              </button>
+              <button
+                type="button"
+                className={focusButtonClass()}
+                onClick={() => applyInventoryFocus('FAILED')}
+              >
+                Failed builds ({failedThemes})
+              </button>
+              <button
+                type="button"
+                className={focusButtonClass()}
+                onClick={() => applyInventoryFocus('LISTED')}
+              >
+                Listed themes ({listedThemes})
+              </button>
+              <button
+                type="button"
+                className={focusButtonClass()}
+                onClick={() => applyInventoryFocus('PAID')}
+              >
+                Paid themes ({paidThemes})
+              </button>
+              <button
+                type="button"
+                className={focusButtonClass()}
+                onClick={() => applyInventoryFocus('RESET')}
+              >
+                Reset view
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">Theme inventory</h2>
+              <p className="text-xs text-slate-500">
+                Search, filter, and sort to curate storefront-ready marketplace inventory.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
+              <input
+                className="rounded-lg border px-3 py-2 text-sm"
+                placeholder="Search name/author/description"
+                value={searchValue}
+                onChange={(e) => setCustomSearchValue(e.target.value)}
+              />
+              <select
+                className="rounded-lg border px-3 py-2 text-sm"
+                value={pricingFilter}
+                onChange={(e) =>
+                  setCustomPricingFilter((e.target.value as 'ALL' | 'FREE' | 'PAID') || 'ALL')
+                }
+              >
+                <option value="ALL">All pricing</option>
+                <option value="FREE">Free</option>
+                <option value="PAID">Paid</option>
+              </select>
+              <select
+                className="rounded-lg border px-3 py-2 text-sm"
+                value={listingFilter}
+                onChange={(e) =>
+                  setCustomListingFilter(
+                    (e.target.value as 'ALL' | 'LISTED' | 'UNLISTED') || 'ALL',
+                  )
+                }
+              >
+                <option value="ALL">All listing states</option>
+                <option value="LISTED">Listed</option>
+                <option value="UNLISTED">Unlisted</option>
+              </select>
+              <select
+                className="rounded-lg border px-3 py-2 text-sm"
+                value={buildFilter}
+                onChange={(e) =>
+                  setCustomBuildFilter(
+                    (e.target.value as 'ALL' | ThemeBuildReadiness) || 'ALL',
+                  )
+                }
+              >
+                <option value="ALL">All build states</option>
+                <option value="READY">Ready</option>
+                <option value="BUILDING">Building</option>
+                <option value="FAILED">Failed</option>
+                <option value="NO_VERSION">No version</option>
+                <option value="UNKNOWN">Unknown</option>
+              </select>
+              <select
+                className="rounded-lg border px-3 py-2 text-sm"
+                value={sortMode}
+                onChange={(e) =>
+                  setCustomSortMode((e.target.value as SortMode) || 'UPDATED_DESC')
+                }
+              >
+                <option value="UPDATED_DESC">Sort: Recently updated</option>
+                <option value="PRICE_ASC">Sort: Price low to high</option>
+                <option value="PRICE_DESC">Sort: Price high to low</option>
+                <option value="LISTED_FIRST">Sort: Listed first</option>
+                <option value="BUILD_READY_FIRST">Sort: Build ready first</option>
+                <option value="BUILD_ISSUES_FIRST">Sort: Build issues first</option>
+                <option value="NAME_ASC">Sort: Name A-Z</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-3 text-xs text-slate-500">
+            Showing {filteredThemes.length} of {themes.length} themes
+          </div>
+
+          {loading ? <div className="mt-6 text-sm text-slate-500">Loading themes…</div> : null}
+
+          <div className="mt-4 space-y-4">
+            {filteredThemes.map((theme) => {
+              const readiness = themeBuildReadiness(theme);
+              const latest = latestVersion(theme);
+              return (
+                <article key={theme.id} className="rounded-xl border bg-slate-50 p-4">
+                  <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px]">
+                    <span className={`rounded-full px-2 py-0.5 font-semibold ${buildReadinessClass(readiness)}`}>
+                      Build: {buildReadinessLabel(readiness)}
+                    </span>
+                    {latest ? (
+                      <span className="rounded-full bg-slate-200 px-2 py-0.5 font-semibold text-slate-700">
+                        Latest: {latest.version}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-lg font-semibold text-slate-900">{theme.name}</div>
+                    <div className="mt-1 text-sm text-slate-600">
+                      {theme.description || 'No description provided yet.'}
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="rounded-full bg-slate-900 px-2 py-0.5 font-semibold text-white">
+                        {formatPrice(theme)}
+                      </span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 font-semibold ${
+                          theme.isListed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {theme.isListed ? 'LISTED' : 'UNLISTED'}
+                      </span>
+                      <span className="rounded-full bg-violet-100 px-2 py-0.5 font-semibold text-violet-700">
+                        {theme.licenseType || 'SINGLE_STORE'}
+                      </span>
+                    </div>
+                    <div className="mt-2 text-xs text-slate-500">
+                      themeId=<span className="font-mono">{theme.id}</span>
+                    </div>
+                  </div>
+                  <div className="text-right text-xs text-slate-500">
+                    <div>Author: {theme.author || 'Unknown'}</div>
+                    <div className="mt-1">Versions: {theme.versions?.length || 0}</div>
+                  </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="mb-2 text-sm font-semibold text-slate-800">Versions</div>
+                    {theme.versions?.length ? (
+                      <div className="space-y-2">
+                        {theme.versions.map((version) => (
+                          <div key={version.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2">
+                            <div className="text-sm">
+                              <span className="font-mono">{version.version}</span>
+                              <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold ${versionStatusClass(version.status)}`}>
+                                {version.status}
+                              </span>
+                              <div className="mt-1 text-xs text-slate-500">
+                                themeVersionId=<span className="font-mono">{version.id}</span>
+                              </div>
+                            </div>
+                            <Link
+                              href={`/themes/versions/${version.id}`}
+                              className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                            >
+                              Open Editor
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-dashed bg-white px-3 py-3 text-sm text-slate-500">
+                        No versions yet. Upload a new bundle version to start editing.
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+
+            {!loading && !filteredThemes.length ? (
+              <div className="rounded-lg border border-dashed bg-slate-50 px-3 py-4 text-sm text-slate-500">
+                No themes matched your search/filter selection.
+              </div>
+            ) : null}
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
-
-

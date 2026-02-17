@@ -1,0 +1,103 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`StorefrontFallbackShell renders diagnostics, hints, and action links 1`] = `
+<DocumentFragment>
+  <main
+    class="min-h-screen bg-slate-950 text-slate-100"
+  >
+    <section
+      class="mx-auto max-w-4xl px-6 py-20"
+    >
+      <div
+        class="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 p-8 shadow-2xl"
+      >
+        <div
+          class="inline-flex rounded-full border border-indigo-400/40 bg-indigo-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-200"
+        >
+          Tenant missing
+        </div>
+        <h1
+          class="mt-4 text-3xl font-bold tracking-tight text-white"
+        >
+          Storefront tenant could not be resolved
+        </h1>
+        <p
+          class="mt-2 text-sm leading-relaxed text-slate-300"
+        >
+          Connect domain mapping from Builder.
+        </p>
+        <div
+          class="mt-6 rounded-xl border border-slate-700 bg-slate-900/70 p-4"
+        >
+          <div
+            class="text-xs font-semibold uppercase tracking-wide text-slate-400"
+          >
+            Diagnostics
+          </div>
+          <div
+            class="mt-2 grid grid-cols-1 gap-2 text-sm md:grid-cols-2"
+          >
+            <div
+              class="rounded border border-slate-700 bg-slate-900 px-3 py-2"
+            >
+              <div
+                class="text-[11px] uppercase tracking-wide text-slate-500"
+              >
+                Host
+              </div>
+              <div
+                class="mt-1 break-all font-mono text-xs text-slate-100"
+              >
+                shop.example.com
+              </div>
+            </div>
+            <div
+              class="rounded border border-slate-700 bg-slate-900 px-3 py-2"
+            >
+              <div
+                class="text-[11px] uppercase tracking-wide text-slate-500"
+              >
+                Request ID
+              </div>
+              <div
+                class="mt-1 break-all font-mono text-xs text-slate-100"
+              >
+                req_1
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="mt-6 flex flex-wrap items-center gap-2"
+        >
+          <a
+            class="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-100 hover:border-indigo-400 hover:text-indigo-100"
+            href="/"
+          >
+            Open storefront root
+          </a>
+        </div>
+        <div
+          class="mt-6 rounded-xl border border-slate-700 bg-slate-900/70 p-4"
+        >
+          <div
+            class="text-xs font-semibold uppercase tracking-wide text-slate-400"
+          >
+            Suggested next steps
+          </div>
+          <ul
+            class="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-300"
+          >
+            <li>
+              Verify domain mapping.
+            </li>
+            <li>
+              Check DNS records.
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+</DocumentFragment>
+`;

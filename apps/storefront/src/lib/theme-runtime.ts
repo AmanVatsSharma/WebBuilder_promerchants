@@ -14,7 +14,6 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { createRequire } from 'module';
 import vm from 'node:vm';
-import * as ThemeSdk from '@web-builder/theme-sdk';
 
 type ThemeModule = {
   default?: React.ComponentType<any>;
@@ -24,6 +23,7 @@ type ThemeModule = {
 };
 
 const cache = new Map<string, { mtimeMs: number; mod: ThemeModule }>();
+const runtimeRequire = createRequire(import.meta.url);
 
 function storageRootDir() {
   return process.env.STORAGE_DIR || path.resolve(process.cwd(), 'storage');
@@ -53,13 +53,13 @@ export async function loadThemeModule(themeVersionId: string): Promise<ThemeModu
     const moduleObj: { exports: any } = { exports: {} };
     const exportsObj = moduleObj.exports;
 
-    const realRequire = createRequire(process.cwd() + '/');
+    const realRequire = runtimeRequire;
     const sandboxRequire = (spec: string) => {
       if (!allowedRequire(spec)) {
         throw new Error(`Disallowed require in theme runtime: ${spec}`);
       }
       if (spec === '@web-builder/theme-sdk') {
-        return ThemeSdk;
+        return realRequire(spec);
       }
       return realRequire(spec);
     };

@@ -7,6 +7,7 @@ sidebar_position: 1
 ## Prerequisites
 - Node: v20+ (repo currently uses Node v24 locally)
 - PostgreSQL running locally
+- Redis running locally (required for theme build queue + worker)
 
 ## Environment variables (API)
 The API uses these defaults if unset:
@@ -18,14 +19,25 @@ The API uses these defaults if unset:
 
 Optional:
 - `STORAGE_DIR=<repo>/storage` (defaults to `<repo>/storage`)
+- `API_AUTH_KEY=<key>` (enforces `x-api-key` header globally)
+- `ENFORCE_SITE_SCOPE=true` (enforces `x-site-id` header for `/api/sites/:siteId/*`)
 
 ## Start services
 
 ```bash
 npx nx serve api
+npx nx run api:worker
 npx nx serve builder
 npx nx serve storefront
 ```
+
+## Optional containerized startup
+
+```bash
+docker compose up --build
+```
+
+Environment reference is available at repo root in `.env.example`.
 
 ## Minimal “happy path” demo
 1. Create a Site: `POST /api/sites`

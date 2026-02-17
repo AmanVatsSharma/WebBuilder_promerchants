@@ -1,0 +1,421 @@
+/**
+ * File: tools/investor-demo-verify.mjs
+ * Module: investor-demo-ops
+ * Purpose: Run a deterministic verification bundle for investor demo readiness
+ * Author: Cursor / Aman
+ * Last-updated: 2026-02-16
+ */
+
+import { spawn } from 'node:child_process';
+import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import {
+  artifactNamePattern,
+  buildArtifactCoverageMarkdown,
+  buildCapturePlanMarkdown,
+  captureChecklistRows,
+  compactTimestamp,
+  computeArtifactReadinessScore,
+  formatIstTimestamp,
+  INVESTOR_PLACEHOLDER_MARKER,
+} from './investor-artifact-utils.mjs';
+
+const argv = process.argv.slice(2);
+const isDryRun = argv.includes('--dry-run');
+const outputArg = argv.find((arg) => arg.startsWith('--output='));
+const outputPath = outputArg ? path.resolve(outputArg.split('=')[1] || '') : '';
+const compareToArg = argv.find((arg) => arg.startsWith('--compare-to='));
+const compareToPath = compareToArg
+  ? path.resolve(compareToArg.split('=')[1] || '')
+  : '';
+const capturePlanArg = argv.find((arg) => arg.startsWith('--capture-plan='));
+const capturePlanPath = capturePlanArg
+  ? path.resolve(capturePlanArg.split('=')[1] || '')
+  : '';
+const artifactDirArg = argv.find((arg) => arg.startsWith('--artifact-dir='));
+const artifactDirPath = artifactDirArg
+  ? path.resolve(artifactDirArg.split('=')[1] || '')
+  : '';
+const artifactStrict = argv.includes('--artifact-strict');
+const artifactStrictExtra = argv.includes('--artifact-strict-extra');
+const artifactStrictPlaceholders = argv.includes('--artifact-strict-placeholders');
+const artifactStrictContent = argv.includes('--artifact-strict-content');
+const artifactReportMdArg = argv.find((arg) =>
+  arg.startsWith('--artifact-report-md='),
+);
+const artifactReportMdPath = artifactReportMdArg
+  ? path.resolve(artifactReportMdArg.split('=')[1] || '')
+  : '';
+const artifactManifestArg = argv.find((arg) =>
+  arg.startsWith('--artifact-manifest='),
+);
+const artifactManifestPath = artifactManifestArg
+  ? path.resolve(artifactManifestArg.split('=')[1] || '')
+  : '';
+
+const commands = [
+  { id: 'test-builder', command: 'npx', args: ['nx', 'test', 'builder'] },
+  { id: 'build-builder', command: 'npx', args: ['nx', 'build', 'builder'] },
+  { id: 'build-docs', command: 'npm', args: ['run', 'docs:build'] },
+];
+
+function matchSlotFile(entries, chapter, surface, label, ext) {
+  const slotToken = `-${chapter}-${surface}-${label}-`;
+  return entries.filter((entry) => {
+    const lower = entry.name.toLowerCase();
+    return (
+      entry.isFile() &&
+      lower.includes(slotToken.toLowerCase()) &&
+      lower.endsWith(`.${ext}`) &&
+      artifactNamePattern().test(entry.name)
+    );
+  });
+}
+
+async function validateArtifactDirectory(targetDir) {
+  const checklist = captureChecklistRows();
+  const entries = await readdir(targetDir, { withFileTypes: true });
+  const fileNames = entries.filter((item) => item.isFile()).map((item) => item.name);
+  const coverage = checklist.map(([chapter, surface, label, ext]) => {
+    const matches = matchSlotFile(entries, chapter, surface, label, ext);
+    return {
+      chapter,
+      surface,
+      label,
+      ext,
+      matchedFiles: matches.map((item) => item.name),
+      complete: matches.length > 0,
+    };
+  });
+  const covered = coverage.filter((item) => item.complete).length;
+  const matchedNames = new Set(
+    coverage.flatMap((item) => item.matchedFiles),
+  );
+  const unexpectedFiles = fileNames.filter(
+    (fileName) => artifactNamePattern().test(fileName) && !matchedNames.has(fileName),
+  );
+  const nonConformingFiles = fileNames.filter(
+    (fileName) => !artifactNamePattern().test(fileName),
+  );
+  const placeholderFiles = [];
+  const contentChecks = [];
+  for (const row of coverage) {
+    for (const fileName of row.matchedFiles) {
+      const filePath = path.join(targetDir, fileName);
+      const slot = `${row.chapter}/${row.surface}/${row.label}.${row.ext}`;
+      const issues = [];
+      if (row.ext === 'png' || row.ext === 'mp4') {
+        try {
+          const stats = await stat(filePath);
+          if (!stats.size) {
+            issues.push('binary-artifact-empty');
+          }
+        } catch {
+          issues.push('binary-artifact-unreadable');
+        }
+      }
+      if (row.ext === 'json' || row.ext === 'log') {
+        try {
+          const content = await readFile(filePath, 'utf8');
+          if (content.includes(INVESTOR_PLACEHOLDER_MARKER)) {
+            placeholderFiles.push(fileName);
+          }
+          if (row.ext === 'log' && row.label === 'demo-verify-log') {
+            if (!content.includes('investor-demo-verify')) {
+              issues.push('log-missing-investor-demo-verify-marker');
+            }
+          }
+          if (row.ext === 'json' && row.label === 'curation-export-json') {
+            try {
+              const parsed = JSON.parse(content);
+              const requiredKeys = [
+                'activePreset',
+                'searchValue',
+                'pricingFilter',
+                'listingFilter',
+                'buildFilter',
+                'sortMode',
+              ];
+              const missingKeys = requiredKeys.filter(
+                (key) => !(key in (parsed || {})),
+              );
+              if (missingKeys.length) {
+                issues.push(`curation-json-missing-keys:${missingKeys.join(',')}`);
+              }
+            } catch {
+              issues.push('curation-json-parse-failed');
+            }
+          }
+        } catch {
+          // Ignore content-read errors; missing/read issues are captured by coverage.
+          issues.push('text-artifact-unreadable');
+        }
+      }
+      contentChecks.push({
+        slot,
+        fileName,
+        passed: issues.length === 0,
+        issues,
+      });
+    }
+  }
+  const failedContentChecks = contentChecks.filter((item) => !item.passed);
+  return {
+    directory: targetDir,
+    required: coverage.length,
+    covered,
+    missing: coverage.length - covered,
+    unexpectedFiles,
+    nonConformingFiles,
+    placeholderFiles,
+    contentChecks,
+    failedContentChecks,
+    coverage,
+  };
+}
+
+function contentIssueCount(artifactValidation) {
+  return Array.isArray(artifactValidation.failedContentChecks)
+    ? artifactValidation.failedContentChecks.length
+    : 0;
+}
+
+async function readJsonFile(filePath) {
+  const raw = await readFile(filePath, 'utf8');
+  return JSON.parse(raw);
+}
+
+function extractReadiness(summary) {
+  if (!summary?.artifactReadiness) return null;
+  return {
+    score: Number(summary.artifactReadiness.score || 0),
+    deductions: summary.artifactReadiness.deductions || {},
+  };
+}
+
+async function attachReadinessTrend(summary) {
+  if (!compareToPath) return;
+  try {
+    const baseline = await readJsonFile(compareToPath);
+    const baselineReadiness = extractReadiness(baseline);
+    const currentReadiness = extractReadiness(summary);
+    if (!baselineReadiness || !currentReadiness) {
+      summary.readinessTrend = {
+        comparedTo: compareToPath,
+        available: false,
+        reason: 'artifactReadiness missing in one of the summaries',
+      };
+      return;
+    }
+    summary.readinessTrend = {
+      comparedTo: compareToPath,
+      available: true,
+      baselineScore: baselineReadiness.score,
+      currentScore: currentReadiness.score,
+      deltaScore: currentReadiness.score - baselineReadiness.score,
+    };
+    console.log('[investor-demo-verify] readiness trend', summary.readinessTrend);
+  } catch (error) {
+    summary.readinessTrend = {
+      comparedTo: compareToPath,
+      available: false,
+      reason: error instanceof Error ? error.message : String(error),
+    };
+    console.error('[investor-demo-verify] readiness trend failed', {
+      reason: summary.readinessTrend.reason,
+    });
+  }
+}
+
+async function validateArtifactsAndApplyGates(summary) {
+  const artifactValidation = await validateArtifactDirectory(artifactDirPath);
+  summary.artifactValidation = artifactValidation;
+  summary.artifactReadiness = computeArtifactReadinessScore(artifactValidation);
+  console.log('[investor-demo-verify] artifact coverage', {
+    covered: artifactValidation.covered,
+    required: artifactValidation.required,
+    missing: artifactValidation.missing,
+    unexpectedFiles: artifactValidation.unexpectedFiles.length,
+    nonConformingFiles: artifactValidation.nonConformingFiles.length,
+    placeholderFiles: artifactValidation.placeholderFiles.length,
+    contentIssues: contentIssueCount(artifactValidation),
+    readinessScore: summary.artifactReadiness.score,
+  });
+  if (artifactStrict && artifactValidation.missing > 0) {
+    summary.success = false;
+  }
+  if (
+    artifactStrictExtra &&
+    (artifactValidation.unexpectedFiles.length > 0 ||
+      artifactValidation.nonConformingFiles.length > 0)
+  ) {
+    summary.success = false;
+  }
+  if (artifactStrictPlaceholders && artifactValidation.placeholderFiles.length > 0) {
+    summary.success = false;
+  }
+  if (artifactStrictContent && contentIssueCount(artifactValidation) > 0) {
+    summary.success = false;
+  }
+  if (artifactReportMdPath) {
+    const markdown = buildArtifactCoverageMarkdown(artifactValidation);
+    await writeFile(artifactReportMdPath, markdown, 'utf8');
+    console.log(
+      `[investor-demo-verify] wrote artifact coverage report to ${artifactReportMdPath}`,
+    );
+  }
+  if (artifactManifestPath) {
+    const manifest = buildArtifactManifest(summary);
+    await writeFile(
+      artifactManifestPath,
+      `${JSON.stringify(manifest, null, 2)}\n`,
+      'utf8',
+    );
+    console.log(
+      `[investor-demo-verify] wrote artifact manifest to ${artifactManifestPath}`,
+    );
+  }
+}
+
+async function handleArtifactValidationFailure(summary, error) {
+  summary.success = false;
+  summary.artifactValidation = {
+    directory: artifactDirPath,
+    error: error instanceof Error ? error.message : String(error),
+  };
+  console.error('[investor-demo-verify] artifact validation failed', {
+    reason: error instanceof Error ? error.message : String(error),
+  });
+  if (artifactManifestPath) {
+    const manifest = buildArtifactManifest(summary);
+    await writeFile(
+      artifactManifestPath,
+      `${JSON.stringify(manifest, null, 2)}\n`,
+      'utf8',
+    );
+    console.log(
+      `[investor-demo-verify] wrote artifact manifest to ${artifactManifestPath}`,
+    );
+  }
+}
+
+
+function buildArtifactManifest(summary) {
+  const readiness = summary.artifactValidation
+    ? computeArtifactReadinessScore(summary.artifactValidation)
+    : null;
+  return {
+    generatedAt: new Date().toISOString(),
+    generatedAtIst: formatIstTimestamp(),
+    verification: {
+      success: summary.success,
+      dryRun: summary.dryRun,
+      checks: summary.results.map((item) => ({
+        id: item.id,
+        command: item.command,
+        success: item.success,
+        durationMs: item.durationMs,
+        exitCode: item.exitCode,
+      })),
+    },
+    artifactValidation: summary.artifactValidation,
+    artifactReadiness: readiness,
+  };
+}
+
+function runCommand(entry) {
+  return new Promise((resolve) => {
+    const startedAt = Date.now();
+    const child = spawn(entry.command, entry.args, {
+      stdio: 'inherit',
+      cwd: process.cwd(),
+      env: process.env,
+    });
+    child.on('close', (code) => {
+      const finishedAt = Date.now();
+      resolve({
+        id: entry.id,
+        command: `${entry.command} ${entry.args.join(' ')}`,
+        startedAt,
+        finishedAt,
+        durationMs: finishedAt - startedAt,
+        success: code === 0,
+        exitCode: code ?? 1,
+      });
+    });
+  });
+}
+
+async function main() {
+  const startedAt = new Date().toISOString();
+  const startedAtIst = formatIstTimestamp();
+  const results = [];
+
+  for (const entry of commands) {
+    console.log(`[investor-demo-verify] start ${entry.id}`);
+    if (isDryRun) {
+      results.push({
+        id: entry.id,
+        command: `${entry.command} ${entry.args.join(' ')}`,
+        startedAt: Date.now(),
+        finishedAt: Date.now(),
+        durationMs: 0,
+        success: true,
+        exitCode: 0,
+        dryRun: true,
+      });
+      console.log(`[investor-demo-verify] dry-run ${entry.id}`);
+      continue;
+    }
+    const result = await runCommand(entry);
+    results.push(result);
+    console.log(`[investor-demo-verify] done ${entry.id}`, {
+      success: result.success,
+      durationMs: result.durationMs,
+    });
+    if (!result.success) break;
+  }
+
+  const summary = {
+    startedAt,
+    startedAtIst,
+    finishedAt: new Date().toISOString(),
+    finishedAtIst: formatIstTimestamp(),
+    success: results.every((entry) => entry.success),
+    dryRun: isDryRun,
+    results,
+    artifactValidation: null,
+    artifactReadiness: null,
+    readinessTrend: null,
+  };
+
+  if (capturePlanPath) {
+    const stamp = compactTimestamp();
+    const markdown = buildCapturePlanMarkdown(stamp);
+    await writeFile(capturePlanPath, markdown, 'utf8');
+    console.log(`[investor-demo-verify] wrote capture plan to ${capturePlanPath}`);
+  }
+
+  if (artifactDirPath) {
+    try {
+      await validateArtifactsAndApplyGates(summary);
+    } catch (error) {
+      await handleArtifactValidationFailure(summary, error);
+    }
+  }
+
+  await attachReadinessTrend(summary);
+
+  if (outputPath) {
+    await writeFile(outputPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8');
+    console.log(`[investor-demo-verify] wrote summary to ${outputPath}`);
+  }
+
+  console.log('[investor-demo-verify] summary', {
+    success: summary.success,
+    checks: summary.results.length,
+  });
+  if (!summary.success) process.exit(1);
+}
+
+void main();

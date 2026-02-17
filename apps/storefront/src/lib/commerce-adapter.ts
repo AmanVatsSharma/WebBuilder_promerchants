@@ -14,6 +14,19 @@ function apiBase() {
   return process.env.API_BASE_URL || 'http://localhost:3000/api';
 }
 
+function requestHeaders(siteId: string, extra?: HeadersInit) {
+  const apiKey = process.env.API_AUTH_KEY;
+  const actorId = process.env.API_ACTOR_ID;
+  const authToken = process.env.API_AUTH_TOKEN;
+  return {
+    'x-site-id': siteId,
+    ...(apiKey ? { 'x-api-key': apiKey } : {}),
+    ...(actorId ? { 'x-actor-id': actorId } : {}),
+    ...(authToken ? { authorization: `Bearer ${authToken}` } : {}),
+    ...(extra || {}),
+  };
+}
+
 async function jsonOrThrow<T>(res: Response, label: string): Promise<T> {
   if (!res.ok) {
     const text = await res.text().catch(() => '');
@@ -27,13 +40,19 @@ export function createApiCommerceAdapter(siteId: string): CommerceAdapter {
   return {
     async getSite(): Promise<ThemeSite> {
       console.debug('[storefront-commerce] getSite', { siteId });
-      const res = await fetch(`${apiBase()}/sites/${encodeURIComponent(siteId)}`, { cache: 'no-store' });
+      const res = await fetch(`${apiBase()}/sites/${encodeURIComponent(siteId)}`, {
+        cache: 'no-store',
+        headers: requestHeaders(siteId),
+      });
       const site = await jsonOrThrow<any>(res, 'getSite');
       return { id: site.id, name: site.name, domain: site.domain ?? null, currency: 'USD' };
     },
     async listProducts(): Promise<ThemeProduct[]> {
       console.debug('[storefront-commerce] listProducts', { siteId });
-      const res = await fetch(`${apiBase()}/commerce/sites/${encodeURIComponent(siteId)}/products`, { cache: 'no-store' });
+      const res = await fetch(`${apiBase()}/commerce/sites/${encodeURIComponent(siteId)}/products`, {
+        cache: 'no-store',
+        headers: requestHeaders(siteId),
+      });
       const products = await jsonOrThrow<any[]>(res, 'listProducts');
       return (products || []).map((p) => ({
         id: p.id,
@@ -46,7 +65,10 @@ export function createApiCommerceAdapter(siteId: string): CommerceAdapter {
     },
     async getCart(): Promise<ThemeCart> {
       console.debug('[storefront-commerce] getCart', { siteId });
-      const res = await fetch(`${apiBase()}/commerce/sites/${encodeURIComponent(siteId)}/cart`, { cache: 'no-store' });
+      const res = await fetch(`${apiBase()}/commerce/sites/${encodeURIComponent(siteId)}/cart`, {
+        cache: 'no-store',
+        headers: requestHeaders(siteId),
+      });
       const cart = await jsonOrThrow<any>(res, 'getCart');
       return { lines: cart.lines || [], currency: cart.currency || 'USD' };
     },
@@ -54,7 +76,7 @@ export function createApiCommerceAdapter(siteId: string): CommerceAdapter {
       console.debug('[storefront-commerce] addToCart', { siteId, productId, quantity });
       const res = await fetch(`${apiBase()}/commerce/sites/${encodeURIComponent(siteId)}/cart/lines`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: requestHeaders(siteId, { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ productId, quantity }),
       });
       const cart = await jsonOrThrow<any>(res, 'addToCart');

@@ -19,8 +19,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { getComponent, registerComponent, registerCoreComponents } from '@web-builder/builder-core';
 import type { JsonValue, PageContentV1, PageNode } from '@web-builder/contracts';
 import { applyEditorAction, type EditorActionEnvelope } from '@web-builder/contracts';
-import { apiGet, apiPost, apiPut } from '../../../../../lib/api';
-import { MediaPickerModal } from '../../../../media/media-picker-modal.client';
+import { apiGet, apiPost, apiPut } from '../../../../../../lib/api';
+import { MediaPickerModal } from '../../../../../media/media-picker-modal.client';
 
 registerCoreComponents();
 

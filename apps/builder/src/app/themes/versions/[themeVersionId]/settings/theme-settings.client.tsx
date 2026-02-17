@@ -31,7 +31,6 @@ function defaultSettingsFromSchema(manifest: ThemeManifestV1): Record<string, un
   for (const g of schema.groups || []) {
     for (const f of g.fields || []) {
       if (f && typeof f.id === 'string' && (out[f.id] === undefined)) {
-        // @ts-expect-error schema union
         out[f.id] = f.default;
       }
     }

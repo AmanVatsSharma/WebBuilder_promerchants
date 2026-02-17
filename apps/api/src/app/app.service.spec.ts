@@ -17,4 +17,13 @@ describe('AppService', () => {
       expect(service.getData()).toEqual({message: 'Hello API'});
     });
   });
+
+  describe('getHealth', () => {
+    it('should return healthy payload', () => {
+      const health = service.getHealth();
+      expect(health.status).toBe('ok');
+      expect(typeof health.timestamp).toBe('string');
+      expect(typeof health.uptimeSeconds).toBe('number');
+    });
+  });
 });

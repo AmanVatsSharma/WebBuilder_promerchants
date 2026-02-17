@@ -25,6 +25,21 @@ export class Theme {
   @Column({ type: 'text', nullable: true })
   author?: string | null;
 
+  @Column({ default: 'FREE' })
+  pricingModel: 'FREE' | 'PAID';
+
+  @Column({ type: 'int', nullable: true })
+  priceCents?: number | null;
+
+  @Column({ length: 3, default: 'USD' })
+  currency: string;
+
+  @Column({ default: 'SINGLE_STORE' })
+  licenseType: string;
+
+  @Column({ default: false })
+  isListed: boolean;
+
   @OneToMany(() => ThemeVersion, (v) => v.theme, { cascade: true })
   versions: ThemeVersion[];
 

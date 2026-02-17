@@ -17,5 +17,38 @@ The **seller-facing editor** for:
 - Builder production build is forced to webpack via `apps/builder/project.json`.
 
 ## Changelog
+- 2026-02-16: Added Theme Studio `Paste curation JSON` shortcut for clipboard-driven import of preset/filter artifacts without file picker friction.
+- 2026-02-16: Added Theme Studio `Import curation view` action to load preset/filter/sort JSON artifacts back into the workspace for reproducible demo states.
+- 2026-02-16: Added Theme Studio `Export curation view` action to copy active preset/filter/sort + visible theme IDs as JSON for investor artifacts and async collaboration.
+- 2026-02-16: Added Theme Studio preset-result counters (e.g., `Investor demo (N)`) so operators can preview curation impact before switching views.
+- 2026-02-16: Hardened Theme Studio `Inventory focus` behavior to reset unrelated filters before applying a focus lens, preventing accidental stacked-filter confusion.
+- 2026-02-16: Added Theme Studio `Inventory focus` quick-action chips (Ready/Building/Failed/Listed/Paid/Reset) for one-click curation pivots during triage and investor demos.
+- 2026-02-16: Persisted Theme Studio curation view state in session storage (`builder.themeStudio.curationView.v1`) so preset/filter context survives refreshes during demos.
+- 2026-02-16: Added Theme Studio saved curation presets (`All themes`, `Investor demo`, `Needs attention`, `Revenue-first`) with active preset indicator for faster marketplace storytelling and triage.
+- 2026-02-16: Added Theme Studio marketplace curation controls (build-state filter + sorting by price/listing/build readiness/name) with readiness chips and result counts for faster investor storytelling.
+- 2026-02-16: Added dashboard shortcut analytics controls (`Reset shortcut stats`, `Export shortcut stats`) plus aggregate totals chip for fast operator-behavior review during demos.
+- 2026-02-16: Added per-site shortcut analytics chip on dashboard cards (`E/S/P` click counters for editor/storefront/publish actions) persisted in session storage for operator behavior awareness.
+- 2026-02-16: Added dashboard theme health chips (`Published status`, `Draft status`) alongside version context so merchants can see build readiness without opening Theme Studio.
+- 2026-02-16: Added per-site release context chips on dashboard cards (`Published theme`, `Last release`) for faster merchant confidence checks before opening publish flows.
+- 2026-02-16: Added Publish Center quick actions (`Open Latest Editor`, `Open Live Storefront`) to shorten merchant release verification loops.
+- 2026-02-16: Added per-site quick actions on dashboard cards (`Open Latest Editor`, `Open Live Storefront`) to reduce navigation friction during merchant and investor walkthroughs.
+- 2026-02-16: Introduced shared `InlineNotice` UI component and wired dashboard/themes/publish flows to use consistent dismissible inline feedback for premium interaction polish.
+- 2026-02-16: Added snapshot-backed builder route smoke tests (dashboard, themes, publish center) to catch unintentional visual/layout regressions during rapid UX iteration.
+- 2026-02-16: Redesigned dashboard home UX with premium hero metrics, project search/filter, and inline action notices replacing interruptive popups for smoother site/domain/page workflows.
+- 2026-02-16: Upgraded Publish Center UX with premium navigation shell, inline operation notices (no blocking alerts), and cleaner release/rollback status surfaces for faster merchant publishing decisions.
+- 2026-02-16: Redesigned Theme Studio UX with premium visual hierarchy (hero stats, inventory filters, polished cards) and replaced blocking alert popups with inline operation notices for smoother seller workflows.
+- 2026-02-16: Added domain challenge SLO dashboard panel on home route with success-rate/retry/alert signal cards and recent alert feed for investor-demo operations visibility.
+- 2026-02-16: Builder API helper now supports bearer auth propagation (`NEXT_PUBLIC_API_AUTH_TOKEN`) for JWT auth-context guard environments.
+- 2026-02-16: Theme upload panel now captures marketplace metadata (`FREE/PAID`, price, currency, license, listed toggle) for theme store governance narratives.
+- 2026-02-16: Builder API helper now forwards optional `x-actor-id` (`NEXT_PUBLIC_ACTOR_ID`) for site-ownership authorization guard compatibility.
+- 2026-02-16: Builder API helper now auto-attaches `x-site-id` for site-scoped routes and optional `x-api-key` (`NEXT_PUBLIC_API_AUTH_KEY`) to support API auth/scope guards.
+- 2026-02-16: Added container image template at `apps/builder/Dockerfile` for production-style builder deployment via docker compose.
+- 2026-02-16: Added per-domain Verify action in project dashboard so sellers can trigger domain status checks directly from builder UI.
+- 2026-02-16: Removed stale `@ts-expect-error` in theme settings editor defaults to restore strict Next.js production TypeScript builds.
+- 2026-02-16: Fixed deep-route import paths in editor/template layout clients so Next production webpack builds resolve shared API/media modules correctly.
+- 2026-02-16: Added Theme Store bundle upload UI (metadata + zip upload) and domain mapping controls on dashboard projects for site-level domain setup visibility.
+- 2026-02-15: Replaced builder home with a real project dashboard (site/page creation, editor/preview/publish entry paths) and added local MVP seed/validation scripts (`npm run mvp:seed`, `npm run mvp:validate`).
+- 2026-02-15: Upgraded `/editor/[pageId]` with layer tree, multi-select, duplicate/copy/paste shortcuts, viewport-aware visual design controls, and side-by-side live preview.
+- 2026-02-15: Polished publish/theme workflows with readiness snapshots, theme audit visibility, rollback controls, and improved theme version editor telemetry/search/unsaved-state UX.
 - 2026-01-24: Theme version editor can seed a demo product via Commerce API for faster end-to-end theme testing.
 - 2026-01-24: Editor palette now loads from theme manifest sections, supports nested drag-reorder, and autosaves edits.

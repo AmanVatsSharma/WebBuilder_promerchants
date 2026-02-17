@@ -8,9 +8,12 @@
  * - Storefront middleware will call resolve endpoint to map Host->siteId
  */
 
-import { Controller, Get, Post, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Header } from '@nestjs/common';
 import { DomainsService } from './domains.service';
 import { CreateDomainMappingDto } from './dto/create-domain-mapping.dto';
+import { VerifyDomainMappingDto } from './dto/verify-domain-mapping.dto';
+import { CreateDomainChallengeDto } from './dto/create-domain-challenge.dto';
+import { DomainChallengeWebhookDto } from './dto/domain-challenge-webhook.dto';
 
 @Controller('domains')
 export class DomainsController {
@@ -29,6 +32,55 @@ export class DomainsController {
   @Get('resolve')
   resolve(@Query('host') host: string) {
     return this.domainsService.resolveHost(host);
+  }
+
+  @Get('challenges/metrics')
+  metrics() {
+    return this.domainsService.getChallengeSloMetrics();
+  }
+
+  @Get('challenges/alerts')
+  alerts(@Query('limit') limit?: string, @Query('delivered') delivered?: string) {
+    const parsedLimit = Number(limit || 50);
+    const deliveredFilter = typeof delivered === 'string' ? delivered.toLowerCase() === 'true' : undefined;
+    return this.domainsService.listChallengeAlerts(parsedLimit, deliveredFilter);
+  }
+
+  @Get('challenges/metrics/prometheus')
+  @Header('content-type', 'text/plain; version=0.0.4; charset=utf-8')
+  metricsPrometheus() {
+    return this.domainsService.getChallengeSloMetricsPrometheus();
+  }
+
+  @Post(':id/challenges')
+  issueChallenge(@Param('id') id: string, @Body() dto?: CreateDomainChallengeDto) {
+    return this.domainsService.issueChallenge(id, dto);
+  }
+
+  @Get(':id/challenges')
+  listChallenges(@Param('id') id: string) {
+    return this.domainsService.listChallenges(id);
+  }
+
+  @Post('challenges/:challengeId/verify')
+  verifyChallenge(@Param('challengeId') challengeId: string) {
+    return this.domainsService.verifyChallenge(challengeId);
+  }
+
+  @Post('challenges/:challengeId/webhook')
+  webhookChallenge(@Param('challengeId') challengeId: string, @Body() dto: DomainChallengeWebhookDto) {
+    return this.domainsService.ingestChallengeWebhook(challengeId, dto);
+  }
+
+  @Post('challenges/poll')
+  pollChallenges(@Query('limit') limit?: string) {
+    const parsedLimit = Number(limit || 10);
+    return this.domainsService.pollDueChallenges(parsedLimit);
+  }
+
+  @Post(':id/verify')
+  verify(@Param('id') id: string, @Body() dto?: VerifyDomainMappingDto) {
+    return this.domainsService.verifyMapping(id, dto);
   }
 }
 

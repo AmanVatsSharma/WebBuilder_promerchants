@@ -1,0 +1,63 @@
+name: webbuilder-ci
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - 'cursor/**'
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Sync docs and ensure clean generated output
+        run: |
+          npm run docs:sync
+          git diff --exit-code
+
+      - name: Test contracts
+        run: npx nx test contracts
+
+      - name: Test API
+        run: npx nx test api
+
+      - name: Build API
+        run: npx nx build api
+
+      - name: API e2e
+        env:
+          DB_TYPE: sqljs
+          THEME_BUILD_MODE: inline
+        run: npx nx e2e api-e2e
+
+      - name: Test builder
+        run: npx nx test builder
+
+      - name: Guard builder snapshot drift
+        run: git diff --exit-code -- apps/builder/specs/__snapshots__
+
+      - name: Build builder
+        run: npx nx build builder
+
+      - name: Test storefront
+        run: npx nx test storefront
+
+      - name: Guard storefront snapshot drift
+        run: git diff --exit-code -- apps/storefront/specs/__snapshots__
+
+      - name: Build storefront
+        run: npx nx build storefront

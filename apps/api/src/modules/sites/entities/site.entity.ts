@@ -19,6 +19,12 @@ export class Site {
   @Column({ nullable: true })
   domain: string;
 
+  @Column({ nullable: true })
+  ownerId?: string | null;
+
+  @Column({ nullable: true })
+  workspaceId?: string | null;
+
   @OneToMany(() => Page, (page) => page.site, { cascade: true })
   pages: Page[];
 

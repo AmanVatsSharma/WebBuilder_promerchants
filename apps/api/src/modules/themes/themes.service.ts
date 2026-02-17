@@ -35,9 +35,42 @@ function defaultVersion() {
   return `0.0.1-${Date.now()}`;
 }
 
-function isAllowedThemePath(p: string) {
-  // allow typical theme source files
-  return /\.(tsx|ts|jsx|js|css|json|md)$/i.test(p);
+function normalizePricingModel(raw?: string) {
+  return String(raw || '').toUpperCase() === 'PAID' ? 'PAID' : 'FREE';
+}
+
+function normalizePriceCents(raw: unknown, pricingModel: 'FREE' | 'PAID') {
+  if (pricingModel !== 'PAID') return null;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return Math.floor(parsed);
+}
+
+function normalizeCurrency(raw?: string) {
+  const value = String(raw || '').trim().toUpperCase();
+  return value.length === 3 ? value : 'USD';
+}
+
+function normalizeListed(raw?: string) {
+  return String(raw || '').trim().toLowerCase() === 'true';
+}
+
+function normalizeThemeSourcePath(rawPath: string): string | null {
+  const normalized = (rawPath || '').replace(/\\/g, '/').replace(/^\.\/+/, '').trim();
+  if (!normalized) return null;
+  if (normalized.startsWith('/')) return null;
+  if (normalized.includes('\0')) return null;
+  const segments = normalized.split('/');
+  if (segments.some((segment) => segment.length === 0 || segment === '.' || segment === '..')) {
+    return null;
+  }
+
+  // Allow typical theme source files only.
+  if (!/\.(tsx|ts|jsx|js|css|json|md)$/i.test(normalized)) {
+    return null;
+  }
+
+  return normalized;
 }
 
 type SiteThemeSettingsStored = {
@@ -225,11 +258,22 @@ export class ThemesService {
 
     this.logger.log(`uploadThemeBundle name=${dto.name} bytes=${file.size}`);
 
+    const pricingModel = normalizePricingModel(dto.pricingModel);
+    const priceCents = normalizePriceCents(dto.priceCents, pricingModel);
+    const currency = normalizeCurrency(dto.currency);
+    const licenseType = String(dto.licenseType || 'SINGLE_STORE').trim() || 'SINGLE_STORE';
+    const isListed = normalizeListed(dto.isListed);
+
     const theme = await this.themeRepo.save(
       this.themeRepo.create({
         name: dto.name,
         description: dto.description ?? null,
         author: dto.author ?? null,
+        pricingModel,
+        priceCents,
+        currency,
+        licenseType,
+        isListed,
       }),
     );
 
@@ -248,10 +292,9 @@ export class ThemesService {
     let manifestJson: any = null;
     for (const entry of dir.files) {
       if (entry.type !== 'File') continue;
-      const entryPath = entry.path.replaceAll('\\', '/');
-      if (!entryPath || entryPath.endsWith('/')) continue;
-      if (!isAllowedThemePath(entryPath)) {
-        this.logger.debug(`Skipping disallowed theme file: ${entryPath}`);
+      const entryPath = normalizeThemeSourcePath(entry.path);
+      if (!entryPath) {
+        this.logger.debug(`Skipping disallowed theme file: ${entry.path}`);
         continue;
       }
       const content = await entry.buffer();
@@ -291,22 +334,31 @@ export class ThemesService {
   async readThemeFile(themeVersionId: string, filePath: string) {
     await this.getThemeVersion(themeVersionId);
     if (!filePath) throw new BadRequestException('path is required');
-    if (!isAllowedThemePath(filePath)) throw new BadRequestException('path extension not allowed');
+    const normalizedPath = normalizeThemeSourcePath(filePath);
+    if (!normalizedPath) {
+      throw new BadRequestException('path is invalid or extension is not allowed');
+    }
 
-    const content = await this.storage.readText(`themes/${themeVersionId}/src/${filePath}`);
-    return { path: filePath, content };
+    const content = await this.storage.readText(`themes/${themeVersionId}/src/${normalizedPath}`);
+    return { path: normalizedPath, content };
   }
 
   async updateThemeFile(themeVersionId: string, filePath: string, content: string) {
     const v = await this.getThemeVersion(themeVersionId);
     if (!filePath) throw new BadRequestException('path is required');
-    if (!isAllowedThemePath(filePath)) throw new BadRequestException('path extension not allowed');
+    const normalizedPath = normalizeThemeSourcePath(filePath);
+    if (!normalizedPath) {
+      throw new BadRequestException('path is invalid or extension is not allowed');
+    }
 
-    const { size, sha256 } = await this.storage.writeText(`themes/${themeVersionId}/src/${filePath}`, content);
+    const { size, sha256 } = await this.storage.writeText(
+      `themes/${themeVersionId}/src/${normalizedPath}`,
+      content,
+    );
     await this.fileRepo.save(
       this.fileRepo.create({
         themeVersionId,
-        path: filePath,
+        path: normalizedPath,
         size,
         sha256,
       }),
@@ -316,8 +368,8 @@ export class ThemesService {
     v.status = 'DRAFT';
     await this.versionRepo.save(v);
 
-    this.logger.log(`updateThemeFile themeVersionId=${themeVersionId} path=${filePath} size=${size}`);
-    return { path: filePath, size, sha256 };
+    this.logger.log(`updateThemeFile themeVersionId=${themeVersionId} path=${normalizedPath} size=${size}`);
+    return { path: normalizedPath, size, sha256 };
   }
 
   async installThemeForSite(siteId: string, themeId: string, themeVersionId: string) {
@@ -415,6 +467,11 @@ export class ThemesService {
         name: themeName,
         description: 'Starter ecommerce theme shipped with the platform.',
         author: 'WebBuilder',
+        pricingModel: 'FREE',
+        priceCents: null,
+        currency: 'USD',
+        licenseType: 'SINGLE_STORE',
+        isListed: true,
       }),
     );
 
@@ -443,18 +500,22 @@ export class ThemesService {
 
     let manifestJson: any = null;
     for (const f of files) {
-      if (!isAllowedThemePath(f.rel)) continue;
+      const normalizedPath = normalizeThemeSourcePath(f.rel);
+      if (!normalizedPath) continue;
       const buf = await fs.readFile(f.abs);
-      const { size, sha256 } = await this.storage.writeBytes(`themes/${version.id}/src/${f.rel}`, buf);
+      const { size, sha256 } = await this.storage.writeBytes(
+        `themes/${version.id}/src/${normalizedPath}`,
+        buf,
+      );
       await this.fileRepo.save(
         this.fileRepo.create({
           themeVersionId: version.id,
-          path: f.rel,
+          path: normalizedPath,
           size,
           sha256,
         }),
       );
-      if (f.rel.toLowerCase() === 'manifest.json') {
+      if (normalizedPath.toLowerCase() === 'manifest.json') {
         try {
           manifestJson = JSON.parse(buf.toString('utf-8'));
         } catch (e) {

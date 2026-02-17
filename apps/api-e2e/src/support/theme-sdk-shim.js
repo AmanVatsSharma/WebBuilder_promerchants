@@ -69,6 +69,10 @@ function ProductCard() {
   return React.createElement('div', null);
 }
 
+function ThemeNodeRenderer({ node }) {
+  return React.createElement('pre', null, JSON.stringify(node || {}));
+}
+
 module.exports = {
   ThemeSdkProvider,
   useThemeSdk,
@@ -77,5 +81,6 @@ module.exports = {
   Footer,
   Money,
   ProductCard,
+  ThemeNodeRenderer,
 };
 

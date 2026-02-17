@@ -9,7 +9,7 @@
  * - ThemeBuildJob is the durable API-facing ledger for job status.
  */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Queue } from 'bullmq';
@@ -19,6 +19,7 @@ import { ThemeVersion } from './entities/theme-version.entity';
 import { ThemeBuildJob, type ThemeBuildJobStatus } from './entities/theme-build-job.entity';
 import { THEME_BUILD_QUEUE_NAME } from '../../shared/queue/queue.constants';
 import { LoggerService } from '../../shared/logger/logger.service';
+import { isInlineThemeBuildMode } from './theme-build-mode';
 
 type PublicBuildJob = {
   jobId: string;
@@ -38,14 +39,13 @@ function parseIntSafe(v: string | undefined, fallback: number) {
 
 @Injectable()
 export class ThemeBuildQueueService {
+  private readonly inlineMode = isInlineThemeBuildMode();
+
   constructor(
-    // buildSvc is intentionally unused here; worker does the heavy lifting.
-    // We keep it injected so older wiring/tests that expect it still compile.
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     private readonly buildSvc: ThemeBuildService,
     @InjectRepository(ThemeVersion) private readonly versionRepo: Repository<ThemeVersion>,
     @InjectRepository(ThemeBuildJob) private readonly buildJobRepo: Repository<ThemeBuildJob>,
-    @InjectQueue(THEME_BUILD_QUEUE_NAME) private readonly queue: Queue,
+    @Optional() @InjectQueue(THEME_BUILD_QUEUE_NAME) private readonly queue: Queue | undefined,
     private readonly logger: LoggerService,
   ) {}
 
@@ -65,18 +65,19 @@ export class ThemeBuildQueueService {
       return this.toPublic(existing);
     }
 
-    v.status = 'QUEUED';
+    const maxAttempts = parseIntSafe(process.env.THEME_BUILD_MAX_ATTEMPTS, 3);
+
+    v.status = this.inlineMode ? 'BUILDING' : 'QUEUED';
     await this.versionRepo.save(v);
 
-    const maxAttempts = parseIntSafe(process.env.THEME_BUILD_MAX_ATTEMPTS, 3);
     const saved = await this.buildJobRepo.save(
       this.buildJobRepo.create({
         themeVersionId,
-        status: 'QUEUED',
+        status: this.inlineMode ? 'RUNNING' : 'QUEUED',
         attempt: 0,
         maxAttempts,
         requestId: requestId ?? null,
-        startedAt: null,
+        startedAt: this.inlineMode ? new Date() : null,
         finishedAt: null,
         durationMs: null,
         errorMessage: null,
@@ -84,6 +85,14 @@ export class ThemeBuildQueueService {
         bullJobId: null,
       }),
     );
+
+    if (this.inlineMode) {
+      return await this.executeInlineBuild(saved.id, themeVersionId, requestId ?? null);
+    }
+
+    if (!this.queue) {
+      throw new Error('Theme build queue is not configured. Set THEME_BUILD_MODE=inline for local execution.');
+    }
 
     const bullJob = await this.queue.add(
       THEME_BUILD_QUEUE_NAME,
@@ -105,6 +114,72 @@ export class ThemeBuildQueueService {
       requestId: requestId ?? null,
     });
     return this.toPublic({ ...saved, bullJobId: String(bullJob.id) } as ThemeBuildJob);
+  }
+
+  private async executeInlineBuild(
+    themeBuildJobId: string,
+    themeVersionId: string,
+    requestId: string | null,
+  ): Promise<PublicBuildJob> {
+    const startedAt = new Date();
+    try {
+      const res = await this.buildSvc.buildThemeVersion(themeVersionId);
+      const finishedAt = new Date();
+      const durationMs = Math.max(0, finishedAt.getTime() - startedAt.getTime());
+
+      if (res?.status === 'FAILED') {
+        await this.buildJobRepo.update(themeBuildJobId, {
+          status: 'FAILED',
+          attempt: 1,
+          maxAttempts: 1,
+          startedAt,
+          finishedAt,
+          durationMs,
+          requestId,
+          errorMessage: res.error || 'Build failed',
+          errorStack: null,
+        });
+      } else {
+        await this.buildJobRepo.update(themeBuildJobId, {
+          status: 'SUCCEEDED',
+          attempt: 1,
+          maxAttempts: 1,
+          startedAt,
+          finishedAt,
+          durationMs,
+          requestId,
+          errorMessage: null,
+          errorStack: null,
+        });
+      }
+    } catch (e: any) {
+      const finishedAt = new Date();
+      const durationMs = Math.max(0, finishedAt.getTime() - startedAt.getTime());
+      await this.buildJobRepo.update(themeBuildJobId, {
+        status: 'FAILED',
+        attempt: 1,
+        maxAttempts: 1,
+        startedAt,
+        finishedAt,
+        durationMs,
+        requestId,
+        errorMessage: e?.message || String(e),
+        errorStack: e?.stack || null,
+      });
+    }
+
+    const finalJob = await this.buildJobRepo.findOne({ where: { id: themeBuildJobId } });
+    if (!finalJob) {
+      throw new NotFoundException(`Inline build job not found: ${themeBuildJobId}`);
+    }
+
+    this.logger.info('theme build inline execution complete', {
+      themeBuildJobId,
+      themeVersionId,
+      status: finalJob.status,
+      requestId,
+    });
+    return this.toPublic(finalJob);
   }
 
   async getJob(jobId: string): Promise<PublicBuildJob> {

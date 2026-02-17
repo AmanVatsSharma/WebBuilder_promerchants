@@ -1,0 +1,56 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`StorefrontBasicShell renders branded header, host marker, and content 1`] = `
+<DocumentFragment>
+  <div
+    class="min-h-screen bg-slate-50 text-slate-900"
+  >
+    <header
+      class="border-b bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white"
+    >
+      <div
+        class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4"
+      >
+        <div>
+          <div
+            class="text-sm uppercase tracking-wide text-slate-300"
+          >
+            Storefront
+          </div>
+          <div
+            class="text-lg font-semibold"
+          >
+            Demo Store
+          </div>
+        </div>
+        <div
+          class="rounded border border-white/30 bg-white/10 px-3 py-1 text-xs text-slate-200"
+        >
+          host: 
+          <span
+            class="font-mono"
+          >
+            shop.demo.localhost
+          </span>
+        </div>
+      </div>
+    </header>
+    <main
+      class="mx-auto max-w-6xl px-6 py-8"
+    >
+      <div>
+        Demo body
+      </div>
+    </main>
+    <footer
+      class="border-t bg-white"
+    >
+      <div
+        class="mx-auto max-w-6xl px-6 py-4 text-xs text-slate-500"
+      >
+        Powered by WebBuilder storefront runtime.
+      </div>
+    </footer>
+  </div>
+</DocumentFragment>
+`;

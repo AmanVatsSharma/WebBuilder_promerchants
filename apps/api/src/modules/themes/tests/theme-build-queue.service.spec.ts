@@ -16,17 +16,37 @@ import { Theme } from '../entities/theme.entity';
 import { ThemeFile } from '../entities/theme-file.entity';
 import { ThemeVersion } from '../entities/theme-version.entity';
 import { ThemeBuildService } from '../theme-build.service';
+import { ThemeBuildJob } from '../entities/theme-build-job.entity';
+import { LoggerService } from '../../../shared/logger/logger.service';
 
 describe('ThemeBuildQueueService', () => {
   let mod: any;
   let svc: ThemeBuildQueueService;
   let versionRepo: Repository<ThemeVersion>;
+  const originalDbType = process.env.DB_TYPE;
   const buildSvcMock = {
     buildThemeVersion: jest.fn(async () => ({ status: 'BUILT' })),
+  };
+  const loggerStub: Partial<LoggerService> = {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+    trace: jest.fn(),
+    fatal: jest.fn(),
+    with: jest.fn(() => ({
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn(),
+      debug: jest.fn(),
+      trace: jest.fn(),
+      fatal: jest.fn(),
+    })),
   };
 
   beforeEach(async () => {
     buildSvcMock.buildThemeVersion.mockClear();
+    process.env.DB_TYPE = 'sqljs';
 
     mod = await Test.createTestingModule({
       imports: [
@@ -34,16 +54,20 @@ describe('ThemeBuildQueueService', () => {
           type: 'sqljs',
           location: ':memory:',
           autoSave: false,
-          entities: [Theme, ThemeVersion, ThemeFile],
+          entities: [Theme, ThemeVersion, ThemeFile, ThemeBuildJob],
           synchronize: true,
         }),
-        TypeOrmModule.forFeature([Theme, ThemeVersion, ThemeFile]),
+        TypeOrmModule.forFeature([Theme, ThemeVersion, ThemeFile, ThemeBuildJob]),
       ],
       providers: [
         ThemeBuildQueueService,
         {
           provide: ThemeBuildService,
           useValue: buildSvcMock,
+        },
+        {
+          provide: LoggerService,
+          useValue: loggerStub,
         },
       ],
     }).compile();
@@ -54,6 +78,7 @@ describe('ThemeBuildQueueService', () => {
 
   afterEach(async () => {
     if (mod) await mod.close();
+    process.env.DB_TYPE = originalDbType;
   });
 
   it('enqueues a build job and exposes it via getJob', async () => {
@@ -76,7 +101,7 @@ describe('ThemeBuildQueueService', () => {
     expect(['QUEUED', 'RUNNING', 'SUCCEEDED']).toContain(job.status);
     expect(typeof job.jobId).toBe('string');
 
-    const loaded = svc.getJob(job.jobId);
+    const loaded = await svc.getJob(job.jobId);
     expect(loaded.jobId).toBe(job.jobId);
   });
 });

@@ -1,0 +1,632 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`ThemesClient renders curation controls, supports filtering, and keeps upload flow 1`] = `
+<DocumentFragment>
+  <div
+    class="min-h-screen bg-slate-50"
+  >
+    <section
+      class="border-b bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white"
+    >
+      <div
+        class="mx-auto max-w-7xl px-6 py-8"
+      >
+        <div
+          class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"
+        >
+          <div>
+            <h1
+              class="text-3xl font-bold tracking-tight"
+            >
+              Theme Studio
+            </h1>
+            <p
+              class="mt-2 max-w-2xl text-sm text-slate-200"
+            >
+              Curate theme inventory, package marketplace-ready metadata, and jump into version editors quickly.
+            </p>
+          </div>
+          <div
+            class="flex flex-wrap items-center gap-2"
+          >
+            <button
+              class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
+            >
+              Seed Default Theme
+            </button>
+            <button
+              class="rounded-lg border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20 disabled:opacity-60"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+        <div
+          class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3"
+        >
+          <div
+            class="rounded-xl border border-white/20 bg-white/10 px-4 py-3"
+          >
+            <div
+              class="text-xs uppercase tracking-wide text-slate-300"
+            >
+              Total themes
+            </div>
+            <div
+              class="mt-1 text-2xl font-semibold"
+            >
+              3
+            </div>
+          </div>
+          <div
+            class="rounded-xl border border-white/20 bg-white/10 px-4 py-3"
+          >
+            <div
+              class="text-xs uppercase tracking-wide text-slate-300"
+            >
+              Marketplace listed
+            </div>
+            <div
+              class="mt-1 text-2xl font-semibold"
+            >
+              2
+            </div>
+          </div>
+          <div
+            class="rounded-xl border border-white/20 bg-white/10 px-4 py-3"
+          >
+            <div
+              class="text-xs uppercase tracking-wide text-slate-300"
+            >
+              Paid themes
+            </div>
+            <div
+              class="mt-1 text-2xl font-semibold"
+            >
+              2
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <main
+      class="mx-auto max-w-7xl px-6 py-6"
+    >
+      <div
+        class="mb-4"
+      >
+        <div
+          class="rounded-lg border px-3 py-2 text-sm bg-emerald-50 border-emerald-200 text-emerald-800"
+        >
+          <div
+            class="flex items-start justify-between gap-3"
+          >
+            <div>
+              <div
+                class="text-[11px] font-semibold uppercase tracking-wide"
+              >
+                Success
+              </div>
+              <div>
+                Curation view copied to clipboard.
+              </div>
+            </div>
+            <button
+              class="rounded border border-current/30 px-2 py-0.5 text-[11px] hover:bg-white/30"
+              type="button"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      </div>
+      <section
+        class="rounded-xl border bg-white p-4 shadow-sm"
+      >
+        <div
+          class="flex flex-col gap-1"
+        >
+          <h2
+            class="text-base font-semibold text-slate-900"
+          >
+            Upload Theme Bundle
+          </h2>
+          <p
+            class="text-xs text-slate-500"
+          >
+            Upload zip packages containing 
+            <span
+              class="font-mono"
+            >
+              manifest.json
+            </span>
+            , entry source, and template files.
+          </p>
+        </div>
+        <div
+          class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2"
+        >
+          <input
+            class="rounded-lg border px-3 py-2 text-sm"
+            placeholder="Theme name"
+            value=""
+          />
+          <input
+            class="rounded-lg border px-3 py-2 text-sm"
+            placeholder="Version (optional)"
+            value=""
+          />
+          <input
+            class="rounded-lg border px-3 py-2 text-sm"
+            placeholder="Author (optional)"
+            value=""
+          />
+          <input
+            class="rounded-lg border px-3 py-2 text-sm"
+            placeholder="Description (optional)"
+            value=""
+          />
+          <select
+            class="rounded-lg border px-3 py-2 text-sm"
+          >
+            <option
+              value="FREE"
+            >
+              FREE
+            </option>
+            <option
+              value="PAID"
+            >
+              PAID
+            </option>
+          </select>
+          <input
+            class="rounded-lg border px-3 py-2 text-sm"
+            disabled=""
+            placeholder="Price (cents, optional for PAID)"
+            value=""
+          />
+          <input
+            class="rounded-lg border px-3 py-2 text-sm"
+            placeholder="Currency (USD)"
+            value="USD"
+          />
+          <input
+            class="rounded-lg border px-3 py-2 text-sm"
+            placeholder="License (SINGLE_STORE)"
+            value="SINGLE_STORE"
+          />
+        </div>
+        <div
+          class="mt-4 flex flex-wrap items-center gap-3"
+        >
+          <input
+            accept=".zip,application/zip"
+            type="file"
+          />
+          <button
+            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+          >
+            Upload Theme
+          </button>
+          <div
+            class="text-xs text-slate-600"
+          >
+            Selected bundle: 
+            <span
+              class="font-mono"
+            >
+              demo-theme.zip
+            </span>
+          </div>
+          <label
+            class="text-xs text-slate-700 flex items-center gap-2"
+          >
+            <input
+              type="checkbox"
+            />
+            Listed in marketplace
+          </label>
+        </div>
+      </section>
+      <section
+        class="mt-6 rounded-xl border bg-white p-4 shadow-sm"
+      >
+        <div
+          class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
+        >
+          <div
+            class="text-xs font-semibold uppercase tracking-wide text-slate-700"
+          >
+            Curation presets
+          </div>
+          <div
+            class="mt-2 flex flex-wrap gap-2"
+          >
+            <button
+              aria-pressed="false"
+              class="rounded-full border px-3 py-1 text-xs font-semibold transition border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+              type="button"
+            >
+              All themes (3)
+            </button>
+            <button
+              aria-pressed="false"
+              class="rounded-full border px-3 py-1 text-xs font-semibold transition border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+              type="button"
+            >
+              Investor demo (1)
+            </button>
+            <button
+              aria-pressed="true"
+              class="rounded-full border px-3 py-1 text-xs font-semibold transition border-blue-500 bg-blue-600 text-white"
+              type="button"
+            >
+              Needs attention (1)
+            </button>
+            <button
+              aria-pressed="false"
+              class="rounded-full border px-3 py-1 text-xs font-semibold transition border-slate-300 bg-white text-slate-700 hover:border-slate-400"
+              type="button"
+            >
+              Revenue-first (0)
+            </button>
+          </div>
+          <div
+            class="mt-2 text-xs text-slate-500"
+          >
+            Active preset: Needs attention — Failed builds surfaced first for fast triage
+          </div>
+          <div
+            class="mt-2"
+          >
+            <div
+              class="flex flex-wrap items-center gap-2"
+            >
+              <button
+                class="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+                type="button"
+              >
+                Export curation view
+              </button>
+              <button
+                class="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+                type="button"
+              >
+                Import curation view
+              </button>
+              <button
+                class="rounded border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+                type="button"
+              >
+                Paste curation JSON
+              </button>
+              <input
+                accept="application/json,.json"
+                class="hidden"
+                type="file"
+              />
+            </div>
+          </div>
+        </div>
+        <div
+          class="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3"
+        >
+          <div
+            class="text-xs font-semibold uppercase tracking-wide text-slate-700"
+          >
+            Inventory focus
+          </div>
+          <div
+            class="mt-2 flex flex-wrap gap-2"
+          >
+            <button
+              class="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+              type="button"
+            >
+              Ready builds (1)
+            </button>
+            <button
+              class="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+              type="button"
+            >
+              Building (1)
+            </button>
+            <button
+              class="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+              type="button"
+            >
+              Failed builds (1)
+            </button>
+            <button
+              class="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+              type="button"
+            >
+              Listed themes (2)
+            </button>
+            <button
+              class="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+              type="button"
+            >
+              Paid themes (2)
+            </button>
+            <button
+              class="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-400"
+              type="button"
+            >
+              Reset view
+            </button>
+          </div>
+        </div>
+        <div
+          class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+        >
+          <div>
+            <h2
+              class="text-base font-semibold text-slate-900"
+            >
+              Theme inventory
+            </h2>
+            <p
+              class="text-xs text-slate-500"
+            >
+              Search, filter, and sort to curate storefront-ready marketplace inventory.
+            </p>
+          </div>
+          <div
+            class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5"
+          >
+            <input
+              class="rounded-lg border px-3 py-2 text-sm"
+              placeholder="Search name/author/description"
+              value=""
+            />
+            <select
+              class="rounded-lg border px-3 py-2 text-sm"
+            >
+              <option
+                value="ALL"
+              >
+                All pricing
+              </option>
+              <option
+                value="FREE"
+              >
+                Free
+              </option>
+              <option
+                value="PAID"
+              >
+                Paid
+              </option>
+            </select>
+            <select
+              class="rounded-lg border px-3 py-2 text-sm"
+            >
+              <option
+                value="ALL"
+              >
+                All listing states
+              </option>
+              <option
+                value="LISTED"
+              >
+                Listed
+              </option>
+              <option
+                value="UNLISTED"
+              >
+                Unlisted
+              </option>
+            </select>
+            <select
+              class="rounded-lg border px-3 py-2 text-sm"
+            >
+              <option
+                value="ALL"
+              >
+                All build states
+              </option>
+              <option
+                value="READY"
+              >
+                Ready
+              </option>
+              <option
+                value="BUILDING"
+              >
+                Building
+              </option>
+              <option
+                value="FAILED"
+              >
+                Failed
+              </option>
+              <option
+                value="NO_VERSION"
+              >
+                No version
+              </option>
+              <option
+                value="UNKNOWN"
+              >
+                Unknown
+              </option>
+            </select>
+            <select
+              class="rounded-lg border px-3 py-2 text-sm"
+            >
+              <option
+                value="UPDATED_DESC"
+              >
+                Sort: Recently updated
+              </option>
+              <option
+                value="PRICE_ASC"
+              >
+                Sort: Price low to high
+              </option>
+              <option
+                value="PRICE_DESC"
+              >
+                Sort: Price high to low
+              </option>
+              <option
+                value="LISTED_FIRST"
+              >
+                Sort: Listed first
+              </option>
+              <option
+                value="BUILD_READY_FIRST"
+              >
+                Sort: Build ready first
+              </option>
+              <option
+                value="BUILD_ISSUES_FIRST"
+              >
+                Sort: Build issues first
+              </option>
+              <option
+                value="NAME_ASC"
+              >
+                Sort: Name A-Z
+              </option>
+            </select>
+          </div>
+        </div>
+        <div
+          class="mt-3 text-xs text-slate-500"
+        >
+          Showing 1 of 3 themes
+        </div>
+        <div
+          class="mt-4 space-y-4"
+        >
+          <article
+            class="rounded-xl border bg-slate-50 p-4"
+          >
+            <div
+              class="mb-3 flex flex-wrap items-center gap-2 text-[11px]"
+            >
+              <span
+                class="rounded-full px-2 py-0.5 font-semibold bg-rose-100 text-rose-700"
+              >
+                Build: FAILED
+              </span>
+              <span
+                class="rounded-full bg-slate-200 px-2 py-0.5 font-semibold text-slate-700"
+              >
+                Latest: 2.1.0
+              </span>
+            </div>
+            <div
+              class="flex flex-wrap items-start justify-between gap-3"
+            >
+              <div>
+                <div
+                  class="text-lg font-semibold text-slate-900"
+                >
+                  Nebula Fashion
+                </div>
+                <div
+                  class="mt-1 text-sm text-slate-600"
+                >
+                  Needs build attention
+                </div>
+                <div
+                  class="mt-2 flex flex-wrap items-center gap-2 text-xs"
+                >
+                  <span
+                    class="rounded-full bg-slate-900 px-2 py-0.5 font-semibold text-white"
+                  >
+                    USD 49.00
+                  </span>
+                  <span
+                    class="rounded-full px-2 py-0.5 font-semibold bg-emerald-100 text-emerald-700"
+                  >
+                    LISTED
+                  </span>
+                  <span
+                    class="rounded-full bg-violet-100 px-2 py-0.5 font-semibold text-violet-700"
+                  >
+                    SINGLE_STORE
+                  </span>
+                </div>
+                <div
+                  class="mt-2 text-xs text-slate-500"
+                >
+                  themeId=
+                  <span
+                    class="font-mono"
+                  >
+                    theme_2
+                  </span>
+                </div>
+              </div>
+              <div
+                class="text-right text-xs text-slate-500"
+              >
+                <div>
+                  Author: Unknown
+                </div>
+                <div
+                  class="mt-1"
+                >
+                  Versions: 1
+                </div>
+              </div>
+            </div>
+            <div
+              class="mt-4"
+            >
+              <div
+                class="mb-2 text-sm font-semibold text-slate-800"
+              >
+                Versions
+              </div>
+              <div
+                class="space-y-2"
+              >
+                <div
+                  class="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2"
+                >
+                  <div
+                    class="text-sm"
+                  >
+                    <span
+                      class="font-mono"
+                    >
+                      2.1.0
+                    </span>
+                    <span
+                      class="ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-rose-100 text-rose-700"
+                    >
+                      FAILED
+                    </span>
+                    <div
+                      class="mt-1 text-xs text-slate-500"
+                    >
+                      themeVersionId=
+                      <span
+                        class="font-mono"
+                      >
+                        tv_2
+                      </span>
+                    </div>
+                  </div>
+                  <a
+                    class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
+                    href="/themes/versions/tv_2"
+                  >
+                    Open Editor
+                  </a>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+</DocumentFragment>
+`;

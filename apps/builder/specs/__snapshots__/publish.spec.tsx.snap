@@ -1,0 +1,360 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`PublishClient renders publish sections and rollback controls 1`] = `
+<DocumentFragment>
+  <div
+    class="min-h-screen bg-slate-50"
+  >
+    <section
+      class="border-b bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white"
+    >
+      <div
+        class="mx-auto max-w-7xl px-6 py-6"
+      >
+        <div
+          class="flex flex-wrap items-start justify-between gap-4"
+        >
+          <div>
+            <h1
+              class="text-2xl font-bold"
+            >
+              Publish Center
+            </h1>
+            <div
+              class="mt-1 text-xs text-slate-200"
+            >
+              siteId: 
+              <span
+                class="font-mono"
+              >
+                site_1
+              </span>
+            </div>
+          </div>
+          <div
+            class="flex gap-2"
+          >
+            <a
+              class="rounded border border-white/30 bg-white/10 px-3 py-2 text-sm hover:bg-white/20"
+              href="/themes"
+            >
+              Themes
+            </a>
+            <button
+              class="rounded border border-white/30 bg-white/10 px-3 py-2 text-sm hover:bg-white/20 disabled:opacity-50"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <main
+      class="mx-auto max-w-7xl space-y-6 px-6 py-6"
+    >
+      <section
+        class="rounded-xl border bg-white p-4 shadow-sm"
+      >
+        <div
+          class="font-semibold text-slate-900"
+        >
+          Quick Actions
+        </div>
+        <div
+          class="mt-1 text-xs text-slate-500"
+        >
+          Jump directly to the latest editor context or live storefront route.
+        </div>
+        <div
+          class="mt-3 flex flex-wrap items-center gap-2"
+        >
+          <a
+            class="rounded border bg-white px-3 py-2 text-xs hover:bg-slate-100"
+            href="/editor/p1"
+          >
+            Open Latest Editor
+          </a>
+          <a
+            class="rounded border bg-white px-3 py-2 text-xs hover:bg-slate-100"
+            href="http://demo.localhost/"
+            rel="noreferrer"
+            target="_blank"
+          >
+            Open Live Storefront
+          </a>
+        </div>
+      </section>
+      <section
+        class="rounded-xl border bg-white p-4 shadow-sm"
+      >
+        <div
+          class="font-semibold text-slate-900"
+        >
+          Readiness Snapshot
+        </div>
+        <div
+          class="mt-3 grid grid-cols-1 gap-2 text-xs md:grid-cols-4"
+        >
+          <div
+            class="rounded px-3 py-2 bg-emerald-100 text-emerald-700"
+          >
+            Draft selected: Yes
+          </div>
+          <div
+            class="rounded px-3 py-2 bg-emerald-100 text-emerald-700"
+          >
+            Build status: BUILT
+          </div>
+          <div
+            class="rounded px-3 py-2 bg-emerald-100 text-emerald-700"
+          >
+            Templates: 1
+          </div>
+          <div
+            class="rounded px-3 py-2 bg-emerald-100 text-emerald-700"
+          >
+            Pages: 1
+          </div>
+        </div>
+      </section>
+      <section
+        class="rounded-xl border bg-white p-4 shadow-sm"
+      >
+        <div
+          class="font-semibold text-slate-900"
+        >
+          Theme
+        </div>
+        <div
+          class="mt-1 text-xs text-slate-500"
+        >
+          Draft: 
+          <span
+            class="font-mono"
+          >
+            tv_1
+          </span>
+           · Published: 
+          <span
+            class="font-mono"
+          >
+            tv_1
+          </span>
+        </div>
+        <div
+          class="mt-2 text-xs"
+        >
+          <span
+            class="rounded px-2 py-1 bg-emerald-100 text-emerald-700"
+          >
+            BUILT
+          </span>
+        </div>
+        <div
+          class="mt-3 flex flex-wrap gap-2"
+        >
+          <button
+            class="rounded bg-indigo-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+            title=""
+          >
+            Publish Theme
+          </button>
+          <a
+            class="rounded border px-4 py-2 text-sm"
+            href="/themes/versions/tv_1/settings"
+          >
+            Edit Settings
+          </a>
+        </div>
+      </section>
+      <section
+        class="rounded-xl border bg-white p-4 shadow-sm"
+      >
+        <div
+          class="font-semibold text-slate-900"
+        >
+          Settings + Layouts + Pages
+        </div>
+        <div
+          class="mt-1 text-xs text-slate-500"
+        >
+          Publish these in sequence to keep storefront state consistent.
+        </div>
+        <div
+          class="mt-3 flex flex-wrap gap-2"
+        >
+          <button
+            class="rounded bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+          >
+            Publish Settings
+          </button>
+          <button
+            class="rounded bg-purple-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+          >
+            Publish Layouts
+          </button>
+          <button
+            class="rounded bg-emerald-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+          >
+            Publish Pages
+          </button>
+        </div>
+        <div
+          class="mt-3 flex flex-wrap gap-2"
+        >
+          <a
+            class="rounded border px-3 py-2 text-sm font-mono"
+            href="/sites/site_1/theme/templates/pages%2Fhome"
+          >
+            pages/home
+          </a>
+        </div>
+      </section>
+      <section
+        class="rounded-xl border bg-white p-4 shadow-sm"
+      >
+        <div
+          class="font-semibold text-slate-900"
+        >
+          Rollback
+        </div>
+        <div
+          class="mt-1 text-xs text-slate-500"
+        >
+          Roll back to a previously built or published theme version if needed.
+        </div>
+        <div
+          class="mt-3 flex flex-wrap items-center gap-2"
+        >
+          <select
+            class="min-w-80 rounded border px-3 py-2 text-sm"
+          >
+            <option
+              value=""
+            >
+              Select target version...
+            </option>
+            <option
+              value="tv_1"
+            >
+              1.0.0 (BUILT) · tv_1
+            </option>
+          </select>
+          <button
+            class="rounded bg-amber-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+            disabled=""
+          >
+            Rollback Theme
+          </button>
+        </div>
+      </section>
+      <section
+        class="rounded-xl border bg-white p-4 shadow-sm"
+      >
+        <div
+          class="font-semibold text-slate-900"
+        >
+          Theme Publish History
+        </div>
+        <div
+          class="mt-3 space-y-2"
+        >
+          <div
+            class="rounded border bg-slate-50 p-2 text-xs"
+          >
+            <div
+              class="font-semibold"
+            >
+              PUBLISH
+            </div>
+            <div
+              class="mt-1 text-slate-600"
+            >
+              actor: 
+              <span
+                class="font-mono"
+              >
+                test
+              </span>
+            </div>
+            <div
+              class="text-slate-600"
+            >
+              from: 
+              <span
+                class="font-mono"
+              >
+                —
+              </span>
+            </div>
+            <div
+              class="text-slate-600"
+            >
+              to: 
+              <span
+                class="font-mono"
+              >
+                tv_1
+              </span>
+            </div>
+            <div
+              class="text-slate-600"
+            >
+              at: 2/16/2026, 10:00:00 AM
+            </div>
+          </div>
+        </div>
+      </section>
+      <section
+        class="rounded-xl border bg-white p-4 shadow-sm"
+      >
+        <div
+          class="font-semibold text-slate-900"
+        >
+          Page Status
+        </div>
+        <div
+          class="mt-3 space-y-2"
+        >
+          <div
+            class="flex items-center justify-between gap-3 rounded border bg-slate-50 p-2"
+          >
+            <div>
+              <div
+                class="text-sm font-semibold"
+              >
+                Home
+              </div>
+              <div
+                class="text-xs text-slate-600"
+              >
+                slug: 
+                <span
+                  class="font-mono"
+                >
+                  home
+                </span>
+                 · id: 
+                <span
+                  class="font-mono"
+                >
+                  p1
+                </span>
+              </div>
+            </div>
+            <div
+              class="text-xs"
+            >
+              <span
+                class="font-semibold text-emerald-700"
+              >
+                PUBLISHED
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</DocumentFragment>
+`;

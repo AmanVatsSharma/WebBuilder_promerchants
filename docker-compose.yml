@@ -1,0 +1,86 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: webbuilder
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - '6379:6379'
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: webbuilder
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      STORAGE_DIR: /app/storage
+    ports:
+      - '3000:3000'
+    depends_on:
+      - postgres
+      - redis
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: webbuilder
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      STORAGE_DIR: /app/storage
+    command: ["node", "dist/apps/api/main.worker.js"]
+    depends_on:
+      - postgres
+      - redis
+
+  builder:
+    build:
+      context: .
+      dockerfile: apps/builder/Dockerfile
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_STOREFRONT_URL: http://localhost:4201
+    ports:
+      - '4200:4200'
+    depends_on:
+      - api
+
+  storefront:
+    build:
+      context: .
+      dockerfile: apps/storefront/Dockerfile
+    environment:
+      NODE_ENV: production
+      API_BASE_URL: http://api:3000/api
+      STORAGE_DIR: /app/storage
+    ports:
+      - '4201:4201'
+    depends_on:
+      - api
+
+volumes:
+  postgres-data:
